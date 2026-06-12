@@ -251,7 +251,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
       </div>
 
       {/* ── Gráfico comparativo ───────────────────────────────────────── */}
-      <div className="space-y-3">
+      <div className="rounded-xl border border-border bg-[#FBFAF7] p-5 space-y-3">
         <h4 className="text-sm font-medium text-ink-secondary">Imposto mensal por regime — hoje vs IVA Dual (2033)</h4>
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
@@ -300,11 +300,17 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               return (
                 <tr key={r.regime} className={`transition-colors ${isAtual ? 'bg-subtle' : 'hover:bg-subtle'}`}>
                   <td className="py-3">
-                    <div className="flex items-center gap-2">
-                      <span className={`font-semibold text-sm ${COR_TEXT[meta.color]}`}>{meta.label}</span>
-                      {isAtual && <span className="text-xs text-ink-muted font-normal">(atual)</span>}
-                      {r.melhorAtual && <span className="text-warning text-xs font-medium">melhor hoje</span>}
-                      {r.melhorIVA && <span className="text-info text-xs font-medium">melhor no IVA</span>}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`font-semibold text-sm ${COR_TEXT[meta.color]}`}>{meta.label}</span>
+                        {isAtual && <span className="text-xs text-ink-muted font-normal">(atual)</span>}
+                      </div>
+                      {(r.melhorAtual || r.melhorIVA) && (
+                        <div className="flex flex-wrap gap-1">
+                          {r.melhorAtual && <span className="badge badge-warning text-[10px]">melhor hoje</span>}
+                          {r.melhorIVA && <span className="badge badge-info text-[10px]">melhor no IVA</span>}
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-3 text-right text-ink-secondary text-sm num">{fmt.pct(r.aliquotaAtual)}</td>

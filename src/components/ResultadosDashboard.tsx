@@ -76,50 +76,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
   return (
     <div className="space-y-6">
 
-      {/* ── Cabeçalho do relatório (visível apenas na impressão) ─────────── */}
-      <div className="hidden print:block pb-5 mb-2 border-b-2 border-gray-800">
-        <div className="flex items-start justify-between gap-6">
-          <div>
-            <div className="text-xs font-bold text-gray-400 uppercase tracking-[0.18em] mb-1">
-              ReformaCalc
-            </div>
-            {nomePrincipal && (
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-0.5">{nomePrincipal}</p>
-            )}
-            <h1 className="text-lg font-bold text-gray-900 leading-snug">
-              Análise de Impacto — Reforma Tributária (LC 214/2025)
-            </h1>
-            <p className="text-xs text-gray-500 mt-2 leading-relaxed">
-              <strong className="text-gray-700">Regime:</strong> {NOMES_REGIME[regime]}
-              {'  ·  '}
-              <strong className="text-gray-700">Setor:</strong> {setor.label.split('(')[0].trim()}
-              {'  ·  '}
-              <strong className="text-gray-700">Faturamento:</strong> {fmt.moeda(faturamentoMensal)}/mês
-              {insumosMensais > 0 && (
-                <>{' · '}<strong className="text-gray-700">Insumos:</strong> {fmt.moeda(insumosMensais)}/mês</>
-              )}
-              {'  ·  '}
-              <strong className="text-gray-700">Perfil:</strong> {NOMES_PERFIL[perfilClientes]}
-            </p>
-          </div>
-          <div className="text-right text-xs text-gray-500 flex-shrink-0 pt-0.5">
-            <div className="font-semibold text-gray-700">
-              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-            </div>
-            <div className="mt-0.5 text-gray-400">Alíquota padrão: 26,5% (CBS + IBS)</div>
-            <div className="mt-0.5 text-gray-400">Valores para fins educacionais</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Rodapé fixo em todas as páginas impressas */}
-      <div className="print-footer hidden">
-        <span>Simulação para fins educacionais — não constitui assessoria fiscal</span>
-        <span>ReformaCalc · LC 214/2025</span>
-      </div>
-
-      {/* ── Cabeçalho dos resultados (tela) ─────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-4 print:hidden">
+      {/* ── Cabeçalho dos resultados ─────────────────────────────────── */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <button onClick={onVoltar} className="btn-ghost flex items-center gap-1.5 mb-3 -ml-1">
             ← Voltar aos dados
@@ -936,16 +894,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         </div>
       </div>
 
-      {/* ── CTA final (oculto na impressão) ─────────────────────────────── */}
-      <div className="flex flex-wrap gap-3 justify-center pt-2 pb-6 print:hidden">
+      {/* ── CTA final ────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-3 justify-center pt-2 pb-6">
         <button onClick={onVoltar} className="btn-secondary">
           ← Simular outra empresa
-        </button>
-        <button
-          onClick={() => window.print()}
-          className="btn-secondary flex items-center gap-2"
-        >
-          Imprimir / Salvar PDF
         </button>
       </div>
 

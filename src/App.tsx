@@ -4,6 +4,7 @@ import {
   Calculator, BarChart2, ChevronLeft, ChevronRight,
   FileText, AlertTriangle, RefreshCw, LogOut, Shield, AlertCircle,
 } from 'lucide-react'
+// FileText mantido para ícone no sidebar; PDF export removido intencionalmente
 import FormularioEntrada from './components/FormularioEntrada'
 import ResultadosDashboard from './components/ResultadosDashboard'
 import { calcularTodosOsCenarios } from './engine/calculadora'
@@ -196,28 +197,29 @@ function StepBar({ etapa }: { etapa: 'formulario' | 'resultados' }) {
   )
 }
 
-// ─── App ──────────────────────────────────────────────────────────────────────
+// ─── SimuladorApp (isolado por usuário via key) ───────────────────────────────
 
 type Etapa = 'formulario' | 'resultados'
-type View  = 'simulador' | 'admin'
 
-export default function App() {
-  const { usuario, logout, atualizarContador } = useAuth()
+interface SimuladorAppProps {
+  usuario: import('./auth/AuthContext').Usuario
+  onAdmin: () => void
+  onLogout: () => void
+}
+
+function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
   const { req } = useApi()
+  const { atualizarContador } = useAuth()
 
-  const [etapa, setEtapa]         = useState<Etapa>('formulario')
+  const [etapa, setEtapa]           = useState<Etapa>('formulario')
   const [resultados, setResultados] = useState<ResultadoCalculo | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
-  const [view, setView]             = useState<View>('simulador')
   const [erroLimite, setErroLimite] = useState('')
-
-  if (!usuario) return <Login />
-  if (view === 'admin' && usuario.role === 'admin') return <Admin onVoltar={() => setView('simulador')} />
 
   const handleCalcular = async (dados: DadosEntrada) => {
     setErroLimite('')
     try {
-      const res = await req('/api/simulacao/autorizar', { method: 'POST' })
+      const res  = await req('/api/simulacao/autorizar', { method: 'POST' })
       const data = await res.json()
       if (!res.ok || !data.autorizado) {
         setErroLimite(data.erro || 'Limite de simulações atingido.')
@@ -228,7 +230,6 @@ export default function App() {
       setErroLimite('Erro ao verificar limite. Tente novamente.')
       return
     }
-
     const calc = calcularTodosOsCenarios(dados)
     setResultados(calc)
     setEtapa('resultados')
@@ -249,8 +250,8 @@ export default function App() {
           collapsed={collapsed}
           onToggle={() => setCollapsed(v => !v)}
           onReset={handleVoltar}
-          onAdmin={() => setView('admin')}
-          onLogout={logout}
+          onAdmin={onAdmin}
+          onLogout={onLogout}
           username={usuario.username}
           isAdmin={usuario.role === 'admin'}
           simulacoesUsadas={usuario.simulacoes_usadas}
@@ -290,22 +291,10 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3">
             <StepBar etapa={etapa} />
-            {etapa === 'resultados' && (
-              <button onClick={() => window.print()} className="btn-secondary hidden sm:inline-flex">
-                <FileText size={14} strokeWidth={1.75} />
-                Exportar PDF
-              </button>
-            )}
           </div>
         </header>
 
-        <div className="print-footer hidden">
-          <span>ReformaCalc · LC 214/2025 — valores para fins educacionais</span>
-          <span>reformacalc.com.br</span>
-        </div>
-
         <main className="flex-1 px-6 sm:px-8 py-8 max-w-5xl mx-auto w-full">
-          {/* Banner de limite atingido */}
           {erroLimite && (
             <div className="mb-6 flex items-start gap-3 bg-danger-soft border border-danger-border rounded-xl px-4 py-4 text-sm text-danger">
               <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
@@ -325,18 +314,38 @@ export default function App() {
           ) : null}
         </main>
 
-        <footer className="border-t border-border py-6 px-8 print:hidden">
+        <footer className="border-t border-border py-6 px-8">
           <p className="text-xs text-ink-muted text-center leading-relaxed max-w-2xl mx-auto">
             Simulação baseada na{' '}
             <strong className="text-ink-secondary">LC 214/2025</strong> e{' '}
             <strong className="text-ink-secondary">LC 227/2026</strong>.
             Alíquota padrão <strong className="text-ink-secondary">26,5%</strong> (CBS + IBS).
-            IRPF com isenção até R$ 5.000 conforme{' '}
-            <strong className="text-ink-secondary">Lei 15.270/2025</strong>.
             Valores para fins educacionais — consulte um contador para análise fiscal completa.
           </p>
         </footer>
       </div>
     </div>
+  )
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+
+type View = 'simulador' | 'admin'
+
+export default function App() {
+  const { usuario, logout } = useAuth()
+  const [view, setView]     = useState<View>('simulador')
+
+  if (!usuario) return <Login />
+  if (view === 'admin' && usuario.role === 'admin') return <Admin onVoltar={() => setView('simulador')} />
+
+  // key={usuario.id} garante que ao trocar de usuário todo o estado do simulador é destruído
+  return (
+    <SimuladorApp
+      key={usuario.id}
+      usuario={usuario}
+      onAdmin={() => setView('admin')}
+      onLogout={logout}
+    />
   )
 }
