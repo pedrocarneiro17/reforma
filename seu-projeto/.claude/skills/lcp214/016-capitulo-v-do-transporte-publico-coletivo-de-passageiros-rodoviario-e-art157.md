@@ -1,0 +1,19 @@
+---
+norma: "LC 214/2025 (IBS, CBS e Imposto Seletivo)"
+livro: "LIVRO I — DO IMPOSTO SOBRE BENS E SERVIÇOS (IBS) E DA CONTRIBUIÇĂO SOCIAL SOBRE BENS E SERVIÇOS (CBS)"
+titulo: "TÍTULO IV — DOS REGIMES DIFERENCIADOS DO IBS E DA CBS"
+capitulo: "CAPÍTULO V — DO TRANSPORTE PÚBLICO COLETIVO DE PASSAGEIROS RODOVIÁRIO E METROVIÁRIO DE CARÁTER URBANO, SEMIURBANO E METROPOLITANO"
+artigos: Art. 157
+keywords: ""
+---
+
+# CAPÍTULO V — DO TRANSPORTE PÚBLICO COLETIVO DE PASSAGEIROS RODOVIÁRIO E METROVIÁRIO DE CARÁTER URBANO, SEMIURBANO E METROPOLITANO
+
+Art. 157. Fica isento do IBS e da CBS o fornecimento de serviços de transporte público coletivo de passageiros rodoviário e metroviário de caráter urbano, semiurbano e metropolitano, sob regime de autorizaçăo, permissăo ou concessăo pública.
+Parágrafo único. Para fins do caput deste artigo, consideram-se:
+I - serviço de transporte público coletivo de passageiros o acessível a toda a populaçăo mediante cobrança individualizada, com itinerários e preços fixados pelo poder público;
+II - transporte rodoviário o serviço de transporte terrestre realizado sobre vias urbanas e rurais;
+III - transporte metroviário o realizado por meio de ferrovias, abrangendo trens urbanos, metrôs, veículos leves sobre trilhos e monotrilhos;
+IV - transporte de passageiros de caráter urbano o serviço de característica urbana prestado no território do Município;
+V - transporte de passageiros de caráter semiurbano o serviço de deslocamento intermunicipal, interestadual ou internacional entre localidades próximas de característica urbana ou metropolitana; e
+VI - transporte de passageiros de caráter metropolitano o serviço prestado entre municípios que pertencem a uma mesma regiăo metropolitana.

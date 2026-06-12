@@ -1,0 +1,72 @@
+---
+norma: "LC 214/2025 (IBS, CBS e Imposto Seletivo)"
+capitulo: "ANEXO XII — DISPOSITIVOS MÉDICOS SUBMETIDOS Ŕ REDUÇĂO A ZERO DAS ALÍQUOTAS DO IBS E DA CBS"
+artigos: —
+keywords: "aliquota padrao, reducao 60%, reducao 30%, teto"
+---
+
+# ANEXO XII — DISPOSITIVOS MÉDICOS SUBMETIDOS Ŕ REDUÇĂO A ZERO DAS ALÍQUOTAS DO IBS E DA CBS
+ITEM
+DESCRIÇĂO
+NCM/SH
+1
+Aparelhos de eletrodiagnóstico (incluídos os aparelhos de exploraçăo funcional e os de verificaçăo de parâmetros fisiológicos)
+1.1
+Eletrocardiógrafos
+9018.11.00
+1.2
+Eletroencefalógrafos
+9018.19.80
+1.3
+Aparelhos de eletrodiagnóstico, exceto os produtos classificados nos códigos 9018.11.00, 9018.12.10, 9018.12.90, 9018.13.00, 9018.14.10, 9018.14.20, 9018.14.90, 9018.19.10 e 9018.19.20
+9018.19.80
+2
+Aparelhos de raios ultravioleta ou infravermelhos
+9018.20
+3
+Artigos e aparelhos ortopédicos
+9021.10.10
+4
+Artigos e aparelhos para fraturas
+9021.10.20
+5
+Artigos e aparelhos de prótese, exceto os dentários e os produtos classificados nos códigos 9021.39.91 e 9021.39.99
+9021.3
+6
+Tomógrafo computadorizado
+9022.12.00
+7
+Aparelhos de raio X, móveis, exceto os produtos classificados no código 9022.19.91
+9022.13
+9022.14
+9022.19
+8
+Aparelho de radiocobalto (bomba de cobalto)
+9022.21.10
+9
+Aparelho de crioterapia
+9018.90.99
+10
+Aparelho de gamaterapia
+9022.21.20
+11
+Aparelhos que utilizem radiaçőes alfa, beta, gama ou outras radiaçőes ionizantes, para usos médicos, cirúrgicos, odontológicos ou veterinários, incluídos os aparelhos de radiofotografia ou de radioterapia, exceto os produtos classificados nos códigos 9022.21.10 e 9022.21.20
+9022.21.90
+12
+Densímetros, areômetros, pesa-líquidos e instrumentos flutuantes semelhantes, termômetros, pirômetros, barômetros, higrômetros e psicômetros, registradores ou năo, mesmo combinados entre si
+90.25
+13
+Respirador
+9019.20.40
+14
+Monitor multiparâmetros
+9018.19.80
+15
+Bomba de infusăo
+9018.90.10
+16
+Aparelhos de diagnóstico por visualizaçăo de ressonância magnética
+9018.13.00
+17
+Aparelhos de ultrassom
+9018.12

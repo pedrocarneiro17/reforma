@@ -1,0 +1,98 @@
+---
+norma: "LC 214/2025 (IBS, CBS e Imposto Seletivo)"
+livro: "LIVRO I — DO IMPOSTO SOBRE BENS E SERVIÇOS (IBS) E DA CONTRIBUIÇĂO SOCIAL SOBRE BENS E SERVIÇOS (CBS)"
+titulo: "TÍTULO VII — DA ADMINISTRAÇĂO DO IBS E DA CBS"
+capitulo: "CAPÍTULO IV (Incluído pela Lei Complementar nş 227, de 2026) — DAS INFRAÇŐES E PENALIDADES RELATIVAS AO IBS E Ŕ CBS"
+artigos: Art. 341
+keywords: ""
+---
+
+# CAPÍTULO IV (Incluído pela Lei Complementar nş 227, de 2026) — DAS INFRAÇŐES E PENALIDADES RELATIVAS AO IBS E Ŕ CBS
+
+Art. 341-A. Constitui infraçăo toda açăo ou omissăo, ainda que involuntária, que importe inobservância, por parte do sujeito passivo, de obrigaçăo tributária principal ou acessória. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-B. As multas punitivas serăo calculadas após o acréscimo a que se refere o inciso II do § 2ş do art. 29 desta Lei Complementar. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-C. É instituída a Unidade Padrăo Fiscal dos Tributos sobre Bens e Serviços (UPF), no valor de R$ 200,00 (duzentos reais), a ser atualizada anualmente pela variaçăo do IPCA ou de outro índice que vier a substituí-lo. (Incluído pela Lei Complementar nş 227, de 2026)
+Parágrafo único. Ato conjunto do CGIBS e da RFB divulgará o valor atualizado da UPF, a que se refere o caput deste artigo. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-D. As penalidades serăo cumulativas quando resultarem do năo cumprimento concomitante de obrigaçőes tributárias acessória e principal. (Incluído pela Lei Complementar nş 227, de 2026)
+Parágrafo único. Quando o valor do tributo devido já tiver servido de base para a aplicaçăo da multa punitiva, năo se aplica, até a data da notificaçăo do lançamento de ofício, a multa de mora prevista no inciso I do § 2ş do art. 29 desta Lei Complementar. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-E. A aplicaçăo das penalidades previstas neste Título năo exclui: (Incluído pela Lei Complementar nş 227, de 2026)
+I - a exigęncia do pagamento do tributo năo recolhido, com os devidos acréscimos legais, quando for o caso; e (Incluído pela Lei Complementar nş 227, de 2026)
+II - a cassaçăo de licenças, concessőes ou autorizaçőes, a baixa de ofício da inscriçăo no CNPJ, a imposiçăo de regimes especiais de fiscalizaçăo e de cobrança, o cancelamento da habilitaçăo de benefícios fiscais, a exclusăo de regimes especiais de tributaçăo ou as representaçőes fiscais para fins penais, entre outras medidas administrativas previstas em lei. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-F. Aplica-se a multa de 75% (setenta e cinco por cento), nos casos de lançamento de ofício: (Incluído pela Lei Complementar nş 227, de 2026)
+I - sobre o valor do tributo năo declarado ou declarado a menor e năo pago ou năo recolhido, no todo ou em parte; ou (Incluído pela Lei Complementar nş 227, de 2026)
+II - sobre o valor do crédito indevido, pela utilizaçăo indevida. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 1ş Nos casos de sonegaçăo, fraude, simulaçăo ou conluio, independentemente de outras penalidades administrativas ou criminais cabíveis, a multa será majorada para: (Incluído pela Lei Complementar nş 227, de 2026)
+I - 100% (cem por cento) sobre a totalidade ou a diferença do tributo objeto do lançamento de ofício; (Incluído pela Lei Complementar nş 227, de 2026)
+II - 150% (cento e cinquenta por cento) sobre a totalidade ou a diferença do tributo objeto do lançamento de ofício, nos casos em que verificada a reincidęncia do sujeito passivo. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 2ş Para os efeitos do disposto neste artigo, consideram-se: (Incluído pela Lei Complementar nş 227, de 2026)
+I - sonegaçăo: toda açăo ou omissăo dolosa tendente a impedir ou retardar, total ou parcialmente, o conhecimento por parte da autoridade fazendária: (Incluído pela Lei Complementar nş 227, de 2026)
+a) da ocorręncia do fato gerador da obrigaçăo tributária principal, sua natureza ou circunstâncias materiais; (Incluída pela Lei Complementar nş 227, de 2026)
+b) das condiçőes pessoais de sujeito passivo, suscetíveis de afetar a obrigaçăo tributária principal ou o crédito tributário correspondente; (Incluída pela Lei Complementar nş 227, de 2026)
+II - fraude: toda açăo ou omissăo dolosa tendente a impedir ou retardar, total ou parcialmente, a ocorręncia do fato gerador da obrigaçăo tributária principal, ou a excluir ou modificar as suas características essenciais, de modo a reduzir o montante do tributo devido, a evitar ou a diferir o seu pagamento; (Incluído pela Lei Complementar nş 227, de 2026)
+III - (VETADO); (Incluído pela Lei Complementar nş 227, de 2026)
+IV - conluio: o ajuste doloso entre 2 (duas) ou mais pessoas naturais ou jurídicas, visando a qualquer dos efeitos referidos nos incisos I a III deste parágrafo; (Incluído pela Lei Complementar nş 227, de 2026)
+V - reincidęncia: a prática de nova infraçăo qualificada como sonegaçăo, fraude, simulaçăo ou conluio, pela mesma pessoa jurídica ou pelos seus sucessores, considerando-se em conjunto todos os seus estabelecimentos, ou pela mesma pessoa natural, dentro de 3 (tręs) anos contados da data em que houver sido efetuado o lançamento anterior. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 3ş A multa a que se refere o inciso I do caput deste artigo será de 50% (cinquenta por cento) sobre a parcela do tributo objeto de lançamento de ofício, desde que a declaraçăo descreva corretamente o bem ou serviço e as respectivas quantidades, bem como o valor da operaçăo. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 4ş Fica descaracterizada a reincidęncia de que trata o inciso V do § 2ş deste artigo, caso a responsabilidade pela infraçăo apontada no lançamento anterior tenha sido afastada por decisăo definitiva em âmbito administrativo ou decisăo judicial transitada em julgado. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 5ş Fica garantido o ressarcimento do valor recolhido em excesso, caso tenha sido afastada a reincidęncia, nos termos do § 4ş deste artigo, e o sujeito passivo tenha adimplido a multa majorada com base no inciso V do § 2ş deste artigo. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 6ş O valor a ressarcir de que trata o § 5ş deste artigo será corrigido pela taxa Selic, desde o efetivo pagamento. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-G. As multas a serem aplicadas em razăo de infraçőes por descumprimento de obrigaçőes tributárias acessórias do IBS ou da CBS săo as seguintes: (Incluído pela Lei Complementar nş 227, de 2026)
+I - deixar de fazer inscriçăo no cadastro com identificaçăo única de que trata o art. 59 desta Lei Complementar, no prazo previsto em regulamento: 10 (dez) UPF; (Incluído pela Lei Complementar nş 227, de 2026)
+II - năo atualizar o domicílio principal previsto na alínea “b” do inciso I do § 3ş do art. 11 desta Lei Complementar no cadastro com identificaçăo única de que trata o art. 59 desta Lei Complementar, quando houver alteraçăo, observados a forma e o prazo previstos em regulamento: 10 (dez) UPF por infraçăo; (Incluído pela Lei Complementar nş 227, de 2026)
+III - năo comunicar ŕ administraçăo tributária a venda ou a transferęncia de estabelecimento e o encerramento ou a paralisaçăo temporária de atividades, na forma e nos prazos estabelecidos na legislaçăo tributária: 10 (dez) UPF por infraçăo; (Incluído pela Lei Complementar nş 227, de 2026)
+IV - entregar em atraso, deixar de entregar, de registrar, de disponibilizar ou de manter, ou manter, registrar ou entregar em desacordo com a legislaçăo tributária, inclusive com relaçăo ao descumprimento de prazo fixado em intimaçăo fiscal, arquivos eletrônicos decorrentes da emissăo de documentos fiscais ou de sua escrituraçăo, documento informativo do movimento econômico ou fiscal, declaraçőes periódicas ou outras informaçőes previstas na legislaçăo necessárias ŕ escrituraçăo ou ŕ apuraçăo do tributo: (Incluído pela Lei Complementar nş 227, de 2026)
+a) 20 (vinte) UPF por período de apuraçăo, independentemente de intimaçăo fiscal; e (Incluída pela Lei Complementar nş 227, de 2026)
+b) 30 (trinta) UPF por período de apuraçăo e a cada intimaçăo fiscal; (Incluída pela Lei Complementar nş 227, de 2026)
+V - instalar ou manter instalado programa, software , aplicativo fiscal ou soluçăo tecnológica que possibilite a emissăo de documentos fiscais com supressăo ou reduçăo de valores do tributo ou da operaçăo ou que năo atenda aos requisitos estabelecidos na legislaçăo tributária: 100 (cem) UPF por equipamento; (Incluído pela Lei Complementar nş 227, de 2026)
+VI - desenvolver, fornecer ou instalar programa, software , aplicativo fiscal ou soluçăo tecnológica para terceiros que possibilite a emissăo de documentos fiscais com supressăo ou reduçăo de valores do tributo ou da operaçăo ou que năo atenda aos requisitos estabelecidos na legislaçăo tributária: 150 (cento e cinquenta) UPF por equipamento; (Incluído pela Lei Complementar nş 227, de 2026)
+VII - deixar de utilizar ou utilizar em desacordo com a legislaçăo tributária mecanismo de mediçăo de volume exigido e controlado pela administraçăo tributária: 100 (cem) UPF por equipamento; (Incluído pela Lei Complementar nş 227, de 2026)
+VIII - deixar de comunicar ou comunicar após o prazo previsto na legislaçăo tributária a inutilizaçăo de número de documento fiscal: 1 (uma) UPF por número; (Incluído pela Lei Complementar nş 227, de 2026)
+IX - deixar o adquirente ou destinatário, relativamente a documento fiscal emitido por terceiro, ainda que em contingęncia, de confirmar a operaçăo, de informar seu desconhecimento, o desfazimento do negócio, de informar a devoluçăo ou retorno dos bens, na forma e nas condiçőes previstas na legislaçăo tributária: 1 (uma) UPF por documento; (Incluído pela Lei Complementar nş 227, de 2026)
+X - descumprir o dever de colaboraçăo com o fisco, mediante embaraço ou resistęncia ŕ açăo fiscal, nos termos dos incisos I e II do caput do art. 338 desta Lei Complementar, por qualquer meio: 50 (cinquenta) UPF por evento; (Incluído pela Lei Complementar nş 227, de 2026)
+XI - fornecer, adquirir, importar, receber, transportar, entregar, dar entrada ou saída, ou manter em depósito bem, ou prestar, disponibilizar ou tomar serviço, desacobertados de documento fiscal, inclusive de declaraçőes de informaçőes necessárias ŕ apuraçăo do IBS e da CBS: 100% (cem por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XII - acobertar mais de uma vez o trânsito de bem ou prestar mais de uma vez serviço de transporte, utilizando o mesmo documento fiscal: 100% (cem por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XIII - emitir ou utilizar documento fiscal năo idôneo, inclusive o documento auxiliar a ele vinculado: 66% (sessenta e seis por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XIV - falsificar, adulterar, extraviar ou inutilizar documento fiscal: 100% (cem por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XV - apropriar indevidamente ou deixar de efetuar o estorno ou a anulaçăo do crédito fiscal nas hipóteses previstas na legislaçăo: 66% (sessenta e seis por cento) do crédito; (Incluído pela Lei Complementar nş 227, de 2026)
+XVI - deixar de emitir documento fiscal referente a aquisiçăo ou entrada de bem ou a aquisiçăo de serviço, no prazo e nas hipóteses previstos na legislaçăo tributária: 100% (cem por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XVII - cancelar documento fiscal ou informaçăo eletrônica do registro da operaçăo: (Incluído pela Lei Complementar nş 227, de 2026)
+a) após a ocorręncia do fato gerador: 66% (sessenta e seis por cento) do valor do tributo de referęncia; ou (Incluída pela Lei Complementar nş 227, de 2026)
+b) após o prazo para cancelamento de documento fiscal previsto na legislaçăo tributária: 33% (trinta e tręs por cento) do valor do tributo de referęncia; (Incluída pela Lei Complementar nş 227, de 2026)
+XVIII - informar Declaraçăo Prévia de Emissăo em Contingęncia com valor divergente do constante do respectivo documento fiscal: 33% (trinta e tręs por cento) do valor da diferença; (Incluído pela Lei Complementar nş 227, de 2026)
+XIX - omitir informaçăo relativa a operaçőes de importaçăo ou exportaçăo, ou prestá-la de forma inexata ou incompleta, desde que necessária ŕ determinaçăo do procedimento de controle fiscal: 100 (cem) UPF por informaçăo; (Incluído pela Lei Complementar nş 227, de 2026)
+XX - violar dispositivo de segurança aposto pela fiscalizaçăo em unidade de carga: 10 (dez) UPF por dispositivo; (Incluído pela Lei Complementar nş 227, de 2026)
+XXI - năo cumprir as obrigaçőes acessórias relacionadas aos controles específicos para verificaçăo da entrada de bens materiais na Zona Franca de Manaus (ZFM) ou em Área de Livre Comércio, inclusive desembaraço e vistoria: 66% (sessenta e seis por cento) do valor do tributo de referęncia; (Incluído pela Lei Complementar nş 227, de 2026)
+XXII - deixar a instalaçăo credenciada, para fins de controles específicos de verificaçăo de entrada de bens materiais na Zona Franca de Manaus ou em Área de Livre Comércio, de atender ŕs exigęncias mínimas de infraestrutura previstas quando do seu credenciamento: 20 (vinte) UPF por requisito exigido. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 1ş As penalidades de que trata este artigo serăo majoradas em 50% (cinquenta por cento) no caso de reincidęncia específica. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 2ş Para fins do disposto no § 1ş deste artigo, considera-se reincidęncia específica a recorręncia em infraçăo prevista em um mesmo inciso do caput deste artigo, pela mesma pessoa jurídica ou pelos seus sucessores, considerando-se em conjunto todos os seus estabelecimentos, ou pela mesma pessoa natural, dentro de 3 (tręs) anos contados da data em que houver sido efetuado o lançamento anterior. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 3ş Para fins do disposto no § 1ş deste artigo, aplica-se o previsto nos §§ 4ş a 6ş do art. 341-F. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 4ş Năo se aplicam as penalidades previstas no inciso IV deste artigo em caso de mera falha ou erro material que năo prejudique o conhecimento acerca da natureza, da discriminaçăo, da procedęncia e do destino da operaçăo. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 5ş Para fins do disposto nos incisos XI, XII, XIII, XIV, XVI, XVII e XXI do caput deste artigo, o valor do tributo de referęncia corresponde: (Incluído pela Lei Complementar nş 227, de 2026)
+I - a partir de 2027, para a CBS, e a partir de 2033, para o IBS, ŕ multiplicaçăo da alíquota de referęncia pelo valor da operaçăo, ainda que se trate de operaçăo imune, isenta, sujeita a alíquota zero, alíquota reduzida ou base de cálculo reduzida, alcançada por diferimento ou suspensăo; (Incluído pela Lei Complementar nş 227, de 2026)
+II - no período de 2027 a 2032, para o IBS, ŕ multiplicaçăo do percentual correspondente ao dobro da alíquota de referęncia da CBS pelo valor da operaçăo; (Incluído pela Lei Complementar nş 227, de 2026)
+III - em 2026: (Incluído pela Lei Complementar nş 227, de 2026)
+a) para a CBS, a 6% (seis por cento) do valor da operaçăo; e (Incluída pela Lei Complementar nş 227, de 2026)
+b) para o IBS, a 12% (doze por cento) do valor da operaçăo. (Incluída pela Lei Complementar nş 227, de 2026)
+§ 6ş Para fins do disposto no inciso XIII do caput deste artigo, considera-se documento fiscal năo idôneo, entre outros, aquele: (Incluído pela Lei Complementar nş 227, de 2026)
+I - que năo corresponda efetivamente a operaçăo com bem ou serviço ou a aquisiçăo de bem ou serviço; (Incluído pela Lei Complementar nş 227, de 2026)
+II - em que conste, como destinatário ou adquirente, pessoa ou estabelecimento diverso daquele a quem o bem ou o serviço de fato se destinar, ou que, de fato, tenha adquirido o bem ou o serviço. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 7ş Para fins do disposto no inciso XIX do caput deste artigo: (Incluído pela Lei Complementar nş 227, de 2026)
+I - considera-se informaçăo necessária ŕ determinaçăo do procedimento de controle fiscal aquela que identifique os responsáveis pela operaçăo, indique a destinaçăo econômica do bem ou serviço e os países de origem, de procedęncia e de aquisiçăo e descreva as características essenciais do bem material; (Incluído pela Lei Complementar nş 227, de 2026)
+II - na ocorręncia de mais de uma das infraçőes para o mesmo bem ou serviço, aplica-se a multa somente uma vez; (Incluído pela Lei Complementar nş 227, de 2026)
+III - o valor da multa năo poderá ser superior a 1% (um por cento) do valor total da operaçăo constante do documento fiscal correspondente, observado o limite inferior de 50 (cinquenta) UPF. (Incluído pela Lei Complementar nş 227, de 2026)
+
+Art. 341-H. As multas de que tratam os arts. 341-F e 341-G poderăo ser pagas com as seguintes reduçőes: (Incluído pela Lei Complementar nş 227, de 2026)
+I - 50% (cinquenta por cento) da penalidade aplicada, se efetuado o pagamento integral do crédito tributário no prazo previsto para apresentaçăo de impugnaçăo administrativa; (Incluído pela Lei Complementar nş 227, de 2026)
+II - 40% (quarenta por cento) da penalidade aplicada, se efetuado o parcelamento do crédito tributário no prazo previsto para apresentaçăo de impugnaçăo administrativa; (Incluído pela Lei Complementar nş 227, de 2026)
+III - 30% (trinta por cento) da penalidade aplicada, se efetuado o pagamento integral do crédito tributário após o prazo previsto no inciso I deste artigo e antes da sua inscriçăo em dívida ativa; (Incluído pela Lei Complementar nş 227, de 2026)
+IV - 20% (vinte por cento) da penalidade aplicada, se efetuado o parcelamento do crédito tributário após o prazo previsto no inciso II deste artigo e antes da sua inscriçăo em dívida ativa. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 1ş Os percentuais de reduçăo previstos nos incisos I a IV do caput deste artigo serăo de, respectivamente, 60% (sessenta por cento), 50% (cinquenta por cento), 40% (quarenta por cento) e 30% (trinta por cento), no caso de sujeitos passivos que: (Incluído pela Lei Complementar nş 227, de 2026)
+I - participem do Programa Nacional de Conformidade Tributária (PNCT) de que trata o art. 471-A; ou (Incluído pela Lei Complementar nş 227, de 2026)
+II - tenham bons antecedentes fiscais, nos termos do regulamento. (Incluído pela Lei Complementar nş 227, de 2026)
+§ 2ş A rescisăo do parcelamento, motivada pelo descumprimento das normas que o regulam, implicará restabelecimento do montante da multa proporcionalmente ao valor do crédito tributário năo satisfeito. (Incluído pela Lei Complementar nş 227, de 2026)
