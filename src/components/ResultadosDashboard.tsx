@@ -47,6 +47,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     creditoDespesasAdicionais,
     alertaExportadorHabilitavel, alertaContratoAdministrativo,
     alertaCashback, creditoRegimeAutomotivo, creditoZFMIbs, creditoZFMCbs,
+    pisCofinsNoDAsMensal, cbsIVADualMensal,
   } = resultados
 
   const isMEI = regime === 'mei'
@@ -200,6 +201,19 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
 
       {/* ── Card de Créditos IVA ─────────────────────────────────────────── */}
       {!isMEI && !isPF && <CardCreditoIVA resultados={resultados} />}
+
+      {/* ── Comparativo PIS/COFINS vs CBS — exclusivo Simples Nacional ───── */}
+      {regime === 'simples_nacional' && cbsSimplesEfetivo != null && (
+        <CardPisCofinsVsCBS
+          pisCofinsAtualMensal={pisCofinsNoDAsMensal}
+          cbsIVADualMensal={cbsIVADualMensal}
+          aliquotaPisCofins={cbsSimplesEfetivo}
+          aliquotaCbsIVA={aliquotaIVAEfetiva * (8.8 / 26.5)}
+          creditoInsumosCBSMensal={creditoInsumosMensal * (8.8 / 26.5)}
+          faturamentoMensal={faturamentoMensal}
+          anexo={anexoSimples}
+        />
+      )}
 
       {/* ── Gráfico de transição ─────────────────────────────────────────── */}
       <div className="card p-6">
@@ -1484,6 +1498,135 @@ function CardHolding({ analise }: { analise: AnaliseHolding }) {
           {regime === 'lucro_real' && ' LR: estimativa com margem 50% e créditos PIS/COFINS 5%.'}
         </p>
       </div>
+    </div>
+  )
+}
+
+// ─── CardPisCofinsVsCBS ───────────────────────────────────────────────────────
+
+interface CardPisCofinsVsCBSProps {
+  pisCofinsAtualMensal: number
+  cbsIVADualMensal: number
+  aliquotaPisCofins: number
+  aliquotaCbsIVA: number
+  creditoInsumosCBSMensal: number
+  faturamentoMensal: number
+  anexo?: import('../types').AnexoSimples
+}
+
+function CardPisCofinsVsCBS({
+  pisCofinsAtualMensal,
+  cbsIVADualMensal,
+  aliquotaPisCofins,
+  aliquotaCbsIVA,
+  creditoInsumosCBSMensal,
+  faturamentoMensal,
+  anexo,
+}: CardPisCofinsVsCBSProps) {
+  const diferenca     = cbsIVADualMensal - pisCofinsAtualMensal
+  const aumentou      = diferenca > 0
+  const cbsBrutaMensal = cbsIVADualMensal + creditoInsumosCBSMensal
+
+  return (
+    <div className="card p-6 space-y-5">
+      <div>
+        <h3 className="section-title mb-1">
+          <span className="font-display">PIS/COFINS no DAS vs CBS no IVA Dual</span>
+        </h3>
+        <p className="text-xs text-ink-muted leading-relaxed">
+          Comparativo entre o PIS/COFINS embutido no DAS atual{anexo ? ` (Anexo ${anexo})` : ''} e a CBS estimada
+          no IVA Dual pleno. A CBS é não-cumulativa — permite deduzir créditos sobre insumos.
+          Proporção CBS estimada em 33,2% do IVA (8,8/26,5 pp — estimativa de mercado).
+        </p>
+      </div>
+
+      {/* Três colunas comparativas */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        {/* PIS/COFINS atual */}
+        <div className="rounded-xl border border-border bg-[#FBFAF7] p-4 space-y-2">
+          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide">PIS/COFINS hoje (DAS)</div>
+          <div className="text-2xl font-black text-info num">{fmt.moeda(pisCofinsAtualMensal)}</div>
+          <div className="text-xs text-ink-muted num">{fmt.pct(aliquotaPisCofins)} efetivo</div>
+          <div className="mt-2 rounded-md bg-info-soft border border-info-border px-3 py-2 text-xs text-info leading-relaxed">
+            <strong>Cumulativo:</strong> incide sobre a receita bruta, sem direito a crédito sobre compras ou insumos
+          </div>
+        </div>
+
+        {/* CBS bruta IVA Dual */}
+        <div className="rounded-xl border border-border bg-[#FBFAF7] p-4 space-y-2">
+          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide">CBS bruta (IVA Dual)</div>
+          <div className="text-2xl font-black text-ink num">{fmt.moeda(cbsBrutaMensal)}</div>
+          <div className="text-xs text-ink-muted">
+            antes dos créditos de insumos
+          </div>
+          <div className="mt-2 rounded-md bg-subtle border border-border px-3 py-2 text-xs text-ink-secondary leading-relaxed">
+            <strong>Crédito de insumos:</strong>{' '}
+            <span className="text-success font-medium num">− {fmt.moeda(creditoInsumosCBSMensal)}</span>
+            {' '}(CBS proporcional sobre suas compras)
+          </div>
+        </div>
+
+        {/* CBS líquida IVA Dual */}
+        <div className={`rounded-xl border p-4 space-y-2 ${aumentou ? 'border-danger-border bg-danger-soft' : 'border-success-border bg-success-soft'}`}>
+          <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide">CBS líquida (IVA Dual)</div>
+          <div className={`text-2xl font-black num ${aumentou ? 'text-danger' : 'text-success'}`}>{fmt.moeda(cbsIVADualMensal)}</div>
+          <div className={`text-xs num ${aumentou ? 'text-danger' : 'text-success'}`}>{fmt.pct(aliquotaCbsIVA)} efetivo líquido</div>
+          <div className={`mt-2 rounded-md px-3 py-2 text-xs leading-relaxed border
+            ${aumentou ? 'bg-danger-soft border-danger-border text-danger' : 'bg-success-soft border-success-border text-success'}`}>
+            <strong>vs. PIS/COFINS:</strong>{' '}
+            {aumentou ? '+' : ''}{fmt.moeda(diferenca)}/mês
+            {' '}({aumentou ? '▲' : '▼'} {faturamentoMensal > 0 ? Math.abs((diferenca / faturamentoMensal) * 100).toFixed(2) : '0,00'} pp sobre a receita)
+          </div>
+        </div>
+      </div>
+
+      {/* Tabela detalhada */}
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="table-premium w-full text-sm">
+          <thead>
+            <tr className="bg-subtle border-b border-border">
+              <th className="text-left py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Item</th>
+              <th className="text-right px-4 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">PIS/COFINS — DAS atual</th>
+              <th className="text-right px-4 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">CBS — IVA Dual</th>
+              <th className="text-right py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Diferença</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            <tr className="hover:bg-subtle">
+              <td className="py-3 text-ink-secondary">Incidência sobre a receita</td>
+              <td className="px-4 py-3 text-right num text-ink">{fmt.moeda(pisCofinsAtualMensal)}</td>
+              <td className="px-4 py-3 text-right num text-ink">{fmt.moeda(cbsBrutaMensal)}</td>
+              <td className="py-3 text-right">
+                <span className={`num text-sm font-medium ${cbsBrutaMensal - pisCofinsAtualMensal > 0 ? 'text-danger' : 'text-success'}`}>
+                  {cbsBrutaMensal - pisCofinsAtualMensal > 0 ? '+' : ''}{fmt.moeda(cbsBrutaMensal - pisCofinsAtualMensal)}
+                </span>
+              </td>
+            </tr>
+            <tr className="hover:bg-subtle">
+              <td className="py-3 text-ink-secondary">Crédito sobre insumos/compras</td>
+              <td className="px-4 py-3 text-right num text-ink-muted">—</td>
+              <td className="px-4 py-3 text-right num text-success">− {fmt.moeda(creditoInsumosCBSMensal)}</td>
+              <td className="py-3 text-right num text-success text-sm font-medium">− {fmt.moeda(creditoInsumosCBSMensal)}</td>
+            </tr>
+            <tr className="bg-subtle font-semibold">
+              <td className="py-3 text-ink">CBS / PIS+COFINS líquidos</td>
+              <td className="px-4 py-3 text-right num text-ink">{fmt.moeda(pisCofinsAtualMensal)}</td>
+              <td className="px-4 py-3 text-right num text-ink">{fmt.moeda(cbsIVADualMensal)}</td>
+              <td className="py-3 text-right">
+                <span className={`num text-sm font-bold ${aumentou ? 'text-danger' : 'text-success'}`}>
+                  {aumentou ? '+' : ''}{fmt.moeda(diferenca)}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-xs text-ink-muted leading-relaxed">
+        A alíquota de CBS estimada usa a proporção de 8,8 pp dentro dos 26,5% do IVA Dual — valor de mercado, não fixado em lei.
+        O crédito de insumos corresponde à CBS proporcional sobre suas compras tributadas, conforme Art. 103 LC 214/2025.
+      </p>
     </div>
   )
 }

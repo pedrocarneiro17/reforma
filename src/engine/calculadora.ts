@@ -966,6 +966,13 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // mas gerarão crédito de IBS/CBS (aluguel, energia, seguros, marketing, serviços adm, TI, etc.)
   const creditoDespesasAdicionais = (despesasCrediteisAdicionais ?? 0) * aliquotaIVABruta
 
+  // Comparativo PIS/COFINS (DAS) vs CBS (IVA Dual) — exclusivo Simples Nacional
+  // CBS representa ~33,2% do IVA Dual (8,8% / 26,5% — estimativa de mercado)
+  const CBS_SHARE_IVA = 8.8 / 26.5
+  const pisCofinsNoDAsMensal = (regime === 'simples_nacional' && cbsSimplesEfetivo != null)
+    ? faturamentoMensal * cbsSimplesEfetivo
+    : 0
+
   // Alertas informativos
   const alertaExportadorHabilitavel =
     exportacoesMensais > 0 && faturamentoMensal > 0 &&
@@ -1017,6 +1024,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   if (produtorRuralNaoContribuinte) impostoIVALiquidoMensal = 0
 
   const impostoIVALiquidoAnual = impostoIVALiquidoMensal * 12
+  const cbsIVADualMensal = impostoIVALiquidoMensal * CBS_SHARE_IVA
 
   // Imposto Seletivo (Anexo XVII + Arts. 419-423 LC 214/2025)
   const alertaImpostoSeletivo = setor.impostSeletivo === true
@@ -1173,6 +1181,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     creditoRegimeAutomotivo,
     creditoZFMIbs,
     creditoZFMCbs,
+    pisCofinsNoDAsMensal,
+    cbsIVADualMensal,
   }
 }
 

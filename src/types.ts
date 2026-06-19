@@ -250,6 +250,9 @@ export interface ResultadoCalculo {
   ivaZeradoVendasTransp: number     // IBS/CBS que NÃO será cobrado nas vendas para transportador autônomo PF
   // Não-cumulatividade ampla — despesas adicionais que passam a gerar crédito
   creditoDespesasAdicionais: number // crédito mensal de IBS/CBS sobre despesas que hoje não geram crédito de PIS/COFINS
+  // Comparativo PIS/COFINS (dentro do DAS) vs CBS (IVA Dual) — apenas Simples Nacional
+  pisCofinsNoDAsMensal: number   // PIS/COFINS embutido no DAS atual (cbsSimplesEfetivo × faturamento)
+  cbsIVADualMensal: number       // CBS estimada no IVA Dual (proporção CBS dentro do IVA líquido)
   // Alertas informativos
   alertaExportadorHabilitavel: boolean  // true quando exportações > 50% da receita (Art. 82 LC 214/2025)
   alertaContratoAdministrativo: boolean // true quando há vendas ao governo (direito de reequilíbrio Arts. 373-377)
