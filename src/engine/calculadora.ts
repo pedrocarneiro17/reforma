@@ -1185,9 +1185,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     cbsIVADualMensal,
     irpjCsllLPMensal: (() => {
       if (regime !== 'simples_nacional') return 0
-      // Mapeia anexo → tipo de setor para busca das presunções LP
       const anexoParaTipo = (a: import('../types').AnexoSimples): TipoSetor =>
         a === 'I' ? 'comercio' : a === 'II' ? 'industria' : 'servico'
+      // Misto: cada parte usa presunção padrão do seu anexo
       const calcAnexo = (a: import('../types').AnexoSimples, receita: number) => {
         const tipo = anexoParaTipo(a)
         const pIRPJ = PRESUNCAO_LP_IRPJ[tipo]
@@ -1201,7 +1201,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
         return calcAnexo(anexoEfetivoComFatorR!, faturamentoMensal * frac1)
              + calcAnexo(anexoSimples2!, faturamentoMensal * (1 - frac1))
       }
-      return calcAnexo(anexoEfetivoComFatorR ?? inferirAnexo(setor.tipo), faturamentoMensal)
+      // Anexo único: respeita override de presunção do setor (ex: hospitais com 8%)
+      const pIRPJ = setor.presuncaoLPIRPJ ?? PRESUNCAO_LP_IRPJ[setor.tipo]
+      const pCSLL = setor.presuncaoLPCSLL ?? PRESUNCAO_LP_CSLL[setor.tipo]
+      const lucro = faturamentoMensal * pIRPJ
+      return lucro * 0.15 + Math.max(0, lucro - IRPJ_ADICIONAL_LIMIAR) * 0.10 + faturamentoMensal * pCSLL * 0.09
     })(),
   }
 }
