@@ -98,6 +98,8 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 60%',
     reducao: 0.60,
     tipo: 'servico',
+    presuncaoLPIRPJ: 0.08,  // Lei 9.249/95 Art. 15 I d: "serviços hospitalares" → presunção 8% (não 32%)
+    presuncaoLPCSLL: 0.12,  // CSLL: presunção 12% para serviços hospitalares
   },
   {
     value: 'planos_saude',
@@ -266,6 +268,16 @@ export const SETORES: Setor[] = [
     reducao: 0.60,
     tipo: 'servico',
     fatorR: true,
+  },
+  {
+    value: 'sociedade_medica',
+    label: 'Sociedade Médica (S/S e Clínica Ambulatorial)',
+    grupo: 'Redução 60%',
+    reducao: 0.60,
+    tipo: 'servico',
+    fatorR: true,
+    presuncaoLPIRPJ: 0.32,  // S/S médica não é "serviço hospitalar" → presunção 32% (RFB/STJ)
+    presuncaoLPCSLL: 0.32,
   },
   {
     value: 'odontologia',
