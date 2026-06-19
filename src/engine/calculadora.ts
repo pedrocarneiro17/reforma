@@ -1183,6 +1183,16 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     creditoZFMCbs,
     pisCofinsNoDAsMensal,
     cbsIVADualMensal,
+    irpjCsllLPMensal: (() => {
+      if (regime !== 'simples_nacional') return 0
+      const pIRPJ = setor.presuncaoLPIRPJ ?? PRESUNCAO_LP_IRPJ[setor.tipo]
+      const pCSLL = setor.presuncaoLPCSLL ?? PRESUNCAO_LP_CSLL[setor.tipo]
+      const lucroMensal = faturamentoMensal * pIRPJ
+      const irpj  = lucroMensal * 0.15
+      const irpjAdic = Math.max(0, lucroMensal - IRPJ_ADICIONAL_LIMIAR) * 0.10
+      const csll  = faturamentoMensal * pCSLL * 0.09
+      return irpj + irpjAdic + csll
+    })(),
   }
 }
 

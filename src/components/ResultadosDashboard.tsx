@@ -48,6 +48,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     alertaExportadorHabilitavel, alertaContratoAdministrativo,
     alertaCashback, creditoRegimeAutomotivo, creditoZFMIbs, creditoZFMCbs,
     pisCofinsNoDAsMensal, cbsIVADualMensal,
+    irpjCsllLPMensal,
   } = resultados
 
   const isMEI = regime === 'mei'
@@ -183,20 +184,42 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <tr className="border-b border-border">
                 <th className="text-left pb-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Item</th>
                 <th className="text-right pb-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Regime Atual</th>
-                <th className="text-right pb-3 text-ink-muted font-medium text-xs uppercase tracking-wide">IVA Dual</th>
+                <th className="text-right pb-3 text-ink-muted font-medium text-xs uppercase tracking-wide">
+                  {regime === 'simples_nacional' ? 'IVA Dual (LP referência)' : 'IVA Dual'}
+                </th>
                 <th className="text-right pb-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Diferença</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               <TabelaRow label="Faturamento Mensal" atual={faturamentoMensal} nova={faturamentoMensal} neutro />
               <TabelaRow label="Insumos / Compras" atual={insumosMensais} nova={insumosMensais} neutro />
-              <TabelaRow label="Imposto Bruto" atual={impostoAtualMensal} nova={impostoIVABrutoMensal} />
+              <TabelaRow label={regime === 'simples_nacional' ? 'IBS + CBS (bruto)' : 'Imposto Bruto'} atual={impostoAtualMensal} nova={impostoIVABrutoMensal} />
               <TabelaRow label="Créditos de IVA nos Insumos" atual={0} nova={-creditoInsumosMensal} credito />
-              <TabelaRow label="Imposto Líquido (devido)" atual={impostoAtualMensal} nova={impostoIVALiquidoMensal} destaque />
-              <TabelaRow label="Alíquota Efetiva" atual={aliquotaAtual} nova={aliquotaIVAEfetiva} isPct />
+              <TabelaRow label={regime === 'simples_nacional' ? 'IBS + CBS (líquido)' : 'Imposto Líquido (devido)'} atual={impostoAtualMensal} nova={impostoIVALiquidoMensal} destaque={regime !== 'simples_nacional'} />
+              {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
+                <TabelaRow label="IRPJ + CSLL (Lucro Presumido)" atual={0} nova={irpjCsllLPMensal} />
+              )}
+              {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
+                <TabelaRow label="Carga Total (IBS+CBS+IRPJ+CSLL)" atual={impostoAtualMensal} nova={impostoIVALiquidoMensal + irpjCsllLPMensal} destaque />
+              )}
+              <TabelaRow
+                label="Alíquota Efetiva"
+                atual={aliquotaAtual}
+                nova={regime === 'simples_nacional' && irpjCsllLPMensal > 0
+                  ? (impostoIVALiquidoMensal + irpjCsllLPMensal) / faturamentoMensal
+                  : aliquotaIVAEfetiva}
+                isPct
+              />
             </tbody>
           </table>
         </div>
+        {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
+          <p className="text-xs text-ink-muted mt-3 leading-relaxed">
+            <strong>Nota:</strong> O Simples Nacional unifica todos os tributos (IRPJ, CSLL, PIS/COFINS, ICMS, ISS, CPP) em um único DAS.
+            A coluna "IVA Dual" mostra IBS+CBS (tributos sobre consumo) + IRPJ+CSLL calculados pelo Lucro Presumido,
+            para comparar a carga total caso a empresa migre para o regime pleno.
+          </p>
+        )}
       </div>
 
       {/* ── Card de Créditos IVA ─────────────────────────────────────────── */}

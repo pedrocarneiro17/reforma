@@ -253,6 +253,8 @@ export interface ResultadoCalculo {
   // Comparativo PIS/COFINS (dentro do DAS) vs CBS (IVA Dual) — apenas Simples Nacional
   pisCofinsNoDAsMensal: number   // PIS/COFINS embutido no DAS atual (cbsSimplesEfetivo × faturamento)
   cbsIVADualMensal: number       // CBS estimada no IVA Dual (proporção CBS dentro do IVA líquido)
+  // IRPJ + CSLL (Lucro Presumido referência) — para Simples Nacional comparar carga total no IVA Dual
+  irpjCsllLPMensal: number       // IRPJ + CSLL + adicional que a empresa pagaria se migrasse para LP
   // Alertas informativos
   alertaExportadorHabilitavel: boolean  // true quando exportações > 50% da receita (Art. 82 LC 214/2025)
   alertaContratoAdministrativo: boolean // true quando há vendas ao governo (direito de reequilíbrio Arts. 373-377)
