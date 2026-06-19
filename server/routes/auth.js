@@ -21,14 +21,15 @@ router.post('/login', async (req, res) => {
     { expiresIn: '8h' }
   )
 
+  const isAdmin = user.role === 'admin'
   res.json({
     token,
     usuario: {
       id: user.id,
       username: user.username,
       role: user.role,
-      simulacoes_usadas: user.simulacoes_usadas,
-      simulacoes_limite: user.simulacoes_limite,
+      simulacoes_usadas: isAdmin ? 0 : user.simulacoes_usadas,
+      simulacoes_limite: isAdmin ? null : user.simulacoes_limite,
     }
   })
 })
