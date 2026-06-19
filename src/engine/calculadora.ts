@@ -1185,13 +1185,23 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     cbsIVADualMensal,
     irpjCsllLPMensal: (() => {
       if (regime !== 'simples_nacional') return 0
-      const pIRPJ = setor.presuncaoLPIRPJ ?? PRESUNCAO_LP_IRPJ[setor.tipo]
-      const pCSLL = setor.presuncaoLPCSLL ?? PRESUNCAO_LP_CSLL[setor.tipo]
-      const lucroMensal = faturamentoMensal * pIRPJ
-      const irpj  = lucroMensal * 0.15
-      const irpjAdic = Math.max(0, lucroMensal - IRPJ_ADICIONAL_LIMIAR) * 0.10
-      const csll  = faturamentoMensal * pCSLL * 0.09
-      return irpj + irpjAdic + csll
+      // Mapeia anexo → tipo de setor para busca das presunções LP
+      const anexoParaTipo = (a: import('../types').AnexoSimples): TipoSetor =>
+        a === 'I' ? 'comercio' : a === 'II' ? 'industria' : 'servico'
+      const calcAnexo = (a: import('../types').AnexoSimples, receita: number) => {
+        const tipo = anexoParaTipo(a)
+        const pIRPJ = PRESUNCAO_LP_IRPJ[tipo]
+        const pCSLL = PRESUNCAO_LP_CSLL[tipo]
+        const lucro = receita * pIRPJ
+        return lucro * 0.15 + Math.max(0, lucro - IRPJ_ADICIONAL_LIMIAR) * 0.10 + receita * pCSLL * 0.09
+      }
+      const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
+      if (isMisto) {
+        const frac1 = pctAnexo1! / 100
+        return calcAnexo(anexoEfetivoComFatorR!, faturamentoMensal * frac1)
+             + calcAnexo(anexoSimples2!, faturamentoMensal * (1 - frac1))
+      }
+      return calcAnexo(anexoEfetivoComFatorR ?? inferirAnexo(setor.tipo), faturamentoMensal)
     })(),
   }
 }
