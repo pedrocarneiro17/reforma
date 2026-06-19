@@ -826,9 +826,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                         </div>
                         <input
                           type="range"
-                          min={5}
-                          max={95}
-                          step={5}
+                          min={1}
+                          max={99}
+                          step={1}
                           value={pctAnexo1}
                           onChange={e => setPctAnexo1(Number(e.target.value))}
                           className="w-full accent-[#111111]"
