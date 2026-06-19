@@ -36,7 +36,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     variacaoAbsolutaMensal, variacaoPercentual, reajustePrecoNecessario,
     projecaoAnos, analiseSimplesHibrido, alertaMEI, analiseGrupoSimples,
     analiseHolding, nomePrincipal, analiseICMS,
-    anexoSimples, cbsSimplesEfetivo, baseCalculoEfetiva,
+    anexoSimples, cbsSimplesEfetivo, ibsSimplesEfetivo, cenarioHibridoVerdadeiro, baseCalculoEfetiva,
     irpjAdicionalMensal, inssAutonomoMensal,
     pctFornecedoresSimples, creditoPerdidoFornecedorSimples,
     analiseProlabore,
@@ -236,6 +236,119 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           faturamentoMensal={faturamentoMensal}
           anexo={anexoSimples}
         />
+      )}
+
+      {/* ── Cenários Simples Nacional — Composição CBS/IBS ──────────────── */}
+      {regime === 'simples_nacional' && cbsSimplesEfetivo != null && ibsSimplesEfetivo != null && cenarioHibridoVerdadeiro != null && (
+        <div className="card p-6 space-y-5">
+          <div>
+            <h3 className="section-title mb-1"><span className="font-display">Cenários Simples Nacional — Reforma Tributária</span></h3>
+            <p className="text-xs text-ink-muted leading-relaxed">
+              A partir de 2027 o CBS substitui PIS/COFINS internamente no DAS; a partir de 2029 o IBS substitui ICMS/ISS gradualmente.
+              Abaixo dois caminhos possíveis para sua empresa.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            {/* Cenário 1 — Simples Pleno */}
+            <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-0.5">Cenário 1</div>
+                <div className="font-semibold text-sm text-ink-primary">Simples Nacional Pleno</div>
+                <div className="text-xs text-ink-muted">Permanece no Simples. DAS inalterado; partilha interna migra ICMS/ISS → IBS e PIS/COFINS → CBS.</div>
+              </div>
+
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-border">
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary">DAS Total / mês</td>
+                    <td className="py-1.5 text-right font-medium num">{fmt.moeda(impostoAtualMensal)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num w-16">{fmt.pct(aliquotaAtual)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary pl-3">→ CBS (PIS/COFINS)</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * cbsSimplesEfetivo)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(cbsSimplesEfetivo)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary pl-3">→ IBS (ICMS/ISS)</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * ibsSimplesEfetivo)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(ibsSimplesEfetivo)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary pl-3">→ IRPJ + CSLL + CPP</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(Math.max(0, impostoAtualMensal - faturamentoMensal * (cbsSimplesEfetivo + ibsSimplesEfetivo)))}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo))}</td>
+                  </tr>
+                  <tr className="border-t-2 border-border font-semibold">
+                    <td className="pt-2 text-ink-primary">Carga Total</td>
+                    <td className="pt-2 text-right num">{fmt.moeda(impostoAtualMensal)}</td>
+                    <td className="pt-2 text-right text-ink-primary num">{fmt.pct(aliquotaAtual)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="rounded-lg bg-warning-soft border border-warning-border px-3 py-2 text-xs text-ink-secondary leading-relaxed">
+                Seus clientes B2B creditam apenas <strong>{fmt.pct(cbsSimplesEfetivo)}</strong> de CBS (embutido no DAS),
+                não os {fmt.pct(aliquotaIVABruta)} cheios do IVA. Isso pode reduzir sua competitividade em cadeias B2B.
+              </div>
+            </div>
+
+            {/* Cenário 2 — Híbrido */}
+            <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-ink-muted mb-0.5">Cenário 2</div>
+                <div className="font-semibold text-sm text-ink-primary">Regime Híbrido (CBS/IBS por fora)</div>
+                <div className="text-xs text-ink-muted">Opta pela CBS/IBS plena (Art. 412–416 LC 214/2025). DAS reduzido ao IRPJ+CSLL+CPP; paga IVA com créditos plenos.</div>
+              </div>
+
+              <table className="w-full text-xs">
+                <tbody className="divide-y divide-border">
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary">DAS Reduzido / mês</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(cenarioHibridoVerdadeiro.dasReduzidoMensal)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num w-16">{fmt.pct(cenarioHibridoVerdadeiro.aliquotaDasReduzido)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary">IBS + CBS Bruto</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(cenarioHibridoVerdadeiro.ibsCBSBrutoMensal)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(aliquotaIVABruta)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-success pl-3">→ Créditos de insumos</td>
+                    <td className="py-1.5 text-right text-success num">({fmt.moeda(cenarioHibridoVerdadeiro.creditoMensal)})</td>
+                    <td className="py-1.5 text-right text-success num">({fmt.pct(cenarioHibridoVerdadeiro.creditoMensal / faturamentoMensal)})</td>
+                  </tr>
+                  <tr>
+                    <td className="py-1.5 text-ink-secondary">IBS + CBS Líquido</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(cenarioHibridoVerdadeiro.ibsCBSLiquidoMensal)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(cenarioHibridoVerdadeiro.ibsCBSLiquidoMensal / faturamentoMensal)}</td>
+                  </tr>
+                  <tr className="border-t-2 border-border font-semibold">
+                    <td className="pt-2 text-ink-primary">Carga Total</td>
+                    <td className="pt-2 text-right num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</td>
+                    <td className="pt-2 text-right text-ink-primary num">{fmt.pct(cenarioHibridoVerdadeiro.aliquotaEfetiva)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className={`rounded-lg px-3 py-2 text-xs leading-relaxed border ${
+                cenarioHibridoVerdadeiro.custoAdicionalVsSimples > 0
+                  ? 'bg-danger-soft border-danger-border text-danger'
+                  : 'bg-success-soft border-success-border text-success'
+              }`}>
+                Custo adicional vs Simples Pleno:{' '}
+                <strong>
+                  {cenarioHibridoVerdadeiro.custoAdicionalVsSimples > 0 ? '+' : ''}
+                  {fmt.moeda(cenarioHibridoVerdadeiro.custoAdicionalVsSimples)}/mês
+                </strong>
+                {' '}— mas seus clientes B2B creditam os <strong>{fmt.pct(aliquotaIVABruta)}</strong> cheios do IVA.
+              </div>
+            </div>
+
+          </div>
+        </div>
       )}
 
       {/* ── Gráfico de transição ─────────────────────────────────────────── */}

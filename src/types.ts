@@ -205,6 +205,17 @@ export interface ResultadoCalculo {
   anexoSimples2: AnexoSimples | undefined
   pctAnexo1: number | undefined
   cbsSimplesEfetivo: number | null
+  ibsSimplesEfetivo: number | null  // IBS (ICMS/ISS) como alíquota embutida no DAS (LC 123 partilha)
+  cenarioHibridoVerdadeiro: {       // Simples fica só IRPJ+CSLL+CPP; CBS/IBS pagos ao IVA pleno
+    aliquotaDasReduzido: number
+    dasReduzidoMensal: number
+    ibsCBSBrutoMensal: number
+    creditoMensal: number
+    ibsCBSLiquidoMensal: number
+    totalMensal: number
+    aliquotaEfetiva: number
+    custoAdicionalVsSimples: number
+  } | null
   baseCalculoEfetiva: number       // base de cálculo real após redutores (imóveis/agências/etc.)
   pctFornecedoresSimples: number
   creditoPerdidoFornecedorSimples: number

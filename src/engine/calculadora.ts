@@ -251,6 +251,20 @@ export const PARTILHA_CBS_SIMPLES: Record<import('../types').AnexoSimples, numbe
   V:   [0.1715, 0.1715, 0.1815, 0.1915, 0.1715, 0.2000], // varia por faixa
 }
 
+/**
+ * Percentual de Repartição IBS (ICMS/ISS) dentro do DAS por anexo e faixa.
+ * LC 123/2006 Anexos I–V — partilha ICMS (comércio/indústria) e ISS (serviços).
+ * Em Faixa 6 o ICMS/ISS é recolhido fora do DAS (sublimite estadual/municipal excedido) → 0%.
+ * A partir de 2029 essa parcela transita gradualmente para IBS (Arts. 501/508 LC 214/2025).
+ */
+export const PARTILHA_IBS_SIMPLES: Record<import('../types').AnexoSimples, number[]> = {
+  I:   [0.3400, 0.3400, 0.3400, 0.3350, 0.3350, 0.0000], // ICMS; F6: sublimite → fora do DAS
+  II:  [0.3200, 0.3200, 0.3200, 0.3200, 0.3200, 0.0000], // ICMS (IPI tratado como federal)
+  III: [0.3350, 0.3200, 0.3250, 0.3250, 0.3350, 0.0215], // ISS
+  IV:  [0.4050, 0.3800, 0.3857, 0.4023, 0.3992, 0.0000], // ISS; F6: fora do DAS
+  V:   [0.1414, 0.1414, 0.1700, 0.1800, 0.1950, 0.1485], // ISS
+}
+
 function getFaixaIdx(faturamentoAnual: number, tabela: FaixaSimples[]): number {
   for (let i = 0; i < tabela.length; i++) {
     if (faturamentoAnual <= tabela[i].limite) return i
@@ -270,6 +284,13 @@ export function getCBSSimples(anexo: import('../types').AnexoSimples, faturament
   const das = getAliquotaDAS(anexo, faturamentoAnual)
   const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
   return das * PARTILHA_CBS_SIMPLES[anexo][faixaIdx]
+}
+
+/** IBS (ICMS/ISS) componente do DAS = DAS_efetivo × partilha_IBS(anexo, faixa) */
+export function getIBSSimples(anexo: import('../types').AnexoSimples, faturamentoAnual: number): number {
+  const das = getAliquotaDAS(anexo, faturamentoAnual)
+  const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
+  return das * PARTILHA_IBS_SIMPLES[anexo][faixaIdx]
 }
 
 /** Fallback: infere anexo padrão pelo tipo de setor quando usuário não informou */
@@ -931,6 +952,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : getCBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
   })()
 
+  const ibsSimplesEfetivo: number | null = (() => {
+    if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return null
+    const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
+    return isMisto
+      ? (pctAnexo1! / 100) * getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
+        + (1 - pctAnexo1! / 100) * getIBSSimples(anexoSimples2!, faturamentoAnual)
+      : getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
+  })()
+
   // Taxa CBS típica de fornecedores Simples (Anexo I Faixa 3 — estimativa conservadora)
   // Real = DAS_efetivo × partilha_CBS; varia por anexo/faixa do fornecedor (desconhecido)
   const cbsFornecedorSimples = getCBSSimples('I', Math.min(faturamentoAnual, 720_000))
@@ -1136,6 +1166,24 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     anexoSimples2: anexoSimples2 ?? undefined,
     pctAnexo1: pctAnexo1 ?? undefined,
     cbsSimplesEfetivo,
+    ibsSimplesEfetivo,
+    cenarioHibridoVerdadeiro: (() => {
+      if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
+      // DAS reduzido: remove CBS e IBS internos — fica só IRPJ+CSLL+CPP
+      const aliquotaDasReduzido = Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo)
+      const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
+      const totalMensal = dasReduzidoMensal + impostoIVALiquidoMensal
+      return {
+        aliquotaDasReduzido,
+        dasReduzidoMensal,
+        ibsCBSBrutoMensal: impostoIVABrutoMensal,
+        creditoMensal: creditoInsumosMensal,
+        ibsCBSLiquidoMensal: impostoIVALiquidoMensal,
+        totalMensal,
+        aliquotaEfetiva: faturamentoMensal > 0 ? totalMensal / faturamentoMensal : 0,
+        custoAdicionalVsSimples: totalMensal - impostoAtualMensal,
+      }
+    })(),
     baseCalculoEfetiva,
     pctFornecedoresSimples,
     creditoPerdidoFornecedorSimples,
