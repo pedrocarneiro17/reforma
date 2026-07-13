@@ -47,8 +47,8 @@ async function criarAdminSeNecessario() {
   console.log(`✓ Admin criado: ${user} / ${senha}`)
 }
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.API_PORT || process.env.PORT || 3001
+app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`))
 initDb()
   .then(criarAdminSeNecessario)
-  .then(() => app.listen(PORT, () => console.log(`API rodando na porta ${PORT}`)))
-  .catch(e => { console.error('Falha ao iniciar:', e); process.exit(1) })
+  .catch(e => console.error('⚠️  Banco indisponível — rotas de autenticação não funcionarão:', e.message))

@@ -99,6 +99,11 @@ export interface DadosEntrada {
   // Supermercados — composição da cesta (Arts. 125/148 + Art. 128 LC 214/2025)
   pctCestaZero?: number                 // % da receita em itens de alíquota zero (cesta básica, hortifruti, frutas, ovos)
   pctCestaReduzida?: number             // % da receita em itens de redução 60% (demais alimentos Anexo VII, higiene/limpeza Anexo VIII)
+  // Lucro Real — apuração efetiva de IRPJ/CSLL
+  folhaPagamentoLRMensal?: number       // folha total (salários + encargos) — dedutível da base IRPJ/CSLL
+  aliquotaICMSEfetiva?: number          // alíquota efetiva líquida de créditos (ex: 0.08 para 8%)
+  aliquotaISSEfetiva?: number           // alíquota efetiva do ISSQN (ex: 0.03 para 3%)
+  despesasOperacionaisMensais?: number  // aluguel, energia, marketing, adm, depreciação etc. — dedutíveis da base IRPJ/CSLL
 }
 
 // ─── Pró-labore — LP e Lucro Real ────────────────────────────────────────────
@@ -194,6 +199,15 @@ export interface ResultadoCalculo {
   perfilClientes: PerfilClientes
   dadosMensais: DadosMes[] | null
 
+  // Ecos dos dados de entrada — usados pelo comparador de regimes para recalcular LP/LR
+  // com o conjunto completo de tributos (folha, ICMS/ISS, despesas, pró-labore)
+  folhaPagamentoLRMensal?: number
+  folhaMensal?: number                  // folha do Fator R (Simples) — fallback de folha p/ LP/LR no comparador
+  aliquotaICMSEfetiva?: number
+  aliquotaISSEfetiva?: number
+  despesasOperacionaisMensais?: number
+  sociosAdministradores?: SocioAdministrador[]
+
   aliquotaAtual: number
   aliquotaAtualEstimada: number
   fonteAliquota: FonteAliquota
@@ -276,6 +290,53 @@ export interface ResultadoCalculo {
   // Zona Franca de Manaus — créditos presumidos (Art. 450 LC 214/2025)
   creditoZFMIbs: number                 // crédito presumido IBS (% por tipo de bem × IBS devido estimado)
   creditoZFMCbs: number                 // crédito presumido CBS (2% × valor da operação — Art. 450 §2º II)
+  // INSS patronal sobre folha (LP e LR) — 20% × folha, custo que não existe no Simples (CPP embutido no DAS)
+  inssPatronalFolhaMensal: number
+  // IRPJ + CSLL que persistem após a reforma (não são substituídos por CBS/IBS) — LP e LR
+  irpjCsllPersistenteMensal: number
+  // Carga tributária total pós-reforma: CBS/IBS líquido + IRPJ/CSLL persistente + INSS patronal
+  // (substitui impostoIVALiquidoMensal como "carga real" para LP/LR, que não some, só substitui ICMS/ISS/PIS-COFINS)
+  cargaTotalReformaMensal: number
+  // Contribuição previdenciária patronal (LP e LR) — detalhamento
+  terceirosFolhaMensal: number   // terceiros (Sistema S) sobre folha de empregados, conforme atividade
+  cppProLaboreMensal: number     // 20% × pró-labore dos sócios (sem terceiros)
+  contribPrevidenciariaMensal: number  // CPP folha + terceiros + CPP pró-labore
+  // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
+  icmsAtualMensal: number
+  issAtualMensal: number
+  // Lucro Presumido — detalhamento da carga atual por tributo
+  apuracaoLucroPresumido: {
+    lucroPresumidoBase: number   // faturamento × presunção IRPJ
+    irpj: number                 // 15% × lucro presumido
+    irpjAdicional: number        // 10% sobre o que exceder R$ 20 mil/mês
+    csll: number                 // 9% × (faturamento × presunção CSLL)
+    pisCofins: number            // cumulativo 3,65%
+    icms: number                 // alíquota informada no formulário ou média 12%
+    iss: number                  // alíquota informada no formulário ou média 3%
+    ipi: number                  // 5% médio (indústria, apenas quando não informado)
+    inssPatronal: number         // 20% × folha de empregados (CPP)
+    terceiros: number            // terceiros (Sistema S) × folha de empregados
+    cppProLabore: number         // 20% × pró-labore dos sócios
+    icmsIssInformado: boolean    // true = usa alíquotas do formulário; false = médias
+    totalImpostos: number
+  } | null
+  // Lucro Real — detalhamento efetivo quando dados reais são fornecidos
+  apuracaoLucroReal: {
+    pisCofinsLiquido: number
+    icmsLiquido: number
+    issLiquido: number
+    inssPatronal: number         // 20% × folha de empregados (CPP)
+    terceiros: number            // terceiros (Sistema S) × folha de empregados
+    cppProLabore: number         // 20% × pró-labore dos sócios
+    proLabore: number            // total de pró-labore dos sócios
+    folhaPagamento: number
+    despesasOperacionais: number
+    lucroRealBase: number
+    irpj: number
+    irpjAdicional: number
+    csll: number
+    totalImpostos: number
+  } | null
 }
 
 // ─── Resultado com dados comparativos ────────────────────────────────────────

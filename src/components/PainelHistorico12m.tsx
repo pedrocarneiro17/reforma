@@ -31,15 +31,25 @@ interface PainelHistorico12mProps {
 }
 
 export default function PainelHistorico12m({ resultados }: PainelHistorico12mProps) {
-  const { projecaoMesAMes, aliquotaAtual, aliquotaAtualEstimada, fonteAliquota } = resultados
+  const {
+    projecaoMesAMes, aliquotaAtual, aliquotaAtualEstimada, fonteAliquota,
+    regime, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
+  } = resultados
 
   if (!projecaoMesAMes) return null
+
+  // LP/LR: os impostos reais informados incluem IRPJ/CSLL e contribuição previdenciária —
+  // a série simulada precisa somar esses componentes (que persistem na reforma) ao IVA
+  // do mês para comparar conjunto com conjunto.
+  const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
+  const fixoMensalReforma = ehLPouLR ? irpjCsllPersistenteMensal + contribPrevidenciariaMensal : 0
+  const labelSimulado = ehLPouLR ? 'Pós-reforma (simulado)' : 'IVA Dual (simulado)'
 
   const data = projecaoMesAMes.map(m => ({
     mes: m.label,
     'Faturamento': m.faturamento,
     'Impostos Reais Pagos': m.impostosReais || 0,
-    'IVA Dual (simulado)': Math.round(m.ivaLiquido),
+    [labelSimulado]: Math.round(m.ivaLiquido + fixoMensalReforma),
     'Alíq. Real (%)': m.aliquotaEfetivaReal != null
       ? parseFloat((m.aliquotaEfetivaReal * 100).toFixed(2))
       : null,
@@ -50,7 +60,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
 
   const totalFat = projecaoMesAMes.reduce((s, m) => s + m.faturamento, 0)
   const totalImpReais = projecaoMesAMes.reduce((s, m) => s + m.impostosReais, 0)
-  const totalIVASimulado = projecaoMesAMes.reduce((s, m) => s + m.ivaLiquido, 0)
+  const totalIVASimulado = projecaoMesAMes.reduce((s, m) => s + m.ivaLiquido + fixoMensalReforma, 0)
   const totalExportacoes = projecaoMesAMes.reduce((s, m) => s + m.exportacoes, 0)
   const totalInsumos = projecaoMesAMes.reduce((s, m) => s + m.insumos, 0)
 
@@ -64,7 +74,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
             Histórico Real — Últimos 12 Meses
           </h3>
           <p className="text-ink-muted text-xs mt-0.5">
-            Dados informados mês a mês · Comparativo: impostos reais pagos vs IVA Dual simulado
+            Dados informados mês a mês · Comparativo: impostos reais pagos vs {ehLPouLR ? 'carga pós-reforma simulada' : 'IVA Dual simulado'}
           </p>
         </div>
         {fonteAliquota === 'real' && (
@@ -93,7 +103,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
         )}
         {temImpostosReais && (
           <KPICard
-            label="IVA Dual Simulado 12m"
+            label={ehLPouLR ? 'Pós-reforma Simulado 12m' : 'IVA Dual Simulado 12m'}
             valor={fmt.moeda(totalIVASimulado)}
             sub={diffAnual != null
               ? `${diffAnual > 0 ? '▲' : '▼'} ${fmt.moeda(Math.abs(diffAnual))} vs atual`
@@ -104,7 +114,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
         )}
         {!temImpostosReais && (
           <KPICard
-            label="IVA Dual Simulado 12m"
+            label={ehLPouLR ? 'Pós-reforma Simulado 12m' : 'IVA Dual Simulado 12m'}
             valor={fmt.moeda(totalIVASimulado)}
             sub="baseado na alíquota do setor"
             color="cyan"
@@ -153,8 +163,8 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
       <div className="space-y-3">
         <h4 className="text-sm font-medium text-ink-secondary">
           {temImpostosReais
-            ? 'Faturamento vs Impostos Reais vs IVA Dual por mês'
-            : 'Faturamento vs IVA Dual simulado por mês'}
+            ? `Faturamento vs Impostos Reais vs ${ehLPouLR ? 'Pós-reforma' : 'IVA Dual'} por mês`
+            : `Faturamento vs ${ehLPouLR ? 'carga pós-reforma' : 'IVA Dual'} simulado por mês`}
         </h4>
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
@@ -191,7 +201,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
               {temImpostosReais && (
                 <Bar yAxisId="left" dataKey="Impostos Reais Pagos" fill="rgba(192,138,64,0.6)" radius={[3, 3, 0, 0]} barSize={18} />
               )}
-              <Bar yAxisId="left" dataKey="IVA Dual (simulado)" fill="rgba(47,125,87,0.65)" radius={[3, 3, 0, 0]} barSize={18} />
+              <Bar yAxisId="left" dataKey={labelSimulado} fill="rgba(47,125,87,0.65)" radius={[3, 3, 0, 0]} barSize={18} />
               {temImpostosReais && (
                 <Line
                   yAxisId="right"
@@ -206,6 +216,12 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
             </ComposedChart>
           </ResponsiveContainer>
         </div>
+        {ehLPouLR && fixoMensalReforma > 0 && (
+          <p className="text-[11px] text-ink-muted leading-relaxed">
+            Pós-reforma (simulado) = IVA líquido do mês + {fmt.moeda(fixoMensalReforma)}/mês de IRPJ/CSLL e
+            contribuição previdenciária — tributos que persistem após a reforma e estão incluídos nos impostos reais informados.
+          </p>
+        )}
       </div>
 
       {/* ── Tabela detalhada por mês ─────────────────────────────────────── */}

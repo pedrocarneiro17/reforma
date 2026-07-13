@@ -393,6 +393,24 @@ const MARGEM_LR: Record<TipoSetor, number> = {
   industria: 0.05,
 }
 
+/**
+ * Contribuições de terceiros ("Sistema S" + outras entidades) sobre a folha de EMPREGADOS.
+ * Somam-se aos 20% da CPP patronal. Variam conforme a atividade (código FPAS).
+ * Pró-labore de sócios NÃO tem terceiros — apenas os 20% de CPP.
+ * Total padrão 5,8%: entidade (1,5%) + aprendizagem (1,0%) + INCRA (0,2%) + Salário-Educação (2,5%) + SEBRAE (0,6%).
+ */
+const TERCEIROS_FOLHA: Record<TipoSetor, number> = {
+  comercio:  0.058, // SESC 1,5% + SENAC 1,0% + INCRA 0,2% + Sal-Educação 2,5% + SEBRAE 0,6%
+  industria: 0.058, // SESI 1,5% + SENAI 1,0% + INCRA 0,2% + Sal-Educação 2,5% + SEBRAE 0,6%
+  servico:   0.058, // SESC 1,5% + SENAC 1,0% + INCRA 0,2% + Sal-Educação 2,5% + SEBRAE 0,6% (FPAS 515)
+  misto:     0.058,
+}
+
+/** Rótulo das entidades de terceiros conforme a atividade — para exibição na UI. */
+export function labelTerceiros(tipo: TipoSetor): string {
+  return tipo === 'industria' ? 'SESI/SENAI + Sal-Educação + INCRA + SEBRAE' : 'SESC/SENAC + Sal-Educação + INCRA + SEBRAE'
+}
+
 export function calcularIRPJAdicional(
   regime: TipoRegime,
   tipoSetor: TipoSetor,
@@ -818,6 +836,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctMedicamentos = 0,
     pctCestaZero = 0,
     pctCestaReduzida = 0,
+    folhaPagamentoLRMensal = 0,
+    aliquotaICMSEfetiva,
+    aliquotaISSEfetiva,
+    despesasOperacionaisMensais = 0,
   } = dados
   const faturamentoAnual = faturamentoMensal * 12
 
@@ -837,10 +859,45 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Anexo efetivo = sempre o informado pelo usuário (ou inferido pelo setor)
   const anexoEfetivoComFatorR = anexoEfetivo
 
+  // ── Contribuição Previdenciária Patronal e ICMS/ISS — comuns a LP e LR ──────
+  // (LC 8.212/1991): CPP 20% sobre folha de EMPREGADOS + terceiros (Sistema S) conforme atividade;
+  // CPP 20% sobre pró-labore de sócios (sem terceiros). No Simples estão embutidos no DAS (CPP).
+  const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
+  // Fallback: se a folha específica LP/LR não foi informada, usa a folha do Fator R (Simples) —
+  // garante que o comparador de regimes considere o custo de pessoal também para quem é do SN.
+  const folhaEmpregadosMensal  = folhaPagamentoLRMensal > 0 ? folhaPagamentoLRMensal : folhaMensal
+  const terceirosAliq          = TERCEIROS_FOLHA[setor.tipo]
+  const cppFolhaEmpregados     = ehLPouLR ? folhaEmpregadosMensal * INSS_ALIQ_PATRONAL : 0
+  const terceirosFolhaMensal   = ehLPouLR ? folhaEmpregadosMensal * terceirosAliq : 0
+  const totalProLaboreMensal   = sociosAdministradores.reduce((s, so) => s + so.prolaboreMensal, 0)
+  const cppProLaboreMensal     = ehLPouLR ? totalProLaboreMensal * INSS_ALIQ_PATRONAL : 0
+  // Contribuição previdenciária total da empresa (folha empregados + terceiros + pró-labore)
+  const contribPrevidenciariaMensal   = cppFolhaEmpregados + terceirosFolhaMensal + cppProLaboreMensal
+  // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
+  const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
+  // ICMS/ISS "hoje": alíquotas informadas no formulário; sem informação cai na média por
+  // setor (mesma regra para LP e LR — comparação justa entre os dois regimes)
+  const icmsAtualMensal = ehLPouLR
+    ? (aliquotaICMSEfetiva != null
+        ? faturamentoMensal * aliquotaICMSEfetiva
+        : (setor.tipo === 'comercio' || setor.tipo === 'industria')
+          ? faturamentoMensal * 0.12
+          : 0)
+    : 0
+  const issAtualMensal = ehLPouLR
+    ? (aliquotaISSEfetiva != null
+        ? faturamentoMensal * aliquotaISSEfetiva
+        : (setor.tipo === 'servico' || setor.tipo === 'misto')
+          ? faturamentoMensal * 0.03
+          : 0)
+    : 0
+
   // ── 1. Carga Atual ──────────────────────────────────────────────────────────
   let aliquotaAtual: number
   let impostoAtualMensal: number
   let fonteAliquota: FonteAliquota = 'estimada'
+  // Detalhamento da carga atual do Lucro Presumido (preenchido no branch abaixo)
+  let apuracaoLucroPresumido: import('../types').ResultadoCalculo['apuracaoLucroPresumido'] = null
 
   if (aliquotaAtualOverride != null && aliquotaAtualOverride > 0) {
     aliquotaAtual = aliquotaAtualOverride
@@ -862,19 +919,67 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : getAliquotaSimplesNacional(setor.tipo, faturamentoAnual, anexoEfetivoComFatorR)
     impostoAtualMensal = faturamentoMensal * aliquotaAtual
   } else if (regime === 'lucro_presumido') {
-    aliquotaAtual = getAliquotaLucroPresumido(setor.tipo, setor)
-    impostoAtualMensal = faturamentoMensal * aliquotaAtual + calcularIRPJAdicional('lucro_presumido', setor.tipo, faturamentoMensal, setor)
-    aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaAtual
+    // Carga hoje decomposta por tributo (RIR/2018, Lei 9.249/1995, Lei 9.718/1998):
+    // IRPJ 15% × presunção + adicional 10% + CSLL 9% × presunção + PIS/COFINS cumulativo 3,65%
+    // + ICMS/ISS pelas alíquotas efetivas informadas no formulário (fallback: média por setor)
+    // + INSS patronal 20% × folha (CPP — no Simples já está dentro do DAS)
+    const pIRPJ = setor.presuncaoLPIRPJ ?? PRESUNCAO_LP_IRPJ[setor.tipo]
+    const pCSLL = setor.presuncaoLPCSLL ?? PRESUNCAO_LP_CSLL[setor.tipo]
+    const lucroPresumido = faturamentoMensal * pIRPJ
+    const irpjLP          = lucroPresumido * 0.15
+    const irpjAdicionalLP = Math.max(0, lucroPresumido - IRPJ_ADICIONAL_LIMIAR) * 0.10
+    const csllLP          = faturamentoMensal * pCSLL * 0.09
+    const pisCofinsLP     = faturamentoMensal * 0.0365  // cumulativo: PIS 0,65% + COFINS 3%
+    // IPI médio 5% para indústria apenas quando o usuário não informou alíquotas próprias
+    const ipiLP = setor.tipo === 'industria' && aliquotaICMSEfetiva == null ? faturamentoMensal * 0.05 : 0
+    impostoAtualMensal = irpjLP + irpjAdicionalLP + csllLP + pisCofinsLP + icmsAtualMensal + issAtualMensal + ipiLP + contribPrevidenciariaMensal
+    aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
+    apuracaoLucroPresumido = {
+      lucroPresumidoBase: lucroPresumido,
+      irpj: irpjLP,
+      irpjAdicional: irpjAdicionalLP,
+      csll: csllLP,
+      pisCofins: pisCofinsLP,
+      icms: icmsAtualMensal,
+      iss: issAtualMensal,
+      ipi: ipiLP,
+      inssPatronal: cppFolhaEmpregados,
+      terceiros: terceirosFolhaMensal,
+      cppProLabore: cppProLaboreMensal,
+      icmsIssInformado: aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null,
+      totalImpostos: impostoAtualMensal,
+    }
   } else if (regime === 'produtor_rural') {
     // Produtor rural PJ: base LP (presunção 8% comércio/agroindústria); sem IBS/CBS se não-contribuinte
     aliquotaAtual = getAliquotaLucroPresumido(setor.tipo, setor)
     impostoAtualMensal = faturamentoMensal * aliquotaAtual + calcularIRPJAdicional('lucro_presumido', setor.tipo, faturamentoMensal, setor)
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaAtual
   } else {
-    // lucro_real (default)
-    aliquotaAtual = getAliquotaLucroReal(setor.tipo)
-    impostoAtualMensal = faturamentoMensal * aliquotaAtual + calcularIRPJAdicional('lucro_real', setor.tipo, faturamentoMensal)
-    aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaAtual
+    // lucro_real
+    const temDadosLR = folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0
+    if (temDadosLR) {
+      // Cálculo efetivo: base real de IRPJ/CSLL deduzindo folha (+CPP+terceiros), pró-labore (+CPP),
+      // despesas, ICMS, ISS e PIS/COFINS não-cumulativo. Todos são dedutíveis do lucro real.
+      const pisCofinsAliq   = 0.0925  // PIS 1,65% + COFINS 7,6% não-cumulativos
+      const pisCofinsCredito = insumosMensais * pisCofinsAliq
+      const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
+      const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
+      const lucroReal = Math.max(0,
+        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal
+        - despesasOperacionaisMensais - icmsAtualMensal - issAtualMensal - pisCofinsLiquido
+      )
+      const irpjBase    = lucroReal * 0.15
+      const irpjAdicional = Math.max(0, lucroReal - IRPJ_ADICIONAL_LIMIAR) * 0.10
+      const csll        = lucroReal * 0.09
+      impostoAtualMensal = irpjBase + irpjAdicional + csll + pisCofinsLiquido + icmsAtualMensal + issAtualMensal + contribPrevidenciariaMensal
+      aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
+    } else {
+      aliquotaAtual = getAliquotaLucroReal(setor.tipo)
+      impostoAtualMensal = faturamentoMensal * aliquotaAtual + calcularIRPJAdicional('lucro_real', setor.tipo, faturamentoMensal)
+      // Contribuição previdenciária quando não há dados de custo: estimativa via margem
+      impostoAtualMensal += contribPrevidenciariaMensal
+      aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaAtual
+    }
   }
 
   // Alíquota estimada de tabela (sempre calculada para comparativo na UI)
@@ -1070,18 +1175,67 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     ? impostoIVALiquidoMensal / faturamentoMensal
     : 0
 
+  // ── 3a. Carga total pós-reforma (CBS/IBS + IRPJ/CSLL + INSS patronal) ──────
+  // impostoIVALiquidoMensal só substitui ICMS/ISS/PIS-COFINS — IRPJ, CSLL e INSS
+  // patronal continuam existindo após 2033 e precisam ser somados para refletir
+  // a carga tributária real pós-reforma em LP e LR.
+  const irpjCsllPersistenteMensal = (() => {
+    if (regime === 'lucro_presumido') {
+      const pIRPJ = setor.presuncaoLPIRPJ ?? PRESUNCAO_LP_IRPJ[setor.tipo]
+      const pCSLL = setor.presuncaoLPCSLL ?? PRESUNCAO_LP_CSLL[setor.tipo]
+      const lucro = faturamentoMensal * pIRPJ
+      return lucro * 0.15 + Math.max(0, lucro - IRPJ_ADICIONAL_LIMIAR) * 0.10 + faturamentoMensal * pCSLL * 0.09
+    }
+    if (regime === 'lucro_real') {
+      const temDadosLR = folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0
+      if (temDadosLR) {
+        // Pós-reforma (2033): ICMS/ISS/PIS-COFINS extintos; IBS/CBS é "por fora" e não
+        // reduz a base de IRPJ/CSLL — o lucro tributável fica MAIOR que o atual.
+        const lucroReal = Math.max(0,
+          faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal - despesasOperacionaisMensais
+        )
+        return lucroReal * 0.15 + Math.max(0, lucroReal - IRPJ_ADICIONAL_LIMIAR) * 0.10 + lucroReal * 0.09
+      }
+      // Sem dados reais: estimativa via margem presumida (mesma base do Lucro Presumido)
+      const pIRPJ = PRESUNCAO_LP_IRPJ[setor.tipo]
+      const pCSLL = PRESUNCAO_LP_CSLL[setor.tipo]
+      const lucro = faturamentoMensal * pIRPJ
+      return lucro * 0.15 + Math.max(0, lucro - IRPJ_ADICIONAL_LIMIAR) * 0.10 + faturamentoMensal * pCSLL * 0.09
+    }
+    return 0
+  })()
+
+  // Contribuição previdenciária (folha + terceiros + pró-labore) persiste após a reforma
+  const cargaTotalReformaMensal = ehLPouLR
+    ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
+    : impostoIVALiquidoMensal
+
   // ── 3. Projeção de Transição por Ano ────────────────────────────────────────
   // Arts. 501 (ICMS) e 508 (ISS) LC 214/2025: redução de 10%/ano de 2029 a 2032 (base: 31/12/2028).
-  // 2026–2028: CBS substitui PIS/COFINS (swap neutro); ICMS/ISS inalterados.
-  // 2033: ICMS e ISS extintos; IVA Dual (CBS+IBS) pleno.
+  // 2027: CBS substitui PIS/COFINS. 2033: ICMS e ISS extintos; IVA Dual (CBS+IBS) pleno.
   // Simples Nacional/MEI: DAS total constante durante toda a transição (partilha interna rebalanceia).
   // Redutor governo (Art. 349 III LC 214 — estimativa, valores fixados anualmente pelo Senado):
   const REDUTOR_GOVERNO: Record<number, number> = { 2029: 0.10, 2030: 0.20, 2031: 0.30, 2032: 0.40 }
   const fracGoverno = Math.min(1, Math.max(0, pctVendasGoverno / 100))
 
   // Componente ICMS/ISS da carga atual: base para aplicar a redução per Arts. 501/508
-  const icmsIssMensalEstimado = estimarICMSISS(regime, setor.tipo, faturamentoMensal, insumosMensais, uf)
+  // LP/LR: usa ICMS/ISS já apurados (alíquotas informadas ou médias); demais regimes usam a estimativa
+  const icmsIssMensalEstimado = ehLPouLR
+    ? icmsAtualMensal + issAtualMensal
+    : estimarICMSISS(regime, setor.tipo, faturamentoMensal, insumosMensais, uf)
   const baseFixaMensal = impostoAtualMensal - icmsIssMensalEstimado  // IRPJ/CSLL + PIS/COFINS (este swap→CBS neutro)
+
+  // Decomposição da carga atual (LP sempre; LR quando há dados efetivos) — permite projetar
+  // a transição pelo CONJUNTO de tributos, convergindo de impostoAtualMensal (2026) para
+  // cargaTotalReformaMensal (2033) sem dupla contagem do PIS/COFINS→CBS.
+  const temDecomposicaoLPLR =
+    regime === 'lucro_presumido' ||
+    (regime === 'lucro_real' && (folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0))
+  const pisCofinsHojeComp = regime === 'lucro_presumido'
+    ? faturamentoMensal * 0.0365
+    : Math.max(0, (faturamentoMensal - insumosMensais) * 0.0925)
+  const icmsIssHojeComp = icmsAtualMensal + issAtualMensal + (apuracaoLucroPresumido?.ipi ?? 0)
+  const irpjCsllHojeComp = Math.max(0, impostoAtualMensal - pisCofinsHojeComp - icmsIssHojeComp - contribPrevidenciariaMensal)
 
   const anosProjecao = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
   const projecaoAnos: ProjecaoAno[] = anosProjecao.map(ano => {
@@ -1089,7 +1243,35 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     const redutorGov = fracGoverno * (REDUTOR_GOVERNO[ano] ?? 0)
     const impostoIVAAjustado = impostoIVALiquidoMensal * (1 - redutorGov)
 
-    // ICMS/ISS reduzem per Arts. 501/508; IBS cresce na mesma proporção
+    if (temDecomposicaoLPLR) {
+      // Modelo por componentes (alinhado à carga total do comparador):
+      // • PIS/COFINS → extinto em 2027, substituído pela CBS (fatia federal do IVA)
+      // • ICMS/ISS/IPI → reduzem 10%/ano 2029-2032 e extinguem em 2033 (Arts. 501/508)
+      // • IBS (fatia estadual/municipal do IVA) cresce na mesma proporção
+      // • IRPJ/CSLL migram da base atual para a base pós-reforma conforme a transição
+      // • Contribuição previdenciária constante (não é substituída)
+      const pisCofinsAno = ano >= 2027 ? 0 : pisCofinsHojeComp
+      const cbsAno       = ano >= 2027 ? impostoIVAAjustado * CBS_SHARE_IVA : 0
+      const icmsIssAno   = icmsIssHojeComp * (1 - reducaoAnual)
+      const ibsAno       = impostoIVAAjustado * (1 - CBS_SHARE_IVA) * reducaoAnual
+      const irpjCsllAno  = irpjCsllHojeComp + (irpjCsllPersistenteMensal - irpjCsllHojeComp) * reducaoAnual
+      const impostoMensal = pisCofinsAno + cbsAno + icmsIssAno + ibsAno + irpjCsllAno + contribPrevidenciariaMensal
+
+      const parcelaAtual = pisCofinsAno + icmsIssAno + irpjCsllAno + contribPrevidenciariaMensal
+      const parcelaNova  = cbsAno + ibsAno
+      return {
+        ano,
+        impostoMensal,
+        impostoAnual: impostoMensal * 12,
+        parcelaAtual,
+        parcelaAtualAnual: parcelaAtual * 12,
+        parcelaNovaAnual:  parcelaNova * 12,
+        aliquotaEfetiva: faturamentoMensal > 0 ? impostoMensal / faturamentoMensal : 0,
+      }
+    }
+
+    // Modelo legado (SN/MEI/PF/produtor rural e LR sem dados): ICMS/ISS reduzem
+    // per Arts. 501/508; IBS cresce na mesma proporção; demais tributos constantes.
     const icmsIssResidual = icmsIssMensalEstimado * (1 - reducaoAnual)
     const ibsProporcional  = impostoIVAAjustado   * reducaoAnual
     const impostoMensal    = baseFixaMensal + icmsIssResidual + ibsProporcional
@@ -1108,14 +1290,17 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   })
 
   // ── 4. Análise Comparativa e Alertas ────────────────────────────────────────
-  const variacaoAbsolutaMensal = impostoIVALiquidoMensal - impostoAtualMensal
+  const variacaoAbsolutaMensal = cargaTotalReformaMensal - impostoAtualMensal
   const variacaoPercentual = impostoAtualMensal > 0
     ? (variacaoAbsolutaMensal / impostoAtualMensal) * 100
     : 0
 
+  // Reajuste de preço para manter a mesma margem líquida: compara alíquotas do CONJUNTO
+  // de tributos (hoje vs pós-reforma), não apenas o IVA isolado.
+  const aliquotaTotalReforma = faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0
   let reajustePrecoNecessario = 0
-  if (aliquotaIVAEfetiva > aliquotaAtual && aliquotaIVAEfetiva < 1) {
-    reajustePrecoNecessario = ((1 - aliquotaAtual) / (1 - aliquotaIVAEfetiva) - 1) * 100
+  if (aliquotaTotalReforma > aliquotaAtual && aliquotaTotalReforma < 1) {
+    reajustePrecoNecessario = ((1 - aliquotaAtual) / (1 - aliquotaTotalReforma) - 1) * 100
   }
 
   // ── 5. Análise do Simples Nacional Híbrido / MEI Híbrido ────────────────────
@@ -1154,6 +1339,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     exportacoesMensais,
     perfilClientes,
     dadosMensais,
+
+    // Ecoa os dados de entrada para que o comparador de regimes recalcule LP/LR
+    // com o mesmo conjunto completo de tributos (folha, ICMS/ISS, despesas, pró-labore).
+    folhaPagamentoLRMensal,
+    folhaMensal,
+    aliquotaICMSEfetiva,
+    aliquotaISSEfetiva,
+    despesasOperacionaisMensais,
+    sociosAdministradores,
 
     aliquotaAtual,
     aliquotaAtualEstimada,
@@ -1255,6 +1449,50 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       const lucro = faturamentoMensal * pIRPJ
       return lucro * 0.15 + Math.max(0, lucro - IRPJ_ADICIONAL_LIMIAR) * 0.10 + faturamentoMensal * pCSLL * 0.09
     })(),
+
+    inssPatronalFolhaMensal: cppFolhaEmpregados,
+    terceirosFolhaMensal,
+    cppProLaboreMensal,
+    contribPrevidenciariaMensal,
+    icmsAtualMensal,
+    issAtualMensal,
+
+    irpjCsllPersistenteMensal,
+    cargaTotalReformaMensal,
+    apuracaoLucroPresumido,
+
+    apuracaoLucroReal: (() => {
+      if (regime !== 'lucro_real') return null
+      const temDadosLR = folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0
+      if (!temDadosLR) return null
+      const pisCofinsAliq    = 0.0925
+      const pisCofinsCredito = insumosMensais * pisCofinsAliq
+      const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
+      const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
+      const lucroRealBase  = Math.max(0,
+        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal
+        - despesasOperacionaisMensais - icmsAtualMensal - issAtualMensal - pisCofinsLiquido
+      )
+      const irpj = lucroRealBase * 0.15
+      const irpjAdicional = Math.max(0, lucroRealBase - IRPJ_ADICIONAL_LIMIAR) * 0.10
+      const csll = lucroRealBase * 0.09
+      return {
+        pisCofinsLiquido,
+        icmsLiquido: icmsAtualMensal,
+        issLiquido: issAtualMensal,
+        inssPatronal: cppFolhaEmpregados,
+        terceiros: terceirosFolhaMensal,
+        cppProLabore: cppProLaboreMensal,
+        proLabore: totalProLaboreMensal,
+        folhaPagamento: folhaEmpregadosMensal,
+        despesasOperacionais: despesasOperacionaisMensais,
+        lucroRealBase,
+        irpj,
+        irpjAdicional,
+        csll,
+        totalImpostos: irpj + irpjAdicional + csll + pisCofinsLiquido + icmsAtualMensal + issAtualMensal + contribPrevidenciariaMensal,
+      }
+    })(),
   }
 }
 
@@ -1337,8 +1575,12 @@ export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativ
     })
   })
 
+  // "Melhor" é sempre pelo CONJUNTO de tributos, não por um imposto isolado:
+  // - hoje: impostoAtualMensal (IRPJ+CSLL+PIS/COFINS+ICMS+ISS+contrib. previdenciária)
+  // - reforma: cargaTotalReformaMensal (IBS/CBS líquido + IRPJ/CSLL + contrib. previdenciária)
+  // O IVA Dual isolado é idêntico entre regimes (mesma receita/insumos) e não distingue cenários.
   const menorAtual = Math.min(...resultados.map(r => r.impostoAtualMensal))
-  const menorIVA   = Math.min(...resultados.map(r => r.impostoIVALiquidoMensal))
+  const menorIVA   = Math.min(...resultados.map(r => r.cargaTotalReformaMensal))
   const menorDelta = Math.min(...resultados.map(r => Math.abs(r.variacaoAbsolutaMensal)))
 
   const acimaDaFaixaSimples = faturamentoAnual > LIMITE_SIMPLES_ANUAL
@@ -1347,7 +1589,7 @@ export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativ
   return resultados.map(r => ({
     ...r,
     melhorAtual:  r.impostoAtualMensal === menorAtual,
-    melhorIVA:    r.impostoIVALiquidoMensal === menorIVA,
+    melhorIVA:    r.cargaTotalReformaMensal === menorIVA,
     menorImpacto: Math.abs(r.variacaoAbsolutaMensal) === menorDelta,
     inaplicavel: (r.regime === 'simples_nacional' && acimaDaFaixaSimples) ||
                  (r.regime === 'mei' && acimaDaFaixaMEI),
@@ -1387,9 +1629,10 @@ export function calcularCurvaCrescimento(dados: DadosEntrada, percentuais: numbe
       faturamentoMensal: fatAjustado,
       faturamentoAnual: fatAnual,
       impostoAtualMensal: resultado.impostoAtualMensal,
-      impostoIVAMensal: resultado.impostoIVALiquidoMensal,
+      // Carga total pós-reforma (IVA + IRPJ/CSLL + contrib. prev.) — comparável com impostoAtualMensal
+      impostoIVAMensal: resultado.cargaTotalReformaMensal,
       aliquotaAtual: resultado.aliquotaAtual,
-      aliquotaIVA: resultado.aliquotaIVAEfetiva,
+      aliquotaIVA: fatAjustado > 0 ? resultado.cargaTotalReformaMensal / fatAjustado : 0,
       acimaDaFaixaSimples: fatAnual > LIMITE_SIMPLES_ANUAL,
     }
   })

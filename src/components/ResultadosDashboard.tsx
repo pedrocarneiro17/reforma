@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { fmt } from '../engine/calculadora'
+import { fmt, labelTerceiros } from '../engine/calculadora'
 import GraficoTransicao from './GraficoTransicao'
 import PainelHistorico12m from './PainelHistorico12m'
 import ComparadorRegimes from './ComparadorRegimes'
 import SimuladorCrescimento from './SimuladorCrescimento'
+import MemoriaCalculo from './MemoriaCalculo'
 import type { ResultadoCalculo, TipoRegime, PerfilClientes, AnaliseGrupoSimples, AnaliseHolding, AnaliseICMS, AnaliseFatorR, AnaliseProlabore } from '../types'
 import { UF_NOMES } from '../engine/calculadora'
 
@@ -28,6 +29,7 @@ interface ResultadosDashboardProps {
 }
 
 export default function ResultadosDashboard({ resultados, onVoltar }: ResultadosDashboardProps) {
+  const [aba, setAba] = useState<'analise' | 'memoria'>('analise')
   const {
     regime, setor, faturamentoMensal, insumosMensais, perfilClientes,
     aliquotaAtual, impostoAtualMensal, impostoAtualAnual,
@@ -49,7 +51,11 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     alertaCashback, creditoRegimeAutomotivo, creditoZFMIbs, creditoZFMCbs,
     pisCofinsNoDAsMensal, cbsIVADualMensal,
     irpjCsllLPMensal,
+    apuracaoLucroReal, apuracaoLucroPresumido,
+    cargaTotalReformaMensal, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
   } = resultados
+
+  const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
 
   const isMEI = regime === 'mei'
   const isPF  = regime === 'profissional_liberal'
@@ -81,7 +87,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       {/* ── Cabeçalho dos resultados ─────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <button onClick={onVoltar} className="btn-ghost flex items-center gap-1.5 mb-3 -ml-1">
+          <button onClick={onVoltar} className="btn-ghost flex items-center gap-1.5 mb-3 -ml-1 no-print">
             ← Voltar aos dados
           </button>
           {nomePrincipal && (
@@ -96,79 +102,165 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         </div>
       </div>
 
+      {/* ── Abas: Análise Tributária | Memória de Cálculo ────────────────── */}
+      <div className="flex items-center justify-between gap-3 border-b border-border -mt-2 no-print">
+        <div className="flex gap-1">
+          {([['analise', 'Análise Tributária'], ['memoria', 'Memória de Cálculo']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setAba(id)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
+                ${aba === id ? 'border-ink text-ink' : 'border-transparent text-ink-muted hover:text-ink-secondary'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="btn-ghost flex items-center gap-1.5 text-sm flex-shrink-0"
+          title="Gera um PDF da aba atual (use 'Salvar como PDF' na caixa de impressão)"
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" />
+          </svg>
+          Imprimir / PDF
+        </button>
+      </div>
+
+      {aba === 'memoria' ? (
+        <MemoriaCalculo resultados={resultados} />
+      ) : (
+      <>
       {/* ── Resumo executivo — recado factual no topo ────────────────────── */}
       <div className={`${resumoClasse} text-sm leading-relaxed`}>
         {resumo.texto}
       </div>
 
       {/* ── Cards de resumo ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Carga Atual */}
-        <div className="stat-card border-l-4 border-l-info">
-          <span className="stat-label">Carga Atual (Mensal)</span>
-          <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
-          <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · {fmt.moeda(impostoAtualAnual)}/ano</span>
-          <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed flex items-center gap-2 flex-wrap">
-            <span>Regime: <strong className="text-ink">{NOMES_REGIME[regime]}</strong></span>
-            {resultados.fonteAliquota === 'real' && (
-              <span className="badge badge-warning text-xs font-medium">
-                alíquota real
-              </span>
-            )}
+      {regime === 'simples_nacional' && cenarioHibridoVerdadeiro != null && cbsSimplesEfetivo != null && ibsSimplesEfetivo != null ? (
+        /* Simples Nacional: dois cenários comparados */
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Carga Atual */}
+          <div className="stat-card border-l-4 border-l-info">
+            <span className="stat-label">Carga Atual — DAS (Mensal)</span>
+            <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
+            <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · {fmt.moeda(impostoAtualAnual)}/ano</span>
+            <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed space-y-0.5">
+              <div>CBS: <strong className="num">{fmt.pct(cbsSimplesEfetivo)}</strong> · IBS: <strong className="num">{fmt.pct(ibsSimplesEfetivo)}</strong></div>
+              <div>IRPJ+CSLL+CPP: <strong className="num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo))}</strong></div>
+            </div>
           </div>
-        </div>
 
-        {/* Carga Nova */}
-        <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
-          <span className="stat-label flex items-center gap-1.5">
-            Carga Nova — IVA Dual (Mensal)
-            {!isento && (
+          {/* Cenário 1 — Simples Pleno */}
+          <div className="stat-card border-l-4 border-l-info">
+            <span className="stat-label flex items-center gap-1.5">
+              Cenário 1 — Simples Pleno
+              <span className="badge badge-neutral text-[10px] font-medium">sem mudança</span>
+            </span>
+            <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
+            <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · DAS inalterado</span>
+            <div className="mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border bg-subtle border-border text-ink-secondary">
+              Permanece no Simples. CBS e IBS migram internamente no DAS sem alterar o valor total.
+            </div>
+          </div>
+
+          {/* Cenário 2 — Híbrido */}
+          <div className="stat-card border-l-4 border-l-warning">
+            <span className="stat-label flex items-center gap-1.5">
+              Cenário 2 — Regime Híbrido
               <span
                 className="badge badge-neutral text-[10px] font-medium cursor-help"
-                title="A alíquota padrão de 26,5% (CBS+IBS) é uma estimativa de mercado — a LC 214/2025 não a fixa. O valor final será definido por lei ordinária e resolução do Senado."
-              >
-                estimativa
-              </span>
-            )}
-          </span>
-          <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
-            {fmt.moeda(impostoIVALiquidoMensal)}
-          </span>
-          <span className="text-xs text-ink-muted num">
-            {fmt.pct(aliquotaIVAEfetiva)} líquido · {fmt.moeda(impostoIVALiquidoAnual)}/ano
-          </span>
-          <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed">
-            Alíquota bruta: <strong className="text-ink num">{fmt.pct(aliquotaIVABruta)}</strong>
-            {' '}→ créditos: <strong className="text-success num">−{fmt.moeda(creditoInsumosMensal)}</strong>
+                title="A alíquota padrão de 26,5% (CBS+IBS) é uma estimativa de mercado — a LC 214/2025 não a fixa."
+              >estimativa</span>
+            </span>
+            <span className="stat-value text-warning num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</span>
+            <span className="text-xs text-ink-muted num">
+              {fmt.pct(cenarioHibridoVerdadeiro.aliquotaEfetiva)} efetivo
+              {' '}· <span className="text-danger">+{fmt.moeda(cenarioHibridoVerdadeiro.custoAdicionalVsSimples)}/mês</span>
+            </span>
+            <div className="mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border bg-warning-soft border-warning-border text-ink-secondary">
+              DAS reduzido + IVA pleno. Custo maior, mas clientes B2B creditam os <strong>{fmt.pct(aliquotaIVABruta)}</strong> cheios.
+            </div>
           </div>
         </div>
+      ) : (
+        /* Demais regimes: cards originais */
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Carga Atual */}
+          <div className="stat-card border-l-4 border-l-info">
+            <span className="stat-label">Carga Atual (Mensal)</span>
+            <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
+            <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · {fmt.moeda(impostoAtualAnual)}/ano</span>
+            <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed flex items-center gap-2 flex-wrap">
+              <span>Regime: <strong className="text-ink">{NOMES_REGIME[regime]}</strong></span>
+              {resultados.fonteAliquota === 'real' && (
+                <span className="badge badge-warning text-xs font-medium">
+                  alíquota real
+                </span>
+              )}
+            </div>
+          </div>
 
-        {/* Variação */}
-        <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
-          <span className="stat-label">Variação Mensal</span>
-          <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
-            {cargaAumentou ? '+' : ''}{fmt.moeda(variacaoAbsolutaMensal)}
-          </span>
-          <span className="text-xs text-ink-muted num">
-            {cargaAumentou ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(1)}% em relação à carga atual
-          </span>
-          <div className={`mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border
-            ${cargaAumentou
-              ? 'bg-danger-soft border-danger-border text-danger'
-              : 'bg-success-soft border-success-border text-success'
-            }`}
-          >
-            {isento
-              ? 'Setor isento — alíquota zero no IVA Dual'
-              : cargaAumentou && vendeB2B
-              ? 'Sobe, mas repassável — cliente PJ credita o IVA'
-              : cargaAumentou
-              ? 'Carga aumenta — recai sobre o preço final (B2C)'
-              : 'Carga reduzida com a Reforma Tributária'
-            }
+          {/* Carga Nova */}
+          <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
+            <span className="stat-label flex items-center gap-1.5">
+              {ehLPouLR ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
+              {!isento && (
+                <span
+                  className="badge badge-neutral text-[10px] font-medium cursor-help"
+                  title="A alíquota padrão de 26,5% (CBS+IBS) é uma estimativa de mercado — a LC 214/2025 não a fixa. O valor final será definido por lei ordinária e resolução do Senado."
+                >
+                  estimativa
+                </span>
+              )}
+            </span>
+            <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
+              {fmt.moeda(ehLPouLR ? cargaTotalReformaMensal : impostoIVALiquidoMensal)}
+            </span>
+            <span className="text-xs text-ink-muted num">
+              {ehLPouLR
+                ? <>{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)} total · {fmt.moeda(cargaTotalReformaMensal * 12)}/ano</>
+                : <>{fmt.pct(aliquotaIVAEfetiva)} líquido · {fmt.moeda(impostoIVALiquidoAnual)}/ano</>}
+            </span>
+            <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed">
+              {ehLPouLR
+                ? <>IVA <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
+                    {' '}+ IR/CSLL <strong className="text-ink num">{fmt.moeda(irpjCsllPersistenteMensal)}</strong>
+                    {contribPrevidenciariaMensal > 0 && <> + prev. <strong className="text-ink num">{fmt.moeda(contribPrevidenciariaMensal)}</strong></>}
+                  </>
+                : <>Alíquota bruta: <strong className="text-ink num">{fmt.pct(aliquotaIVABruta)}</strong>
+                    {' '}→ créditos: <strong className="text-success num">−{fmt.moeda(creditoInsumosMensal)}</strong></>}
+            </div>
+          </div>
+
+          {/* Variação */}
+          <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
+            <span className="stat-label">Variação Mensal</span>
+            <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
+              {cargaAumentou ? '+' : ''}{fmt.moeda(variacaoAbsolutaMensal)}
+            </span>
+            <span className="text-xs text-ink-muted num">
+              {cargaAumentou ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(1)}% em relação à carga atual
+            </span>
+            <div className={`mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border
+              ${cargaAumentou
+                ? 'bg-danger-soft border-danger-border text-danger'
+                : 'bg-success-soft border-success-border text-success'
+              }`}
+            >
+              {isento
+                ? 'Setor isento — alíquota zero no IVA Dual'
+                : cargaAumentou && vendeB2B
+                ? 'Sobe, mas repassável — cliente PJ credita o IVA'
+                : cargaAumentou
+                ? 'Carga aumenta — recai sobre o preço final (B2C)'
+                : 'Carga reduzida com a Reforma Tributária'
+              }
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Painel histórico 12 meses ─────────────────────────────────────── */}
       {resultados.projecaoMesAMes && (
@@ -191,22 +283,58 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              <TabelaRow label="Faturamento Mensal" atual={faturamentoMensal} nova={faturamentoMensal} neutro />
-              <TabelaRow label="Insumos / Compras" atual={insumosMensais} nova={insumosMensais} neutro />
-              <TabelaRow label={regime === 'simples_nacional' ? 'IBS + CBS (bruto)' : 'Imposto Bruto'} atual={impostoAtualMensal} nova={impostoIVABrutoMensal} />
-              <TabelaRow label="Créditos de IVA nos Insumos" atual={0} nova={-creditoInsumosMensal} credito />
-              <TabelaRow label={regime === 'simples_nacional' ? 'IBS + CBS (líquido)' : 'Imposto Líquido (devido)'} atual={impostoAtualMensal} nova={impostoIVALiquidoMensal} destaque={regime !== 'simples_nacional'} />
-              {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
-                <TabelaRow label="IRPJ + CSLL (Lucro Presumido)" atual={0} nova={irpjCsllLPMensal} />
-              )}
-              {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
-                <TabelaRow label="Carga Total (IBS+CBS+IRPJ+CSLL)" atual={impostoAtualMensal} nova={impostoIVALiquidoMensal + irpjCsllLPMensal} destaque />
-              )}
+              {(() => {
+                // Decomposição da carga atual (LP/LR) para alinhar as linhas da tabela:
+                // IRPJ/CSLL hoje + contrib. prev. hoje; o restante são tributos sobre consumo.
+                const irpjCsllHoje = regime === 'lucro_presumido' && apuracaoLucroPresumido
+                  ? apuracaoLucroPresumido.irpj + apuracaoLucroPresumido.irpjAdicional + apuracaoLucroPresumido.csll
+                  : regime === 'lucro_real' && apuracaoLucroReal
+                  ? apuracaoLucroReal.irpj + apuracaoLucroReal.irpjAdicional + apuracaoLucroReal.csll
+                  : 0
+                const consumoHoje = ehLPouLR
+                  ? Math.max(0, impostoAtualMensal - irpjCsllHoje - contribPrevidenciariaMensal)
+                  : impostoAtualMensal
+                return (
+                  <>
+                    <TabelaRow label="Faturamento Mensal" atual={faturamentoMensal} nova={faturamentoMensal} neutro />
+                    <TabelaRow label="Insumos / Compras" atual={insumosMensais} nova={insumosMensais} neutro />
+                    <TabelaRow
+                      label={regime === 'simples_nacional' ? 'IBS + CBS (bruto)' : ehLPouLR ? 'Tributos s/ consumo → IBS+CBS (bruto)' : 'Imposto Bruto'}
+                      atual={consumoHoje}
+                      nova={impostoIVABrutoMensal}
+                    />
+                    <TabelaRow label="Créditos de IVA nos Insumos" atual={0} nova={-creditoInsumosMensal} credito />
+                    <TabelaRow
+                      label={regime === 'simples_nacional' ? 'IBS + CBS (líquido)' : ehLPouLR ? 'Tributos s/ consumo → IBS+CBS (líquido)' : 'Imposto Líquido (devido)'}
+                      atual={consumoHoje}
+                      nova={impostoIVALiquidoMensal}
+                      destaque={!ehLPouLR && regime !== 'simples_nacional'}
+                    />
+                    {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
+                      <TabelaRow label="IRPJ + CSLL (Lucro Presumido)" atual={0} nova={irpjCsllLPMensal} />
+                    )}
+                    {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
+                      <TabelaRow label="Carga Total (IBS+CBS+IRPJ+CSLL)" atual={impostoAtualMensal} nova={impostoIVALiquidoMensal + irpjCsllLPMensal} destaque />
+                    )}
+                    {ehLPouLR && irpjCsllHoje > 0 && (
+                      <TabelaRow label="IRPJ + CSLL" atual={irpjCsllHoje} nova={irpjCsllPersistenteMensal} />
+                    )}
+                    {ehLPouLR && contribPrevidenciariaMensal > 0 && (
+                      <TabelaRow label="Contribuição previdenciária" atual={contribPrevidenciariaMensal} nova={contribPrevidenciariaMensal} />
+                    )}
+                    {ehLPouLR && (
+                      <TabelaRow label="Carga Total (conjunto de tributos)" atual={impostoAtualMensal} nova={cargaTotalReformaMensal} destaque />
+                    )}
+                  </>
+                )
+              })()}
               <TabelaRow
                 label="Alíquota Efetiva"
                 atual={aliquotaAtual}
                 nova={regime === 'simples_nacional' && irpjCsllLPMensal > 0
                   ? (impostoIVALiquidoMensal + irpjCsllLPMensal) / faturamentoMensal
+                  : ehLPouLR
+                  ? (faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)
                   : aliquotaIVAEfetiva}
                 isPct
               />
@@ -373,6 +501,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       {(regime === 'lucro_presumido' || regime === 'lucro_real' || regime === 'simples_nacional') && (
         <CardSplitPayment
           impostoIVAMensal={impostoIVALiquidoMensal}
+          impostoIVABrutoMensal={impostoIVABrutoMensal}
           perfilClientes={perfilClientes}
         />
       )}
@@ -817,7 +946,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 </span>
                 <div className="text-sm text-ink-secondary leading-snug">
                   <div>Alíquota atual: <strong className="text-ink num">{fmt.pct(aliquotaAtual)}</strong></div>
-                  <div>Alíquota IVA líq.: <strong className="text-ink num">{fmt.pct(aliquotaIVAEfetiva)}</strong></div>
+                  <div>Alíquota pós-reforma: <strong className="text-ink num">{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)}</strong></div>
                 </div>
               </div>
             </div>
@@ -970,6 +1099,134 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         <CardHolding analise={analiseHolding} />
       )}
 
+      {/* ── Apuração da carga atual — Lucro Presumido ────────────────────── */}
+      {regime === 'lucro_presumido' && apuracaoLucroPresumido && (
+        <div className="card p-6 space-y-4">
+          <div>
+            <h3 className="text-base font-semibold text-ink font-display">Composição da Carga Atual — Lucro Presumido</h3>
+            <p className="text-ink-muted text-xs mt-0.5">
+              Tributos federais (IRPJ, CSLL, PIS/COFINS), estaduais/municipais (ICMS/ISS
+              {apuracaoLucroPresumido.icmsIssInformado ? ' — alíquotas informadas no formulário' : ' — médias nacionais'})
+              e contribuição previdenciária (CPP 20% + terceiros sobre a folha; CPP 20% sobre o pró-labore).
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Tributos federais</div>
+              <div className="flex justify-between text-ink-muted"><span>Base presumida (presunção × receita)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.lucroPresumidoBase)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>IRPJ (15% da base presumida)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.irpj)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>IRPJ adicional (10% acima de R$ 20 mil)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.irpjAdicional)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>CSLL (9% da base presumida)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.csll)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>PIS/COFINS cumulativo (3,65%)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.pisCofins)}</span></div>
+            </div>
+            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">ICMS / ISS / Encargos</div>
+              <div className="flex justify-between text-ink-secondary"><span>ICMS{apuracaoLucroPresumido.icmsIssInformado ? ' (alíquota informada)' : ' (média 12%)'}</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.icms)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>ISS{apuracaoLucroPresumido.icmsIssInformado ? ' (alíquota informada)' : ' (média 3%)'}</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.iss)}</span></div>
+              {apuracaoLucroPresumido.ipi > 0 && (
+                <div className="flex justify-between text-ink-secondary"><span>IPI (média 5% — indústria)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.ipi)}</span></div>
+              )}
+              {apuracaoLucroPresumido.inssPatronal > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>CPP patronal (20% folha)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.inssPatronal)}</span></div>
+              )}
+              {apuracaoLucroPresumido.terceiros > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>Terceiros — {labelTerceiros(setor.tipo)} (5,8%)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.terceiros)}</span></div>
+              )}
+              {apuracaoLucroPresumido.cppProLabore > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>CPP pró-labore (20%)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.cppProLabore)}</span></div>
+              )}
+              <div className="flex justify-between font-bold text-danger border-t border-border pt-2 mt-1">
+                <span>Carga total do mês</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.totalImpostos)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-ink-muted">
+                <span>Alíquota efetiva sobre receita</span>
+                <span className="num">{fmt.pct(faturamentoMensal > 0 ? apuracaoLucroPresumido.totalImpostos / faturamentoMensal : 0)}</span>
+              </div>
+            </div>
+          </div>
+          {!apuracaoLucroPresumido.icmsIssInformado && (
+            <p className="text-ink-muted text-[11px] leading-relaxed">
+              ICMS/ISS estimados por média nacional. Informe as alíquotas efetivas no formulário
+              (card "Dados da Apuração — Folha, ICMS e ISS") para usar os valores reais da sua empresa.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Apuração efetiva do Lucro Real ───────────────────────────────── */}
+      {regime === 'lucro_real' && apuracaoLucroReal && (
+        <div className="card p-6 space-y-4">
+          <div>
+            <h3 className="text-base font-semibold text-ink font-display">Apuração do Lucro Real — Dados Efetivos</h3>
+            <p className="text-ink-muted text-xs mt-0.5">
+              IRPJ e CSLL calculados sobre o lucro efetivo informado, em vez da margem estimada de tabela.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Formação do lucro tributável</div>
+              <div className="flex justify-between text-ink-secondary"><span>Receita bruta</span><span className="num">{fmt.moeda(faturamentoMensal)}</span></div>
+              <div className="flex justify-between text-ink-muted"><span>(−) CMV / Insumos</span><span className="num">−{fmt.moeda(insumosMensais)}</span></div>
+              {apuracaoLucroReal.folhaPagamento > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) Folha de pagamento</span><span className="num">−{fmt.moeda(apuracaoLucroReal.folhaPagamento)}</span></div>
+              )}
+              {apuracaoLucroReal.inssPatronal > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) CPP patronal (20%)</span><span className="num">−{fmt.moeda(apuracaoLucroReal.inssPatronal)}</span></div>
+              )}
+              {apuracaoLucroReal.terceiros > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) Terceiros — {labelTerceiros(setor.tipo)} (5,8%)</span><span className="num">−{fmt.moeda(apuracaoLucroReal.terceiros)}</span></div>
+              )}
+              {apuracaoLucroReal.proLabore > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) Pró-labore dos sócios</span><span className="num">−{fmt.moeda(apuracaoLucroReal.proLabore)}</span></div>
+              )}
+              {apuracaoLucroReal.cppProLabore > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) CPP pró-labore (20%)</span><span className="num">−{fmt.moeda(apuracaoLucroReal.cppProLabore)}</span></div>
+              )}
+              {apuracaoLucroReal.despesasOperacionais > 0 && (
+                <div className="flex justify-between text-ink-muted"><span>(−) Despesas operacionais</span><span className="num">−{fmt.moeda(apuracaoLucroReal.despesasOperacionais)}</span></div>
+              )}
+              <div className="flex justify-between text-ink-muted"><span>(−) ICMS líquido</span><span className="num">−{fmt.moeda(apuracaoLucroReal.icmsLiquido)}</span></div>
+              <div className="flex justify-between text-ink-muted"><span>(−) ISS</span><span className="num">−{fmt.moeda(apuracaoLucroReal.issLiquido)}</span></div>
+              <div className="flex justify-between text-ink-muted"><span>(−) PIS/COFINS líquido</span><span className="num">−{fmt.moeda(apuracaoLucroReal.pisCofinsLiquido)}</span></div>
+              <div className="flex justify-between font-bold text-ink border-t border-border pt-2 mt-1">
+                <span>Lucro Real (base IRPJ/CSLL)</span><span className="num">{fmt.moeda(apuracaoLucroReal.lucroRealBase)}</span>
+              </div>
+            </div>
+            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Impostos do mês</div>
+              <div className="flex justify-between text-ink-secondary"><span>IRPJ (15%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.irpj)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>IRPJ adicional (10% acima de R$ 20 mil)</span><span className="num">{fmt.moeda(apuracaoLucroReal.irpjAdicional)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>CSLL (9%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.csll)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>PIS/COFINS líquido (9,25%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.pisCofinsLiquido)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>ICMS líquido</span><span className="num">{fmt.moeda(apuracaoLucroReal.icmsLiquido)}</span></div>
+              <div className="flex justify-between text-ink-secondary"><span>ISS</span><span className="num">{fmt.moeda(apuracaoLucroReal.issLiquido)}</span></div>
+              {apuracaoLucroReal.inssPatronal > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>CPP patronal (20% folha)</span><span className="num">{fmt.moeda(apuracaoLucroReal.inssPatronal)}</span></div>
+              )}
+              {apuracaoLucroReal.terceiros > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>Terceiros (Sistema S — 5,8%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.terceiros)}</span></div>
+              )}
+              {apuracaoLucroReal.cppProLabore > 0 && (
+                <div className="flex justify-between text-warning font-medium"><span>CPP pró-labore (20%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.cppProLabore)}</span></div>
+              )}
+              <div className="flex justify-between font-bold text-danger border-t border-border pt-2 mt-1">
+                <span>Carga total do mês</span><span className="num">{fmt.moeda(apuracaoLucroReal.totalImpostos)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-ink-muted">
+                <span>Alíquota efetiva sobre receita</span>
+                <span className="num">{fmt.pct(faturamentoMensal > 0 ? apuracaoLucroReal.totalImpostos / faturamentoMensal : 0)}</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-ink-muted text-[11px] leading-relaxed">
+            Inclui CPP patronal (20%) + terceiros (Sistema S, 5,8%) sobre a folha e CPP (20%) sobre o pró-labore.
+            Modelo simplificado: não considera adições/exclusões do LALUR, compensação de prejuízos fiscais (trava de 30%),
+            créditos de PIS/COFINS sobre despesas (energia, aluguéis, depreciação) nem RAT/FAP sobre a folha (1% a 3% conforme o risco).
+            Apuração real do IRPJ é trimestral ou anual com estimativas — valores mensais são aproximação.
+          </p>
+        </div>
+      )}
+
       {/* ── JCP — Lucro Real ─────────────────────────────────────────────── */}
       {regime === 'lucro_real' && <CardJCP faturamentoMensal={faturamentoMensal} />}
 
@@ -1050,6 +1307,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           ← Simular outra empresa
         </button>
       </div>
+      </>
+      )}
 
     </div>
   )
@@ -2175,20 +2434,36 @@ function AlertaDividendos({ regime }: { regime: string }) {
 
 // ─── CardSplitPayment ─────────────────────────────────────────────────────────
 
-function CardSplitPayment({ impostoIVAMensal, perfilClientes }: { impostoIVAMensal: number; perfilClientes: PerfilClientes }) {
+function CardSplitPayment({ impostoIVAMensal, impostoIVABrutoMensal, perfilClientes }: { impostoIVAMensal: number; impostoIVABrutoMensal: number; perfilClientes: PerfilClientes }) {
   const defaultPct = perfilClientes === 'b2c' ? 90 : perfilClientes === 'b2b' ? 60 : 75
   const [pctEletronico, setPctEletronico] = useState(defaultPct)
   const [cdi, setCdi] = useState(11)
+  const [procedimento, setProcedimento] = useState<'padrao' | 'simplificado'>('padrao')
 
   // Float = prazo médio entre receber o valor e recolher o imposto na apuração mensal (~30 dias).
   // É esse intervalo que o split payment elimina (o imposto sai no recebimento, não no mês seguinte).
   const FLOAT_DIAS = 30
+  // Simplificado (Art. 33): a sobra retida além do devido só retorna até 3 dias úteis APÓS a apuração.
+  // Retenção média da sobra ≈ metade do mês até fechar o período (15d) + 3 dias úteis (~5 corridos).
+  const DIAS_RETENCAO_SOBRA = 20
 
-  // Split payment: imposto retido na liquidação financeira (não entra na conta da empresa).
-  // Custo do float = imposto retido × CDI × (período do float / ano) — você perde o rendimento
-  // sobre o imposto apenas durante o intervalo que hoje o segura, não o ano inteiro.
-  const impostoRetidoMensal = impostoIVAMensal * (pctEletronico / 100)
-  const custoFloatAnual = impostoRetidoMensal * 12 * (cdi / 100) * (FLOAT_DIAS / 365)
+  const fracEletronico = pctEletronico / 100
+
+  // Procedimento padrão (Art. 32 LC 214/2025): o PSP consulta o sistema CGIBS/RFB e segrega apenas
+  // o débito ainda não extinto — na prática, o fluxo retido converge para o IVA líquido.
+  // Procedimento simplificado (Art. 33): retém % preestabelecido sobre o valor da operação
+  // (aproximado aqui pelo débito bruto destacado); a sobra volta só depois da apuração.
+  const retidoLiquidoMensal = impostoIVAMensal * fracEletronico
+  const retidoBrutoMensal   = impostoIVABrutoMensal * fracEletronico
+  const sobraRetidaMensal   = Math.max(0, retidoBrutoMensal - retidoLiquidoMensal)
+
+  const impostoRetidoMensal = procedimento === 'padrao' ? retidoLiquidoMensal : retidoBrutoMensal
+  // Custo do float = rendimento perdido sobre o valor retido durante o intervalo em que hoje
+  // a empresa segura o dinheiro (não o ano inteiro).
+  const custoFloatAnual = procedimento === 'padrao'
+    ? retidoLiquidoMensal * 12 * (cdi / 100) * (FLOAT_DIAS / 365)
+    : retidoLiquidoMensal * 12 * (cdi / 100) * (FLOAT_DIAS / 365)
+      + sobraRetidaMensal * 12 * (cdi / 100) * (DIAS_RETENCAO_SOBRA / 365)
   const custoFloatMensal = custoFloatAnual / 12
 
   return (
@@ -2198,12 +2473,38 @@ function CardSplitPayment({ impostoIVAMensal, perfilClientes }: { impostoIVAMens
           <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
         </svg>
         <span className="font-display">Split Payment — Impacto no Fluxo de Caixa</span>
-        <span className="badge badge-warning text-xs">Novo no IVA Dual</span>
+        <span className="badge badge-warning text-xs">Arts. 31–35 LC 214/2025</span>
       </h3>
 
       <div className="insight-neutral text-xs leading-relaxed">
-        <strong>O que é:</strong> No IVA Dual, o imposto é retido automaticamente na liquidação financeira (PIX, cartão) antes de entrar na sua conta.
-        Hoje você recebe o valor cheio e paga o imposto na apuração do mês seguinte — segurando o dinheiro por ~{FLOAT_DIAS} dias. Com o split payment esse "float" de ~{FLOAT_DIAS} dias desaparece: o imposto já sai direto para o governo no recebimento.
+        <strong>O que é:</strong> No IVA Dual, o prestador de serviço de pagamento (PIX, cartão) segrega e recolhe o IBS/CBS
+        na liquidação financeira, antes de o valor entrar na sua conta (Art. 31). Hoje você recebe o valor cheio e paga o
+        imposto na apuração do mês seguinte — segurando o dinheiro por ~{FLOAT_DIAS} dias. Com o split esse "float" desaparece.
+      </div>
+
+      {/* Procedimento */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Procedimento de segregação</label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setProcedimento('padrao')}
+            className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors flex-1 text-left
+              ${procedimento === 'padrao' ? 'bg-info-soft border-info-border text-info' : 'bg-surface border-border text-ink-muted hover:text-ink'}`}
+          >
+            <span className="font-bold block">Padrão (Art. 32)</span>
+            Consulta em tempo real — retém só o débito ainda não extinto (≈ IVA líquido)
+          </button>
+          <button
+            type="button"
+            onClick={() => setProcedimento('simplificado')}
+            className={`px-3 py-2 rounded-lg border text-xs font-medium transition-colors flex-1 text-left
+              ${procedimento === 'simplificado' ? 'bg-warning-soft border-warning-border text-warning' : 'bg-surface border-border text-ink-muted hover:text-ink'}`}
+          >
+            <span className="font-bold block">Simplificado (Art. 33)</span>
+            Retém % fixo sobre a operação (≈ débito bruto); sobra devolvida até 3 dias úteis após a apuração
+          </button>
+        </div>
       </div>
 
       {/* Controles */}
@@ -2221,7 +2522,7 @@ function CardSplitPayment({ impostoIVAMensal, perfilClientes }: { impostoIVAMens
             />
             <span className="num text-sm font-bold text-ink w-10 text-right">{pctEletronico}%</span>
           </div>
-          <p className="text-xs text-ink-muted">Pagamentos em espécie não passam pelo split payment</p>
+          <p className="text-xs text-ink-muted">Dinheiro em espécie não passa pelo split; no B2B, o adquirente pode recolher direto (Art. 36)</p>
         </div>
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
@@ -2243,11 +2544,15 @@ function CardSplitPayment({ impostoIVAMensal, perfilClientes }: { impostoIVAMens
       {/* Resultado */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-[#FFF7ED] border border-[#F5C27C] rounded-xl p-4">
-          <p className="text-xs text-[#92400E] font-semibold uppercase tracking-wide">Imposto retido/mês</p>
+          <p className="text-xs text-[#92400E] font-semibold uppercase tracking-wide">Retido na liquidação/mês</p>
           <p className="text-xl font-bold num text-[#92400E] mt-1">
             {fmt.moeda(impostoRetidoMensal)}<span className="text-xs font-normal">/mês</span>
           </p>
-          <p className="text-xs text-[#92400E] opacity-70 mt-0.5">{pctEletronico}% do IVA mensal</p>
+          <p className="text-xs text-[#92400E] opacity-70 mt-0.5">
+            {procedimento === 'padrao'
+              ? `${pctEletronico}% do IVA líquido mensal`
+              : <>{pctEletronico}% do débito bruto · sobra de {fmt.moeda(sobraRetidaMensal)} devolvida após a apuração</>}
+          </p>
         </div>
         <div className="bg-[#FDECEC] border border-[#F4A9A5] rounded-xl p-4">
           <p className="text-xs text-[#B42318] font-semibold uppercase tracking-wide">Custo do float — anual</p>
@@ -2255,13 +2560,22 @@ function CardSplitPayment({ impostoIVAMensal, perfilClientes }: { impostoIVAMens
             {fmt.moeda(custoFloatAnual)}<span className="text-xs font-normal">/ano</span>
           </p>
           <p className="text-xs text-[#B42318] opacity-70 mt-0.5">
-            {fmt.moeda(custoFloatMensal)}/mês · rendimento perdido sobre ~{FLOAT_DIAS} dias de float
+            {fmt.moeda(custoFloatMensal)}/mês · rendimento perdido sobre o período retido
           </p>
         </div>
       </div>
 
+      <div className="insight-warning text-xs leading-relaxed">
+        <strong>Atenção (Art. 34):</strong> vendas parceladas têm segregação proporcional em cada parcela, e a{' '}
+        <strong>antecipação de recebíveis não afasta a retenção</strong> — o imposto é segregado na liquidação de cada
+        parcela mesmo com o recebível antecipado. Quem antecipa cartão hoje sentirá o impacto no valor líquido antecipável.
+      </div>
+
       <p className="text-xs text-ink-muted leading-relaxed">
-        O split payment entra em vigor gradualmente a partir de 2026 conforme adesão dos meios de pagamento. Verifique com seu contador o cronograma específico para o seu banco/adquirente.
+        Implementação gradual a partir de <strong>2027</strong>, junto com o regime efetivo do IBS/CBS, conforme ato conjunto
+        CGIBS/RFB (Art. 35 §2º LC 214/2025) — obrigatório primeiro nas vendas a consumidor final pelos principais meios de
+        pagamento do varejo. Excedentes retidos são devolvidos em até 3 dias úteis (Arts. 32 §4º e 33 §4º).
+        Verifique com seu contador o cronograma para o seu banco/adquirente.
       </p>
     </div>
   )

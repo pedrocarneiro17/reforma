@@ -187,6 +187,11 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [pctMedicamentos, setPctMedicamentos] = useState(0)  // Art. 133 — % da receita em medicamentos (60% redução)
   const [pctCestaZero, setPctCestaZero] = useState(0)          // supermercados — % alíquota zero
   const [pctCestaReduzida, setPctCestaReduzida] = useState(0)  // supermercados — % redução 60%
+  // Lucro Real — apuração efetiva
+  const [folhaPagamentoLRStr, setFolhaPagamentoLRStr] = useState('')
+  const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
+  const [aliquotaICMSStr, setAliquotaICMSStr] = useState('')   // % efetivo líquido, ex: "8" para 8%
+  const [aliquotaISSStr, setAliquotaISSStr] = useState('')     // % efetivo, ex: "3" para 3%
 
   const setorSelecionado = useMemo<Setor | null>(
     () => SETORES.find(s => s.value === dados.setor) ?? null,
@@ -310,6 +315,10 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctMedicamentos: mostrarMedicamentos ? pctMedicamentos : 0,
       pctCestaZero: mostrarCestaMista ? pctCestaZero : 0,
       pctCestaReduzida: mostrarCestaMista ? pctCestaReduzida : 0,
+      folhaPagamentoLRMensal: parseMoeda(folhaPagamentoLRStr),
+      despesasOperacionaisMensais: parseMoeda(despesasOperacionaisStr),
+      aliquotaICMSEfetiva: aliquotaICMSStr ? parseFloat(aliquotaICMSStr.replace(',', '.')) / 100 : undefined,
+      aliquotaISSEfetiva:  aliquotaISSStr  ? parseFloat(aliquotaISSStr.replace(',', '.'))  / 100 : undefined,
     })
   }
 
@@ -1012,6 +1021,166 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               />
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Lucro Real — Apuração Efetiva de IRPJ/CSLL ──────────────────── */}
+      {!['mei', 'profissional_liberal', 'produtor_rural'].includes(dados.regime) && (
+        <div className="card p-5 space-y-4 border-l-4 border-l-gold">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">
+              {dados.regime === 'lucro_real'
+                ? 'Apuração do Lucro Real — IRPJ e CSLL (opcional)'
+                : dados.regime === 'lucro_presumido'
+                ? 'Dados da Apuração — Folha, ICMS e ISS (opcional)'
+                : 'Comparativo Lucro Real — Dados para Simulação (opcional)'}
+            </h3>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+              {dados.regime === 'lucro_real'
+                ? <>Informe os dados reais para calcular IRPJ e CSLL sobre o lucro efetivo em vez de usar a margem estimada.
+                  {' '}Base: Receita − CMV/Insumos − Folha − INSS Patronal − Despesas Operacionais − ICMS − ISS − PIS/COFINS líquido.</>
+                : dados.regime === 'lucro_presumido'
+                ? <>As alíquotas de ICMS/ISS informadas substituem as médias nacionais no cálculo da sua carga atual,
+                  e a folha adiciona o INSS patronal (20%). Também alimentam o comparativo com o Lucro Real.</>
+                : <>O comparador de regimes simula o Lucro Real com margem estimada. Informe os dados reais para um comparativo preciso.
+                  {' '}Base: Receita − CMV/Insumos − Folha − INSS Patronal − Despesas Operacionais − ICMS − ISS − PIS/COFINS líquido.</>}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Folha de pagamento */}
+            <div>
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
+                Folha de Pagamento Mensal
+              </label>
+              <p className="text-[10px] text-ink-muted mt-0.5">Salários brutos (sistema calcula INSS patronal 20% sobre esse valor)</p>
+              <div className="relative mt-1.5">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm font-medium select-none">R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={folhaPagamentoLRStr}
+                  onChange={e => setFolhaPagamentoLRStr(mascaraMoeda(e.target.value))}
+                  placeholder="0"
+                  className="input-field pl-10 num"
+                />
+              </div>
+            </div>
+
+            {/* ICMS */}
+            <div>
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
+                ICMS — Alíquota Efetiva Líquida
+              </label>
+              <p className="text-[10px] text-ink-muted mt-0.5">Após créditos de entradas. Ex: 8% para comércio</p>
+              <div className="relative mt-1.5">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={aliquotaICMSStr}
+                  onChange={e => setAliquotaICMSStr(e.target.value.replace(/[^0-9,.]/g, ''))}
+                  placeholder="0,00"
+                  className="input-field pr-8 num"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm select-none">%</span>
+              </div>
+            </div>
+
+            {/* ISS */}
+            <div>
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
+                ISSQN — Alíquota Efetiva
+              </label>
+              <p className="text-[10px] text-ink-muted mt-0.5">Alíquota municipal sobre serviços. Ex: 2% a 5%</p>
+              <div className="relative mt-1.5">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={aliquotaISSStr}
+                  onChange={e => setAliquotaISSStr(e.target.value.replace(/[^0-9,.]/g, ''))}
+                  placeholder="0,00"
+                  className="input-field pr-8 num"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm select-none">%</span>
+              </div>
+            </div>
+
+            {/* Despesas operacionais */}
+            <div>
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
+                Despesas Operacionais Mensais
+              </label>
+              <p className="text-[10px] text-ink-muted mt-0.5">Aluguel, energia, marketing, adm, depreciação — dedutíveis do IRPJ/CSLL</p>
+              <div className="relative mt-1.5">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm font-medium select-none">R$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={despesasOperacionaisStr}
+                  onChange={e => setDespesasOperacionaisStr(mascaraMoeda(e.target.value))}
+                  placeholder="0"
+                  className="input-field pl-10 num"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Preview do cálculo */}
+          {(parseMoeda(folhaPagamentoLRStr) > 0 || aliquotaICMSStr || aliquotaISSStr || parseMoeda(despesasOperacionaisStr) > 0 || sociosAdministradores.length > 0) && (() => {
+            const fat = parseMoeda(dados.faturamentoMensal)
+            const ins = parseMoeda(dados.insumosMensais)
+            const folha = parseMoeda(folhaPagamentoLRStr)
+            const cppFolha = folha * 0.20
+            const terceiros = folha * 0.058
+            const proLabore = sociosAdministradores.reduce((s, so) => s + so.prolaboreMensal, 0)
+            const cppProLabore = proLabore * 0.20
+            const contribPrev = cppFolha + terceiros + cppProLabore
+            const despOp = parseMoeda(despesasOperacionaisStr)
+            const icms = fat * (parseFloat((aliquotaICMSStr || '0').replace(',', '.')) / 100 || 0)
+            const iss  = fat * (parseFloat((aliquotaISSStr  || '0').replace(',', '.')) / 100 || 0)
+            const pisCofins = Math.max(0, (fat - ins) * 0.0925)
+            const lucro = Math.max(0, fat - ins - folha - cppFolha - terceiros - proLabore - cppProLabore - despOp - icms - iss - pisCofins)
+            const irpj = lucro * 0.15 + Math.max(0, lucro - 20000) * 0.10
+            const csll = lucro * 0.09
+            const isLP = dados.regime === 'lucro_presumido'
+            return (
+              <div className="bg-[#FBFAF7] border border-border rounded-lg p-3 text-xs space-y-1.5">
+                <div className="font-semibold text-ink mb-2">
+                  {isLP ? 'Prévia — contribuição previdenciária patronal' : 'Prévia da apuração mensal (Lucro Real)'}
+                </div>
+                {!isLP && <>
+                  <div className="flex justify-between text-ink-muted"><span>(−) CMV / Insumos</span><span className="num">−{fmt.moeda(ins)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) Folha de pagamento (salários)</span><span className="num">−{fmt.moeda(folha)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) CPP patronal (20%)</span><span className="num">−{fmt.moeda(cppFolha)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) Terceiros — Sistema S (5,8%)</span><span className="num">−{fmt.moeda(terceiros)}</span></div>
+                  {proLabore > 0 && <>
+                    <div className="flex justify-between text-ink-muted"><span>(−) Pró-labore dos sócios</span><span className="num">−{fmt.moeda(proLabore)}</span></div>
+                    <div className="flex justify-between text-ink-muted"><span>(−) CPP pró-labore (20%)</span><span className="num">−{fmt.moeda(cppProLabore)}</span></div>
+                  </>}
+                  <div className="flex justify-between text-ink-muted"><span>(−) Despesas operacionais</span><span className="num">−{fmt.moeda(despOp)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) ICMS líquido</span><span className="num">−{fmt.moeda(icms)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) ISS</span><span className="num">−{fmt.moeda(iss)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) PIS/COFINS líquido (9,25%)</span><span className="num">−{fmt.moeda(pisCofins)}</span></div>
+                  <div className="flex justify-between font-semibold text-ink border-t border-border pt-1.5"><span>Lucro Real</span><span className="num">{fmt.moeda(lucro)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>IRPJ (15% + adicional)</span><span className="num">{fmt.moeda(irpj)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>CSLL (9%)</span><span className="num">{fmt.moeda(csll)}</span></div>
+                </>}
+                {isLP && <>
+                  <div className="flex justify-between text-ink-muted"><span>Folha (salários brutos)</span><span className="num">{fmt.moeda(folha)}</span></div>
+                  <div className="flex justify-between text-warning font-medium"><span>CPP patronal (20% folha)</span><span className="num">{fmt.moeda(cppFolha)}</span></div>
+                  <div className="flex justify-between text-warning font-medium"><span>Terceiros — Sistema S (5,8% folha)</span><span className="num">{fmt.moeda(terceiros)}</span></div>
+                  {proLabore > 0 && (
+                    <div className="flex justify-between text-warning font-medium"><span>CPP pró-labore (20% de {fmt.moeda(proLabore)})</span><span className="num">{fmt.moeda(cppProLabore)}</span></div>
+                  )}
+                  <p className="text-[10px] text-ink-muted leading-relaxed">No Simples Nacional a CPP já está dentro do DAS. No Lucro Presumido é paga separadamente.</p>
+                </>}
+                <div className="flex justify-between font-bold text-ink border-t border-border pt-1.5">
+                  <span>{isLP ? 'Contribuição previdenciária total' : 'Total impostos'}</span>
+                  <span className="num text-danger">{fmt.moeda(isLP ? contribPrev : irpj + csll + pisCofins + icms + iss + contribPrev)}</span>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 

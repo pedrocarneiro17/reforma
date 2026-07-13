@@ -43,7 +43,10 @@ interface GraficoTransicaoProps {
 }
 
 export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) {
-  const { projecaoAnos, impostoAtualAnual, impostoIVALiquidoAnual } = resultados
+  const { projecaoAnos, impostoAtualAnual, impostoIVALiquidoAnual, cargaTotalReformaMensal, regime } = resultados
+  const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
+  // LP/LR: referência final é a carga total pós-reforma (IVA + IRPJ/CSLL + contrib. prev.)
+  const referenciaFinalAnual = ehLPouLR ? cargaTotalReformaMensal * 12 : impostoIVALiquidoAnual
 
   const data: GraficoData[] = projecaoAnos
     .filter(p => ANOS_CHAVE.includes(p.ano))
@@ -54,7 +57,7 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
       total: Math.round(p.impostoAnual),
     }))
 
-  const maxValor = Math.max(impostoAtualAnual, impostoIVALiquidoAnual) * 1.15
+  const maxValor = Math.max(impostoAtualAnual, referenciaFinalAnual, ...projecaoAnos.map(p => p.impostoAnual)) * 1.15
 
   return (
     <div className="space-y-4">
@@ -103,10 +106,10 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
               label={{ value: 'Atual', position: 'insideTopRight', fill: 'rgba(49,92,140,0.6)', fontSize: 10 }}
             />
             <ReferenceLine
-              y={impostoIVALiquidoAnual}
+              y={referenciaFinalAnual}
               stroke="rgba(47,125,87,0.35)"
               strokeDasharray="4 4"
-              label={{ value: 'IVA líquido', position: 'insideBottomRight', fill: 'rgba(47,125,87,0.6)', fontSize: 10 }}
+              label={{ value: ehLPouLR ? 'Pós-reforma' : 'IVA líquido', position: 'insideBottomRight', fill: 'rgba(47,125,87,0.6)', fontSize: 10 }}
             />
           </BarChart>
         </ResponsiveContainer>

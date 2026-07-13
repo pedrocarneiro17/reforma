@@ -438,8 +438,14 @@
    IMPRESSÃO — Relatório tributário
    ═════════════════════════════════════════════════════════════════════════════ */
 
+/* Utilitário: visível apenas na impressão (cabeçalho da memória de cálculo) */
+.only-print { display: none; }
+
 @media print {
   @page { size: A4 portrait; margin: 16mm 15mm 22mm 15mm; }
+
+  .no-print { display: none !important; }
+  .only-print { display: block !important; }
 
   * {
     -webkit-print-color-adjust: exact !important;
