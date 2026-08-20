@@ -400,6 +400,13 @@ export const SETORES: Setor[] = [
     tipo: 'comercio',
   },
   {
+    value: 'material_construcao',
+    label: 'Comércio Varejista Especializado em Material para Construção',
+    grupo: 'Alíquota Cheia (26,5%)',
+    reducao: 0.00,
+    tipo: 'comercio',
+  },
+  {
     value: 'concessionarias_veiculos',
     label: 'Concessionárias de Veículos (Revenda)',
     grupo: 'Alíquota Cheia (26,5%) + Imposto Seletivo',
