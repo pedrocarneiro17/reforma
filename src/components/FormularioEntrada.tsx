@@ -1070,9 +1070,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {/* ICMS */}
             <div>
               <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
-                ICMS — Alíquota Efetiva Líquida
+                ICMS — Alíquota
               </label>
-              <p className="text-[10px] text-ink-muted mt-0.5">Após créditos de entradas. Ex: 8% para comércio</p>
+              <p className="text-[10px] text-ink-muted mt-0.5">Alíquota do ICMS. O crédito sobre as compras informadas é calculado automaticamente. Ex: 18%</p>
               <div className="relative mt-1.5">
                 <input
                   type="text"
@@ -1136,7 +1136,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             const cppProLabore = proLabore * 0.20
             const contribPrev = cppFolha + terceiros + cppProLabore
             const despOp = parseMoeda(despesasOperacionaisStr)
-            const icms = fat * (parseFloat((aliquotaICMSStr || '0').replace(',', '.')) / 100 || 0)
+            const aliqICMS = parseFloat((aliquotaICMSStr || '0').replace(',', '.')) / 100 || 0
+            const icms = Math.max(0, (fat - ins) * aliqICMS)  // débito sobre vendas − crédito sobre compras
             const iss  = fat * (parseFloat((aliquotaISSStr  || '0').replace(',', '.')) / 100 || 0)
             const pisCofins = Math.max(0, (fat - ins) * 0.0925)
             const lucro = Math.max(0, fat - ins - folha - cppFolha - terceiros - proLabore - cppProLabore - despOp - icms - iss - pisCofins)
@@ -1158,7 +1159,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                     <div className="flex justify-between text-ink-muted"><span>(−) CPP pró-labore (20%)</span><span className="num">−{fmt.moeda(cppProLabore)}</span></div>
                   </>}
                   <div className="flex justify-between text-ink-muted"><span>(−) Despesas operacionais</span><span className="num">−{fmt.moeda(despOp)}</span></div>
-                  <div className="flex justify-between text-ink-muted"><span>(−) ICMS líquido</span><span className="num">−{fmt.moeda(icms)}</span></div>
+                  <div className="flex justify-between text-ink-muted"><span>(−) ICMS {ins > 0 && aliqICMS > 0 ? '(vendas − compras)' : 'líquido'}</span><span className="num">−{fmt.moeda(icms)}</span></div>
                   <div className="flex justify-between text-ink-muted"><span>(−) ISS</span><span className="num">−{fmt.moeda(iss)}</span></div>
                   <div className="flex justify-between text-ink-muted"><span>(−) PIS/COFINS líquido (9,25%)</span><span className="num">−{fmt.moeda(pisCofins)}</span></div>
                   <div className="flex justify-between font-semibold text-ink border-t border-border pt-1.5"><span>Lucro Real</span><span className="num">{fmt.moeda(lucro)}</span></div>

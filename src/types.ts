@@ -311,7 +311,9 @@ export interface ResultadoCalculo {
     irpjAdicional: number        // 10% sobre o que exceder R$ 20 mil/mês
     csll: number                 // 9% × (faturamento × presunção CSLL)
     pisCofins: number            // cumulativo 3,65%
-    icms: number                 // alíquota informada no formulário ou média 12%
+    icms: number                 // ICMS a recolher = débito − crédito (não-cumulativo)
+    icmsDebito: number           // alíquota × vendas
+    icmsCredito: number          // alíquota × compras de mercadorias informadas
     iss: number                  // alíquota informada no formulário ou média 3%
     ipi: number                  // 5% médio (indústria, apenas quando não informado)
     inssPatronal: number         // 20% × folha de empregados (CPP)
@@ -323,7 +325,9 @@ export interface ResultadoCalculo {
   // Lucro Real — detalhamento efetivo quando dados reais são fornecidos
   apuracaoLucroReal: {
     pisCofinsLiquido: number
-    icmsLiquido: number
+    icmsLiquido: number          // ICMS a recolher = débito − crédito (não-cumulativo)
+    icmsDebito: number           // alíquota × vendas
+    icmsCredito: number          // alíquota × compras de mercadorias informadas
     issLiquido: number
     inssPatronal: number         // 20% × folha de empregados (CPP)
     terceiros: number            // terceiros (Sistema S) × folha de empregados

@@ -1,5 +1,6 @@
-import { fmt, labelTerceiros } from '../engine/calculadora'
-import type { ResultadoCalculo } from '../types'
+import { useMemo } from 'react'
+import { fmt, labelTerceiros, calcularTodosOsRegimes } from '../engine/calculadora'
+import type { ResultadoCalculo, ResultadoComparativo } from '../types'
 
 /**
  * Memória de Cálculo — auditoria linha a linha de como o sistema chegou a cada valor.
@@ -81,80 +82,106 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
   const moeda = (v: number) => fmt.moeda(v)
   const hoje = new Date().toLocaleDateString('pt-BR')
 
-  // ── Bloco: carga tributária atual (específico por regime) ──────────────────
-  const blocoCargaAtual = (n: number) => {
-    if (regime === 'lucro_presumido' && aLP) return (
-      <Bloco key="ca" numero={n} titulo="Carga tributária atual — Lucro Presumido" base="RIR/2018 · Lei 9.249/1995 · Lei 9.718/1998">
-        <Linha label="Base presumida (IRPJ)" formula={`${moeda(faturamentoMensal)} × ${pct(aLP.lucroPresumidoBase / faturamentoMensal)}`} valor={aLP.lucroPresumidoBase} refLegal="Presunção conforme atividade (Art. 15 Lei 9.249/1995)" />
-        <Linha label="IRPJ" formula={`${moeda(aLP.lucroPresumidoBase)} × 15%`} valor={aLP.irpj} />
-        <Linha label="IRPJ adicional" formula={aLP.irpjAdicional > 0 ? `(${moeda(aLP.lucroPresumidoBase)} − ${moeda(20000)}) × 10%` : 'base ≤ R$ 20.000/mês — não incide'} valor={aLP.irpjAdicional} refLegal="Art. 3º §1º Lei 9.249/1995" />
-        <Linha label="CSLL" formula={`${moeda(aLP.csll / 0.09)} × 9%`} valor={aLP.csll} />
-        <Linha label="PIS/COFINS cumulativo" formula={`${moeda(faturamentoMensal)} × 3,65%`} valor={aLP.pisCofins} refLegal="PIS 0,65% + COFINS 3% (Lei 9.718/1998)" />
-        {aLP.icms > 0 && <Linha label="ICMS" formula={`${moeda(faturamentoMensal)} × ${pct(aLP.icms / faturamentoMensal)}`} valor={aLP.icms} refLegal={aLP.icmsIssInformado ? 'Alíquota efetiva informada' : 'Média nacional 12%'} />}
-        {aLP.iss > 0 && <Linha label="ISS" formula={`${moeda(faturamentoMensal)} × ${pct(aLP.iss / faturamentoMensal)}`} valor={aLP.iss} refLegal={aLP.icmsIssInformado ? 'Alíquota efetiva informada' : 'Média nacional 3%'} />}
-        {aLP.ipi > 0 && <Linha label="IPI" formula={`${moeda(faturamentoMensal)} × 5%`} valor={aLP.ipi} refLegal="Média indústria" />}
-        {aLP.inssPatronal > 0 && <Linha label="CPP patronal (folha)" formula={`${moeda(folhaMensal)} × 20%`} valor={aLP.inssPatronal} refLegal="Art. 22 I Lei 8.212/1991" />}
-        {aLP.terceiros > 0 && <Linha label="Terceiros (Sistema S)" formula={`${moeda(folhaMensal)} × 5,8%`} valor={aLP.terceiros} refLegal={labelTerceiros(setor.tipo)} />}
-        {aLP.cppProLabore > 0 && <Linha label="CPP sobre pró-labore" formula={`${moeda(proLaboreMensal)} × 20%`} valor={aLP.cppProLabore} refLegal="Contribuinte individual — Art. 22 III Lei 8.212/1991" />}
-        <Linha label="Carga total mensal (hoje)" valor={aLP.totalImpostos} destaque />
-        <Linha label="Alíquota efetiva sobre a receita" formula={`${moeda(aLP.totalImpostos)} ÷ ${moeda(faturamentoMensal)}`} valor={pct(aLP.totalImpostos / faturamentoMensal)} />
+  // Todos os regimes recalculados com os mesmos dados — para mostrar cada apuração na memória
+  const todosRegimes = useMemo(
+    () => calcularTodosOsRegimes(resultados),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [faturamentoMensal, insumosMensais, setor?.value, perfilClientes,
+     inssPatronalFolhaMensal, cppProLaboreMensal, aLP?.icms, aLR?.icmsLiquido],
+  )
+
+  // ── Bloco: carga tributária de um regime (recebe o resultado desse regime) ──
+  const cargaBlock = (r: ResultadoComparativo, n: number, atual: boolean) => {
+    const fat = r.faturamentoMensal
+    const ins = r.insumosMensais
+    const rLP = r.apuracaoLucroPresumido
+    const rLR = r.apuracaoLucroReal
+    const folha = r.inssPatronalFolhaMensal / 0.20
+    const proLab = r.cppProLaboreMensal / 0.20
+    const marca = atual ? ' · REGIME ATUAL' : ''
+
+    if (r.regime === 'lucro_presumido' && rLP) return (
+      <Bloco key={r.regime} numero={n} titulo={`Lucro Presumido${marca}`} base="RIR/2018 · Lei 9.249/1995 · Lei 9.718/1998">
+        <Linha label="Base presumida (IRPJ)" formula={`${moeda(fat)} × ${pct(rLP.lucroPresumidoBase / fat)}`} valor={rLP.lucroPresumidoBase} refLegal="Presunção conforme atividade (Art. 15 Lei 9.249/1995)" />
+        <Linha label="IRPJ" formula={`${moeda(rLP.lucroPresumidoBase)} × 15%`} valor={rLP.irpj} />
+        <Linha label="IRPJ adicional" formula={rLP.irpjAdicional > 0 ? `(${moeda(rLP.lucroPresumidoBase)} − ${moeda(20000)}) × 10%` : 'base ≤ R$ 20.000/mês — não incide'} valor={rLP.irpjAdicional} refLegal="Art. 3º §1º Lei 9.249/1995" />
+        <Linha label="CSLL" formula={`${moeda(rLP.csll / 0.09)} × 9%`} valor={rLP.csll} />
+        <Linha label="PIS/COFINS cumulativo" formula={`${moeda(fat)} × 3,65%`} valor={rLP.pisCofins} refLegal="PIS 0,65% + COFINS 3% (Lei 9.718/1998)" />
+        {rLP.icmsDebito > 0 && <>
+          <Linha label="ICMS — débito sobre vendas" formula={`${moeda(fat)} × ${pct(rLP.icmsDebito / fat)}`} valor={rLP.icmsDebito} refLegal={rLP.icmsIssInformado ? 'Alíquota informada' : 'Média nacional 12%'} />
+          {rLP.icmsCredito > 0 && <Linha label="ICMS — (−) crédito sobre compras" formula={`${moeda(ins)} × ${pct(rLP.icmsDebito / fat)}`} valor={rLP.icmsCredito} negativo refLegal="Crédito de ICMS das mercadorias adquiridas (não-cumulatividade)" />}
+          <Linha label="ICMS a recolher (débito − crédito)" valor={rLP.icms} />
+        </>}
+        {rLP.iss > 0 && <Linha label="ISS" formula={`${moeda(fat)} × ${pct(rLP.iss / fat)}`} valor={rLP.iss} refLegal={rLP.icmsIssInformado ? 'Alíquota efetiva informada' : 'Média nacional 3%'} />}
+        {rLP.ipi > 0 && <Linha label="IPI" formula={`${moeda(fat)} × 5%`} valor={rLP.ipi} refLegal="Média indústria" />}
+        {rLP.inssPatronal > 0 && <Linha label="CPP patronal (folha)" formula={`${moeda(folha)} × 20%`} valor={rLP.inssPatronal} refLegal="Art. 22 I Lei 8.212/1991" />}
+        {rLP.terceiros > 0 && <Linha label="Terceiros (Sistema S)" formula={`${moeda(folha)} × 5,8%`} valor={rLP.terceiros} refLegal={labelTerceiros(setor.tipo)} />}
+        {rLP.cppProLabore > 0 && <Linha label="CPP sobre pró-labore" formula={`${moeda(proLab)} × 20%`} valor={rLP.cppProLabore} refLegal="Contribuinte individual — Art. 22 III Lei 8.212/1991" />}
+        <Linha label="Carga total mensal (hoje)" valor={rLP.totalImpostos} destaque />
+        <Linha label="Alíquota efetiva sobre a receita" formula={`${moeda(rLP.totalImpostos)} ÷ ${moeda(fat)}`} valor={pct(rLP.totalImpostos / fat)} />
       </Bloco>
     )
-    if (regime === 'lucro_real' && aLR) return (
-      <Bloco key="ca" numero={n} titulo="Carga tributária atual — Lucro Real" base="RIR/2018 · Leis 10.637/2002 e 10.833/2003">
-        <Linha label="Receita bruta" valor={faturamentoMensal} />
-        <Linha label="(−) CMV / insumos" valor={insumosMensais} negativo />
-        {aLR.folhaPagamento > 0 && <Linha label="(−) Folha de pagamento" valor={aLR.folhaPagamento} negativo />}
-        {aLR.inssPatronal > 0 && <Linha label="(−) CPP patronal (20%)" valor={aLR.inssPatronal} negativo />}
-        {aLR.terceiros > 0 && <Linha label="(−) Terceiros (5,8%)" valor={aLR.terceiros} negativo refLegal={labelTerceiros(setor.tipo)} />}
-        {aLR.proLabore > 0 && <Linha label="(−) Pró-labore dos sócios" valor={aLR.proLabore} negativo />}
-        {aLR.cppProLabore > 0 && <Linha label="(−) CPP pró-labore (20%)" valor={aLR.cppProLabore} negativo />}
-        {aLR.despesasOperacionais > 0 && <Linha label="(−) Despesas operacionais" valor={aLR.despesasOperacionais} negativo />}
-        {aLR.icmsLiquido > 0 && <Linha label="(−) ICMS" valor={aLR.icmsLiquido} negativo />}
-        {aLR.issLiquido > 0 && <Linha label="(−) ISS" valor={aLR.issLiquido} negativo />}
-        <Linha label="(−) PIS/COFINS não-cumulativo (9,25%)" formula={`(${moeda(faturamentoMensal)} − ${moeda(insumosMensais)}) × 9,25%`} valor={aLR.pisCofinsLiquido} negativo refLegal="PIS 1,65% + COFINS 7,6% com créditos" />
-        <Linha label="= Lucro Real (base IRPJ/CSLL)" valor={aLR.lucroRealBase} destaque />
-        <Linha label="IRPJ (15%)" formula={`${moeda(aLR.lucroRealBase)} × 15%`} valor={aLR.irpj} />
-        <Linha label="IRPJ adicional" formula={aLR.irpjAdicional > 0 ? `(${moeda(aLR.lucroRealBase)} − ${moeda(20000)}) × 10%` : 'base ≤ R$ 20.000/mês — não incide'} valor={aLR.irpjAdicional} />
-        <Linha label="CSLL (9%)" formula={`${moeda(aLR.lucroRealBase)} × 9%`} valor={aLR.csll} />
-        <Linha label="Carga total mensal (hoje)" formula="IRPJ + CSLL + PIS/COFINS + ICMS + ISS + previdenciária" valor={aLR.totalImpostos} destaque />
-        <Linha label="Alíquota efetiva sobre a receita" formula={`${moeda(aLR.totalImpostos)} ÷ ${moeda(faturamentoMensal)}`} valor={pct(aLR.totalImpostos / faturamentoMensal)} />
+    if (r.regime === 'lucro_real' && rLR) return (
+      <Bloco key={r.regime} numero={n} titulo={`Lucro Real${marca}`} base="RIR/2018 · Leis 10.637/2002 e 10.833/2003">
+        <Linha label="Receita bruta" valor={fat} />
+        <Linha label="(−) CMV / insumos" valor={ins} negativo />
+        {rLR.folhaPagamento > 0 && <Linha label="(−) Folha de pagamento" valor={rLR.folhaPagamento} negativo />}
+        {rLR.inssPatronal > 0 && <Linha label="(−) CPP patronal (20%)" valor={rLR.inssPatronal} negativo />}
+        {rLR.terceiros > 0 && <Linha label="(−) Terceiros (5,8%)" valor={rLR.terceiros} negativo refLegal={labelTerceiros(setor.tipo)} />}
+        {rLR.proLabore > 0 && <Linha label="(−) Pró-labore dos sócios" valor={rLR.proLabore} negativo />}
+        {rLR.cppProLabore > 0 && <Linha label="(−) CPP pró-labore (20%)" valor={rLR.cppProLabore} negativo />}
+        {rLR.despesasOperacionais > 0 && <Linha label="(−) Despesas operacionais" valor={rLR.despesasOperacionais} negativo />}
+        {rLR.icmsLiquido > 0 && <Linha label="(−) ICMS (débito − crédito)" formula={rLR.icmsCredito > 0 ? `(${moeda(fat)} − ${moeda(ins)}) × ${pct(rLR.icmsDebito / fat)}` : undefined} valor={rLR.icmsLiquido} negativo refLegal={rLR.icmsCredito > 0 ? 'crédito de ICMS sobre as compras' : undefined} />}
+        {rLR.issLiquido > 0 && <Linha label="(−) ISS" valor={rLR.issLiquido} negativo />}
+        <Linha label="(−) PIS/COFINS não-cumulativo (9,25%)" formula={`(${moeda(fat)} − ${moeda(ins)}) × 9,25%`} valor={rLR.pisCofinsLiquido} negativo refLegal="PIS 1,65% + COFINS 7,6% com créditos" />
+        <Linha label="= Lucro Real (base IRPJ/CSLL)" valor={rLR.lucroRealBase} destaque />
+        <Linha label="IRPJ (15%)" formula={`${moeda(rLR.lucroRealBase)} × 15%`} valor={rLR.irpj} />
+        <Linha label="IRPJ adicional" formula={rLR.irpjAdicional > 0 ? `(${moeda(rLR.lucroRealBase)} − ${moeda(20000)}) × 10%` : 'base ≤ R$ 20.000/mês — não incide'} valor={rLR.irpjAdicional} />
+        <Linha label="CSLL (9%)" formula={`${moeda(rLR.lucroRealBase)} × 9%`} valor={rLR.csll} />
+        <Linha label="Carga total mensal (hoje)" formula="IRPJ + CSLL + PIS/COFINS + ICMS + ISS + previdenciária" valor={rLR.totalImpostos} destaque />
+        <Linha label="Alíquota efetiva sobre a receita" formula={`${moeda(rLR.totalImpostos)} ÷ ${moeda(fat)}`} valor={pct(rLR.totalImpostos / fat)} />
       </Bloco>
     )
-    if (regime === 'simples_nacional') return (
-      <Bloco key="ca" numero={n} titulo="Carga tributária atual — Simples Nacional" base={`DAS unificado${anexoSimples ? ` · Anexo ${anexoSimples}` : ''} · LC 123/2006`}>
-        <Linha label="DAS mensal" formula={`${moeda(faturamentoMensal)} × ${pct(aliquotaAtual)}`} valor={impostoAtualMensal} refLegal="Alíquota efetiva da faixa de faturamento" />
-        {cbsSimplesEfetivo != null && cbsSimplesEfetivo > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(faturamentoMensal)} × ${pct(cbsSimplesEfetivo)}`} valor={faturamentoMensal * cbsSimplesEfetivo} />}
-        {ibsSimplesEfetivo != null && ibsSimplesEfetivo > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(faturamentoMensal)} × ${pct(ibsSimplesEfetivo)}`} valor={faturamentoMensal * ibsSimplesEfetivo} />}
-        {cbsSimplesEfetivo != null && ibsSimplesEfetivo != null && (
-          <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo))} da receita`} valor={faturamentoMensal * Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo)} />
+    // Lucro Real sem dados detalhados (estimado por margem)
+    if (r.regime === 'lucro_real') return (
+      <Bloco key={r.regime} numero={n} titulo={`Lucro Real${marca}`} base="Estimado por margem — informe folha/ICMS/despesas para apuração efetiva">
+        <Linha label="Carga estimada (alíquota efetiva do setor)" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} destaque refLegal="PIS/COFINS + ICMS/ISS + IRPJ/CSLL estimados por margem" />
+      </Bloco>
+    )
+    if (r.regime === 'simples_nacional') return (
+      <Bloco key={r.regime} numero={n} titulo={`Simples Nacional${marca}`} base={`DAS unificado${r.anexoSimples ? ` · Anexo ${r.anexoSimples}` : ''} · LC 123/2006`}>
+        <Linha label="DAS mensal" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} refLegal="Alíquota efetiva da faixa de faturamento (RBT12)" />
+        {r.cbsSimplesEfetivo != null && r.cbsSimplesEfetivo > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(fat)} × ${pct(r.cbsSimplesEfetivo)}`} valor={fat * r.cbsSimplesEfetivo} />}
+        {r.ibsSimplesEfetivo != null && r.ibsSimplesEfetivo > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(fat)} × ${pct(r.ibsSimplesEfetivo)}`} valor={fat * r.ibsSimplesEfetivo} />}
+        {r.cbsSimplesEfetivo != null && r.ibsSimplesEfetivo != null && (
+          <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo))} da receita`} valor={fat * Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo)} />
         )}
-        <Linha label="Carga total mensal (hoje)" valor={impostoAtualMensal} destaque />
+        {r.inaplicavel && <Linha label="⚠ Acima do limite do Simples" formula="RBT12 > R$ 4,8M/ano — inelegível" valor="—" refLegal="LC 123/2006" />}
+        <Linha label="Carga total mensal (hoje)" valor={r.impostoAtualMensal} destaque />
       </Bloco>
     )
-    if (regime === 'mei') return (
-      <Bloco key="ca" numero={n} titulo="Carga tributária atual — MEI" base="Valor fixo mensal · LC 123/2006 Art. 18-A">
-        <Linha label="DAS fixo mensal" formula="valor fixo por atividade — independe do faturamento" valor={impostoAtualMensal} refLegal="INSS + ICMS (comércio) ou ISS (serviços)" destaque />
-        {alertaMEI && <Linha label="Limite anual do MEI" formula={`${pct(Math.min(1, alertaMEI.limitePercentual / 100))} utilizado`} valor={alertaMEI.limiteAnual} refLegal={alertaMEI.acimaDaFaixa ? 'ACIMA do limite — desenquadramento' : 'dentro do limite'} />}
+    if (r.regime === 'mei') return (
+      <Bloco key={r.regime} numero={n} titulo={`MEI${marca}`} base="Valor fixo mensal · LC 123/2006 Art. 18-A">
+        <Linha label="DAS fixo mensal" formula="valor fixo por atividade — independe do faturamento" valor={r.impostoAtualMensal} refLegal="INSS + ICMS (comércio) ou ISS (serviços)" destaque />
+        {r.alertaMEI && <Linha label="Limite anual do MEI" formula={`${pct(Math.min(1, r.alertaMEI.limitePercentual / 100))} utilizado`} valor={r.alertaMEI.limiteAnual} refLegal={r.alertaMEI.acimaDaFaixa ? 'ACIMA do limite — desenquadramento' : 'dentro do limite'} />}
       </Bloco>
     )
-    if (regime === 'profissional_liberal') {
-      const issPF = faturamentoMensal * 0.03
-      const irpfPF = Math.max(0, impostoAtualMensal - issPF - inssAutonomoMensal)
+    if (r.regime === 'profissional_liberal') {
+      const issPF = fat * 0.03
+      const irpfPF = Math.max(0, r.impostoAtualMensal - issPF - r.inssAutonomoMensal)
       return (
-        <Bloco key="ca" numero={n} titulo="Carga tributária atual — Profissional Liberal (PF)" base="Carnê-Leão + ISS + INSS">
+        <Bloco key={r.regime} numero={n} titulo={`Profissional Liberal (PF)${marca}`} base="Carnê-Leão + ISS + INSS">
           <Linha label="IRPF (tabela progressiva)" formula="carnê-leão mensal sobre o rendimento" valor={irpfPF} refLegal="Tabela progressiva 2025 + Lei 15.270/2025" />
-          <Linha label="ISS" formula={`${moeda(faturamentoMensal)} × 3%`} valor={issPF} refLegal="Alíquota municipal média" />
-          <Linha label="INSS (contribuinte individual)" formula="20% até o teto do RGPS" valor={inssAutonomoMensal} refLegal="Art. 21 Lei 8.212/1991" />
-          <Linha label="Carga total mensal (hoje)" valor={impostoAtualMensal} destaque />
+          <Linha label="ISS" formula={`${moeda(fat)} × 3%`} valor={issPF} refLegal="Alíquota municipal média" />
+          <Linha label="INSS (contribuinte individual)" formula="20% até o teto do RGPS" valor={r.inssAutonomoMensal} refLegal="Art. 21 Lei 8.212/1991" />
+          <Linha label="Carga total mensal (hoje)" valor={r.impostoAtualMensal} destaque />
         </Bloco>
       )
     }
     // produtor_rural (base Lucro Presumido)
     return (
-      <Bloco key="ca" numero={n} titulo="Carga tributária atual — Produtor Rural (PJ)" base="Base Lucro Presumido · Arts. 164-168 LC 214/2025">
-        <Linha label="Carga IRPJ/CSLL/PIS-COFINS (presunção do setor)" formula={`${moeda(faturamentoMensal)} × ${pct(aliquotaAtual)}`} valor={impostoAtualMensal} destaque />
-        {produtorRuralNaoContribuinte && <Linha label="IBS/CBS na reforma" formula="não-contribuinte (receita < R$ 3,6M/ano)" valor="R$ 0 (isento)" refLegal="Art. 164 §1º LC 214/2025" />}
+      <Bloco key={r.regime} numero={n} titulo={`Produtor Rural (PJ)${marca}`} base="Base Lucro Presumido · Arts. 164-168 LC 214/2025">
+        <Linha label="Carga IRPJ/CSLL/PIS-COFINS (presunção do setor)" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} destaque />
       </Bloco>
     )
   }
@@ -195,7 +222,11 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
 
   // ── Blocos condicionais montados na ordem de exibição ──────────────────────
   const blocos: Array<(n: number) => React.ReactNode> = []
-  blocos.push(blocoCargaAtual)
+  // Carga tributária de HOJE em cada regime (atual em primeiro), para o contador comparar
+  const regimesOrdenados = [...todosRegimes].sort((a, b) => (a.regime === regime ? -1 : b.regime === regime ? 1 : 0))
+  for (const r of regimesOrdenados) {
+    blocos.push(n => cargaBlock(r, n, r.regime === regime))
+  }
   blocos.push(blocoIVA)
 
   if (ehLPouLR) blocos.push(n => (

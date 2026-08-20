@@ -201,7 +201,7 @@ Cálculo mensal, tributo a tributo (todos somados formam a carga total):
 | **IRPJ adicional** | `max(0, basePresumida − 20.000) × 10%` |
 | **CSLL** | `faturamento × presunçãoCSLL × 9%` (presunção 12% com/ind, 32% serv) |
 | **PIS/COFINS cumulativo** | `faturamento × 3,65%` (PIS 0,65% + COFINS 3,00%) |
-| **ICMS** | `faturamento × alíquotaICMS` — ver 2.1 |
+| **ICMS (não-cumulativo)** | `max(0, (faturamento − compras) × alíquotaICMS)` — ver 2.1 |
 | **ISS** | `faturamento × alíquotaISS` — ver 2.1 |
 | **IPI** | `faturamento × 5%` (só indústria, e só quando ICMS não foi informado) |
 | **CPP patronal (folha)** | `folhaEmpregados × 20%` |
@@ -211,14 +211,19 @@ Cálculo mensal, tributo a tributo (todos somados formam a carga total):
 
 ### 2.1 ICMS e ISS no Lucro Presumido
 
-- **ICMS** (comércio/indústria):
-  - Se a alíquota efetiva foi **informada**: `faturamento × alíquotaInformada`.
-  - Se **não informada**: média nacional **12%** (`faturamento × 12%`). No LP o ICMS é cumulativo (sem crédito na presunção).
-- **ISS** (serviços/misto):
+- **ICMS** (comércio/indústria) — apuração **não-cumulativa** (débito − crédito):
+  ```
+  alíquota = alíquotaInformada  OU  12% (média, se não informada)
+  débito   = faturamento × alíquota          (ICMS sobre as vendas)
+  crédito  = compras     × alíquota          (crédito sobre as compras de mercadorias informadas)
+  ICMS a recolher = max(0, débito − crédito) = max(0, (faturamento − compras) × alíquota)
+  ```
+  `compras` = valor informado em "Compras / Insumos". O crédito é calculado sobre esse valor.
+- **ISS** (serviços/misto) — **cumulativo**, sem crédito:
   - Se informado: `faturamento × alíquotaInformada`.
   - Se não informado: média **3%**.
 
-> ⚠️ **Apuração por UF (débito/crédito) não é usada na carga atual.** O sistema tem uma função `calcularICMS()` que apura `ICMS = max(0, faturamento×alíquotaUF − insumos×alíquotaUF)` com a tabela de alíquotas por UF (Seção 8), mas ela **só é chamada para regimes diferentes de LP/LR** (dentro de `estimarICMSISS()`, usada exclusivamente na projeção de transição da reforma 2029–2033). Para a carga tributária **atual** de LP e LR, o ICMS usa sempre alíquota informada ou a média de 12% — nunca o cálculo por UF.
+> ⚠️ **Crédito de ICMS sobre compras:** a apuração acima credita a alíquota informada sobre **todo** o valor de compras/insumos informado. Para máxima precisão, informe em "Compras / Insumos" apenas o valor de mercadorias/matérias-primas que geram crédito (aluguel e serviços de terceiros, por exemplo, não geram crédito de ICMS).
 
 > No LP, o pró-labore **não é dedutível** — a base do IRPJ/CSLL é sempre `faturamento × presunção`, independentemente do pró-labore.
 
@@ -250,8 +255,8 @@ Componentes:
 | Item | Fórmula |
 |---|---|
 | **PIS/COFINS não-cumulativo** | `max(0, (faturamento − insumos) × 9,25%)` (PIS 1,65% + COFINS 7,6%, crédito sobre insumos) |
-| **ICMS** | `faturamento × alíquotaICMS informada`; se não informada, **média 12%** (comércio/indústria) — **mesma regra do LP** |
-| **ISS** | `faturamento × alíquotaISS informada`; se não informada, **média 3%** (serviços/misto) — **mesma regra do LP** |
+| **ICMS (não-cumulativo)** | `max(0, faturamento × alíquotaICMS − compras × alíquotaICMS)` = `max(0, (faturamento − compras) × alíquotaICMS)`. Alíquota informada, ou média **12%** (comércio/indústria) se não informada. **Compras = insumos/compras de mercadorias informados.** |
+| **ISS (cumulativo)** | `faturamento × alíquotaISS informada`; se não informada, **média 3%** (serviços/misto). Não há crédito sobre compras. |
 | **IRPJ** | `LucroReal × 15%` |
 | **IRPJ adicional** | `max(0, LucroReal − 20.000) × 10%` |
 | **CSLL** | `LucroReal × 9%` |
@@ -409,6 +414,8 @@ Apuração (apenas na projeção de transição, não na carga atual): `ICMS = m
 
 Premissas comuns: faturamento **R$ 100.000/mês**, insumos **R$ 30.000/mês**, folha de empregados **R$ 20.000/mês**, pró-labore **R$ 15.000/mês**, ICMS efetivo **8%**, comércio.
 
+> ICMS é apurado por débito − crédito: `débito = 100.000 × 8% = 8.000`, `crédito = 30.000 × 8% = 2.400`, **ICMS a recolher = 5.600**.
+
 ### 9.1 Lucro Presumido (comércio)
 ```
 Base presumida IRPJ = 100.000 × 8%           = 8.000
@@ -416,27 +423,27 @@ IRPJ                = 8.000 × 15%            = 1.200
 IRPJ adicional      = max(0, 8.000−20.000)×10% = 0
 CSLL                = 100.000 × 12% × 9%      = 1.080
 PIS/COFINS          = 100.000 × 3,65%         = 3.650
-ICMS                = 100.000 × 8%            = 8.000
+ICMS  (débito − crédito) = (100.000 − 30.000) × 8% = 5.600
 ISS                 = 0 (comércio)
 CPP folha           = 20.000 × 20%            = 4.000
 Terceiros           = 20.000 × 5,8%           = 1.160
 CPP pró-labore      = 15.000 × 20%            = 3.000
 ─────────────────────────────────────────────────────
-CARGA TOTAL                                   = 22.090  (22,09% da receita)
+CARGA TOTAL                                   = 19.690  (19,69% da receita)
 ```
 
 ### 9.2 Lucro Real efetivo (comércio, mesmos dados)
 ```
 PIS/COFINS = max(0, (100.000−30.000)×9,25%)   = 6.475
-ICMS       = 100.000 × 8%                      = 8.000
+ICMS       = (100.000 − 30.000) × 8%          = 5.600
 CPP folha  = 4.000 ; Terceiros = 1.160 ; CPP pró-labore = 3.000
 Lucro Real = max(0, 100.000 − 30.000 − 20.000 − 4.000 − 1.160
-                    − 15.000 − 3.000 − 0(desp) − 8.000 − 0 − 6.475) = 12.365
-IRPJ       = 12.365 × 15%                       = 1.855
+                    − 15.000 − 3.000 − 0(desp) − 5.600 − 0 − 6.475) = 14.765
+IRPJ       = 14.765 × 15%                       = 2.215
 IRPJ adic. = 0
-CSLL       = 12.365 × 9%                        = 1.113
+CSLL       = 14.765 × 9%                        = 1.329
 ─────────────────────────────────────────────────────
-CARGA TOTAL = 1.855 + 0 + 1.113 + 6.475 + 8.000 + 0 + 4.000 + 1.160 + 3.000 = 25.603
+CARGA TOTAL = 2.215 + 0 + 1.329 + 6.475 + 5.600 + 0 + 4.000 + 1.160 + 3.000 = 23.779
 ```
 
 ### 9.3 Simples Nacional (comércio, Anexo I)
@@ -463,7 +470,7 @@ Pontos onde este sistema faz uma escolha específica — confira se o seu segue 
 
 1. **Fator R não migra o anexo automaticamente** — é só análise (Seção 1.4).
 2. **Anexo IV do Simples não soma CPP por fora** (Seção 1.2).
-3. **ICMS/ISS não informados:** LP e LR usam a **mesma** média (12% ICMS / 3% ISS) — não há mais diferenciação entre os dois regimes (Seções 2.1 e 3.1). A apuração por UF (débito/crédito) existe no código mas só é usada na projeção de transição da reforma, nunca na carga atual.
+3. **ICMS não-cumulativo (LP e LR):** `ICMS = max(0, (faturamento − compras) × alíquota)` — débito sobre vendas menos crédito sobre as compras de mercadorias informadas. Alíquota informada ou média 12% se não informada. **O crédito incide sobre todo o valor de "Compras / Insumos" informado** (Seções 2.1 e 3.1). O ISS permanece cumulativo (sem crédito).
 4. **RAT/FAP não é modelado** — só CPP 20% + terceiros 5,8% (Seção 0.4).
 5. **Adicional de IRPJ é mensalizado** (limiar R$ 20.000/mês = R$ 60.000/trimestre).
 6. **IRPF com desconto da Lei 15.270/2025** (isenção efetiva até R$ 5.000/mês) — se o seu sistema usa só a tabela clássica, os valores de pró-labore/PF divergem.

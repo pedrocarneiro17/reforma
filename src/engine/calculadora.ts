@@ -875,15 +875,16 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const contribPrevidenciariaMensal   = cppFolhaEmpregados + terceirosFolhaMensal + cppProLaboreMensal
   // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
   const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
-  // ICMS/ISS "hoje": alíquotas informadas no formulário; sem informação cai na média por
-  // setor (mesma regra para LP e LR — comparação justa entre os dois regimes)
-  const icmsAtualMensal = ehLPouLR
-    ? (aliquotaICMSEfetiva != null
-        ? faturamentoMensal * aliquotaICMSEfetiva
-        : (setor.tipo === 'comercio' || setor.tipo === 'industria')
-          ? faturamentoMensal * 0.12
-          : 0)
-    : 0
+  // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
+  // débito = alíquota × vendas ; crédito = alíquota × compras de mercadorias informadas (insumos).
+  // ICMS a recolher = max(0, débito − crédito). Sem alíquota informada, cai na média por setor.
+  const icmsAliquotaAtual = aliquotaICMSEfetiva != null
+    ? aliquotaICMSEfetiva
+    : (setor.tipo === 'comercio' || setor.tipo === 'industria') ? 0.12 : 0
+  const icmsDebitoAtualMensal  = ehLPouLR ? faturamentoMensal * icmsAliquotaAtual : 0
+  const icmsCreditoAtualMensal = ehLPouLR ? insumosMensais * icmsAliquotaAtual : 0
+  const icmsAtualMensal = Math.max(0, icmsDebitoAtualMensal - icmsCreditoAtualMensal)
+  // ISS é cumulativo (incide sobre a receita de serviços, sem crédito sobre compras)
   const issAtualMensal = ehLPouLR
     ? (aliquotaISSEfetiva != null
         ? faturamentoMensal * aliquotaISSEfetiva
@@ -941,6 +942,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       csll: csllLP,
       pisCofins: pisCofinsLP,
       icms: icmsAtualMensal,
+      icmsDebito: icmsDebitoAtualMensal,
+      icmsCredito: icmsCreditoAtualMensal,
       iss: issAtualMensal,
       ipi: ipiLP,
       inssPatronal: cppFolhaEmpregados,
@@ -1479,6 +1482,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       return {
         pisCofinsLiquido,
         icmsLiquido: icmsAtualMensal,
+        icmsDebito: icmsDebitoAtualMensal,
+        icmsCredito: icmsCreditoAtualMensal,
         issLiquido: issAtualMensal,
         inssPatronal: cppFolhaEmpregados,
         terceiros: terceirosFolhaMensal,
