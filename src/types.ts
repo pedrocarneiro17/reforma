@@ -31,6 +31,7 @@ export interface Setor {
   cestaMista?: boolean              // setor de cesta mista (supermercados): parte alíquota zero (cesta básica/hortifruti), parte 60% (Anexo VII/VIII), parte cheia
   regimeAutomotivo?: boolean        // Arts. 309-316 LC 214/2025: setor pode ter projeto habilitado ao crédito presumido automotivo (Lei 9.440/1997)
   zfm?: boolean                     // Arts. 439-457 LC 214/2025: indústria incentivada na Zona Franca de Manaus (créditos presumidos IBS/CBS)
+  vedadoSimples?: boolean           // true = atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 ou Art. 3º §4º)
 }
 
 // Tipo de bem produzido pela indústria incentivada da ZFM — define o % do crédito presumido de IBS (Art. 450 §1º LC 214/2025)
@@ -52,6 +53,7 @@ export interface DadosEntrada {
   faturamentoMensal: number
   insumosMensais: number
   perfilClientes: PerfilClientes
+  pctClientesPJ?: number             // % das vendas a empresas (PJ) quando perfilClientes === 'misto' (0–100)
   aliquotaAtualOverride?: number | null
   dadosMensais?: DadosMes[] | null
   exportacoesMensais?: number
@@ -197,6 +199,8 @@ export interface ResultadoCalculo {
   insumosMensais: number
   exportacoesMensais: number
   perfilClientes: PerfilClientes
+  fracClientesPJ: number             // fração das vendas a PJ (b2b=1, b2c=0, misto=pctClientesPJ/100)
+  setorVedadoSimples: boolean        // atividade impedida de optar pelo Simples Nacional
   dadosMensais: DadosMes[] | null
 
   // Ecos dos dados de entrada — usados pelo comparador de regimes para recalcular LP/LR
@@ -207,6 +211,7 @@ export interface ResultadoCalculo {
   aliquotaISSEfetiva?: number
   despesasOperacionaisMensais?: number
   sociosAdministradores?: SocioAdministrador[]
+  pctClientesPJ?: number
 
   aliquotaAtual: number
   aliquotaAtualEstimada: number
@@ -351,6 +356,7 @@ export interface ResultadoComparativo extends ResultadoCalculo {
   inaplicavel: boolean
   acimaDaFaixaSimples: boolean
   acimaDaFaixaMEI: boolean
+  vedadoSimplesAtividade: boolean   // Simples vedado pela atividade (LC 123/2006 Art. 17 / Art. 3º §4º)
 }
 
 // ─── Ponto na curva de crescimento ───────────────────────────────────────────

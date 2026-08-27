@@ -132,6 +132,16 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         <MemoriaCalculo resultados={resultados} />
       ) : (
       <>
+      {/* ── Alerta: atividade vedada ao Simples Nacional ──────────────────── */}
+      {regime === 'simples_nacional' && setor.vedadoSimples && (
+        <div className="insight-danger text-sm leading-relaxed">
+          <strong>Atenção — atividade vedada ao Simples Nacional.</strong> A atividade
+          "{setor.label.split('(')[0].trim()}" é impedida de optar pelo Simples Nacional
+          (LC 123/2006 Art. 17 / Art. 3º §4º). Os números calculados aqui são apenas
+          ilustrativos — na prática a empresa deve apurar por Lucro Presumido ou Lucro Real.
+        </div>
+      )}
+
       {/* ── Resumo executivo — recado factual no topo ────────────────────── */}
       <div className={`${resumoClasse} text-sm leading-relaxed`}>
         {resumo.texto}

@@ -126,11 +126,14 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     },
   ]
 
-  const scoreTotal = comparativo.map(r => ({
-    regime: r.regime,
-    total: r.impostoAtualMensal + r.cargaTotalReformaMensal,
-  }))
-  const menorTotal = Math.min(...scoreTotal.map(s => s.total))
+  // Recomendação só entre regimes aplicáveis (exclui Simples vedado/acima do limite, MEI acima do limite)
+  const scoreTotal = comparativo
+    .filter(r => !r.inaplicavel)
+    .map(r => ({
+      regime: r.regime,
+      total: r.impostoAtualMensal + r.cargaTotalReformaMensal,
+    }))
+  const menorTotal = scoreTotal.length ? Math.min(...scoreTotal.map(s => s.total)) : Infinity
   const recomendado = scoreTotal.find(s => s.total === menorTotal)?.regime
 
   return (
@@ -186,7 +189,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   </span>
                 )}
                 {r.inaplicavel && (
-                  <span className="badge badge-danger">acima do limite</span>
+                  <span className="badge badge-danger">{r.vedadoSimplesAtividade ? 'atividade vedada' : 'acima do limite'}</span>
                 )}
               </div>
 
@@ -334,7 +337,9 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
               {r.inaplicavel && (
                 <p className="text-danger text-xs leading-relaxed">
-                  Seu faturamento anual ultrapassa R$ 4,8M — empresa não é elegível ao Simples Nacional.
+                  {r.vedadoSimplesAtividade
+                    ? 'Esta atividade é vedada ao Simples Nacional (LC 123/2006 Art. 17 / Art. 3º §4º) — a empresa não pode optar por este regime. Os valores acima são apenas ilustrativos.'
+                    : 'Seu faturamento anual ultrapassa R$ 4,8M — empresa não é elegível ao Simples Nacional.'}
                 </p>
               )}
             </div>

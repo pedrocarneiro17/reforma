@@ -156,7 +156,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
         {r.cbsSimplesEfetivo != null && r.ibsSimplesEfetivo != null && (
           <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo))} da receita`} valor={fat * Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo)} />
         )}
-        {r.inaplicavel && <Linha label="⚠ Acima do limite do Simples" formula="RBT12 > R$ 4,8M/ano — inelegível" valor="—" refLegal="LC 123/2006" />}
+        {r.inaplicavel && <Linha label={r.vedadoSimplesAtividade ? '⚠ Atividade vedada ao Simples' : '⚠ Acima do limite do Simples'} formula={r.vedadoSimplesAtividade ? 'não pode optar pelo regime — valores ilustrativos' : 'RBT12 > R$ 4,8M/ano — inelegível'} valor="—" refLegal={r.vedadoSimplesAtividade ? 'LC 123/2006 Art. 17 / Art. 3º §4º' : 'LC 123/2006'} />}
         <Linha label="Carga total mensal (hoje)" valor={r.impostoAtualMensal} destaque />
       </Bloco>
     )

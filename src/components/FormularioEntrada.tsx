@@ -170,6 +170,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [redutorSocialMensal, setRedutorSocialMensal] = useState(0) // R$ redutor social/mês
   const [pctRepasseAgencia, setPctRepasseAgencia] = useState(80)    // % repasse agências
   const [pctVendasGoverno, setPctVendasGoverno] = useState(0)       // % vendas ao governo
+  const [pctClientesPJ, setPctClientesPJ] = useState(50)            // % vendas a PJ no perfil Misto
   // Novos campos — LC 214/2025
   const [pctGorjeta, setPctGorjeta] = useState(0)                            // % gorjeta excluída da base (Art. 274)
   const [pctInsumosProdutorRural, setPctInsumosProdutorRural] = useState(0)  // % insumos de produtor rural (Art. 168)
@@ -284,6 +285,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       faturamentoMensal: fatEfetivo,
       insumosMensais: insEfetivo,
       perfilClientes: dados.perfilClientes as PerfilClientes,
+      pctClientesPJ: dados.perfilClientes === 'misto' ? pctClientesPJ : undefined,
       aliquotaAtualOverride: agregado12m?.aliquotaRealApurada ?? null,
       dadosMensais: modoEntrada === 'detalhado' ? (agregado12m?.meses ?? null) : null,
       exportacoesMensais: modoEntrada === 'detalhado' ? (agregado12m?.medias.exportacoes ?? 0) : parseMoeda(exportacoesMensaisStr),
@@ -381,6 +383,16 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                   </div>
                 )
               })()}
+
+              {setorSelecionado?.vedadoSimples && (dados.regime === 'simples_nacional' || dados.regime === 'mei') && (
+                <div className="mt-2.5 insight-danger">
+                  <p className="text-xs leading-relaxed">
+                    <strong>Atividade vedada ao Simples Nacional</strong> (LC 123/2006 Art. 17 / Art. 3º §4º).
+                    Empresas desta atividade não podem optar pelo {dados.regime === 'mei' ? 'MEI/Simples' : 'Simples Nacional'} —
+                    a apuração deve ser por Lucro Presumido ou Lucro Real.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Estado (UF) — para cálculo de ICMS */}
@@ -432,6 +444,31 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 })}
               </div>
               {erros.perfilClientes && <p className="insight-danger text-xs mt-1.5 px-3 py-1.5">{erros.perfilClientes}</p>}
+
+              {dados.perfilClientes === 'misto' && (
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
+                      Composição das vendas — PF × PJ
+                    </label>
+                    <span className="num text-sm font-bold text-ink">{pctClientesPJ}% PJ</span>
+                  </div>
+                  <input
+                    type="range" min={0} max={100} step={5}
+                    value={pctClientesPJ}
+                    onChange={e => setPctClientesPJ(Number(e.target.value))}
+                    className="w-full accent-[var(--color-ink)]"
+                  />
+                  <div className="flex justify-between text-[10px] text-ink-muted">
+                    <span>{100 - pctClientesPJ}% Pessoa Física (B2C)</span>
+                    <span>{pctClientesPJ}% Empresas (B2B)</span>
+                  </div>
+                  <p className="text-[10px] text-ink-muted leading-relaxed">
+                    Só a parcela vendida a <strong>empresas (PJ)</strong> gera crédito de IBS/CBS aproveitável pelo cliente —
+                    isso pesa na análise do Simples Híbrido e no repasse do IVA na reforma.
+                  </p>
+                </div>
+              )}
 
               {(dados.regime === 'simples_nacional' || dados.regime === 'mei') &&
                 (dados.perfilClientes === 'b2b' || dados.perfilClientes === 'misto') && (

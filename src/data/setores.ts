@@ -349,6 +349,7 @@ export const SETORES: Setor[] = [
     grupo: 'Regime Específico — SAF',
     reducao: 0.962,  // Arts. 424 Dec. 12.955: CBS = 1% sobre receita total → reducao = 1 − (1/26,5) ≈ 0,9623
     tipo: 'servico',
+    vedadoSimples: true,   // SAF é sociedade anônima — Simples é vedado a S.A. (LC 123/2006 Art. 3º)
   },
   {
     value: 'programas_fidelidade',
@@ -607,6 +608,7 @@ export const SETORES: Setor[] = [
     reducao: 0.00,
     tipo: 'industria',
     impostSeletivo: true,  // Anexo XVII III LC 214/2025: tabaco e derivados — IS a ser fixado por lei ordinária
+    vedadoSimples: true,   // LC 123/2006 Art. 17 X 'a': produção/venda no atacado de cigarros
   },
   {
     value: 'bebidas_alcoolicas',
@@ -615,6 +617,7 @@ export const SETORES: Setor[] = [
     reducao: 0.00,
     tipo: 'industria',
     impostSeletivo: true,  // Anexo XVII II LC 214/2025: bebidas alcoólicas — IS a ser fixado por lei ordinária
+    vedadoSimples: true,   // LC 123/2006 Art. 17 X 'c': produção/importação de bebidas alcoólicas (exceto micro/pequenos produtores registrados)
   },
   {
     value: 'bebidas_acucaradas',
@@ -650,6 +653,7 @@ export const SETORES: Setor[] = [
     grupo: 'Regime Específico — Cooperativas',
     reducao: 1.00,  // Art. 391 Dec. 12.955/2026: CBS = 0% nas operações cooperativa↔associado (nos dois sentidos)
     tipo: 'servico',
+    vedadoSimples: true,   // LC 123/2006 Art. 3º §4º VI: cooperativas (exceto as de consumo) não podem optar pelo Simples
   },
 
   // Serviços financeiros: regime especial com alíquota fixada — Art. 233 LC 214/2025 (redação LC 227/2026)
@@ -661,6 +665,7 @@ export const SETORES: Setor[] = [
     grupo: 'Regime Especial — Serviços Financeiros',
     reducao: 0.590566,  // Art. 233 LC 214/2025 (LC 227/2026): alíquota IBS+CBS = 10,85% em 2027-2028; reducao = 1 − (10,85 ÷ 26,5) = 0,590566...
     tipo: 'servico',
+    vedadoSimples: true,   // LC 123/2006 Art. 17 I: bancos, financeiras e instituições equiparadas não podem optar pelo Simples
   },
   {
     value: 'seguros_resseguros',
@@ -668,5 +673,6 @@ export const SETORES: Setor[] = [
     grupo: 'Regime Especial — Serviços Financeiros',
     reducao: 0.590566,  // Art. 233 LC 214/2025 (LC 227/2026): seguros integram os serviços financeiros do Art. 189 — mesma alíquota especial de 10,85% em 2027-2028; reducao = 1 − (10,85 ÷ 26,5) = 0,590566...
     tipo: 'servico',
+    vedadoSimples: true,   // LC 123/2006 Art. 17 I: seguradoras e resseguradoras não podem optar pelo Simples
   },
 ]

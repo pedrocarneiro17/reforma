@@ -805,6 +805,7 @@ function estimarICMSISS(
 export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const {
     regime, setor, faturamentoMensal, insumosMensais, perfilClientes,
+    pctClientesPJ = 50,
     aliquotaAtualOverride = null,
     dadosMensais = null,
     exportacoesMensais = 0,
@@ -842,6 +843,14 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     despesasOperacionaisMensais = 0,
   } = dados
   const faturamentoAnual = faturamentoMensal * 12
+
+  // Fração das vendas a PJ (empresas) — determina quanto do IVA é aproveitável como crédito
+  // pelo cliente (só PJ credita). b2b = 100%, b2c = 0%, misto = pctClientesPJ informado.
+  const fracClientesPJ = perfilClientes === 'b2b' ? 1
+    : perfilClientes === 'b2c' ? 0
+    : Math.min(1, Math.max(0, pctClientesPJ / 100))
+  // Atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 / Art. 3º §4º)
+  const setorVedadoSimples = setor.vedadoSimples === true
 
   // Anexo efetivo: usa o informado pelo usuário ou infere pelo tipo de setor
   const anexoEfetivo: import('../types').AnexoSimples | undefined = (regime === 'simples_nacional' || regime === 'mei')
@@ -1310,7 +1319,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const analiseSimplesHibrido: AnaliseSimplesHibrido | null =
     (regime === 'simples_nacional' || regime === 'mei') &&
     (perfilClientes === 'b2b' || perfilClientes === 'misto')
-      ? calcularSimplesHibrido(faturamentoMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta)
+      ? calcularSimplesHibrido(faturamentoMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ)
       : null
 
   // ── 6. Análise do Grupo Societário (Simples/MEI) ────────────────────────────
@@ -1341,6 +1350,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     insumosMensais,
     exportacoesMensais,
     perfilClientes,
+    fracClientesPJ,
+    setorVedadoSimples,
     dadosMensais,
 
     // Ecoa os dados de entrada para que o comparador de regimes recalcule LP/LR
@@ -1351,6 +1362,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     aliquotaISSEfetiva,
     despesasOperacionaisMensais,
     sociosAdministradores,
+    pctClientesPJ,
 
     aliquotaAtual,
     aliquotaAtualEstimada,
@@ -1538,12 +1550,14 @@ function calcularSimplesHibrido(
   insumosMensais: number,
   impostoAtualMensal: number,
   aliquotaIVABruta: number,
+  fracClientesPJ: number,   // fração das vendas a PJ — só clientes PJ aproveitam o crédito
 ): AnaliseSimplesHibrido {
   const creditoInsumos = insumosMensais * aliquotaIVABruta
   const ivaHibridoLiquido = Math.max(0, faturamentoMensal * aliquotaIVABruta - creditoInsumos)
 
   const custoAdicionalMensal = ivaHibridoLiquido - impostoAtualMensal
-  const creditoDisponibilizadoAoCliente = faturamentoMensal * aliquotaIVABruta
+  // Só a parcela vendida a PJ gera crédito aproveitável ao cliente
+  const creditoDisponibilizadoAoCliente = faturamentoMensal * aliquotaIVABruta * fracClientesPJ
   const vale = creditoDisponibilizadoAoCliente >= custoAdicionalMensal
 
   return {
@@ -1580,27 +1594,35 @@ export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativ
     })
   })
 
-  // "Melhor" é sempre pelo CONJUNTO de tributos, não por um imposto isolado:
-  // - hoje: impostoAtualMensal (IRPJ+CSLL+PIS/COFINS+ICMS+ISS+contrib. previdenciária)
-  // - reforma: cargaTotalReformaMensal (IBS/CBS líquido + IRPJ/CSLL + contrib. previdenciária)
-  // O IVA Dual isolado é idêntico entre regimes (mesma receita/insumos) e não distingue cenários.
-  const menorAtual = Math.min(...resultados.map(r => r.impostoAtualMensal))
-  const menorIVA   = Math.min(...resultados.map(r => r.cargaTotalReformaMensal))
-  const menorDelta = Math.min(...resultados.map(r => Math.abs(r.variacaoAbsolutaMensal)))
-
   const acimaDaFaixaSimples = faturamentoAnual > LIMITE_SIMPLES_ANUAL
   const acimaDaFaixaMEI     = faturamentoAnual > LIMITE_MEI_ANUAL
 
-  return resultados.map(r => ({
-    ...r,
-    melhorAtual:  r.impostoAtualMensal === menorAtual,
-    melhorIVA:    r.cargaTotalReformaMensal === menorIVA,
-    menorImpacto: Math.abs(r.variacaoAbsolutaMensal) === menorDelta,
-    inaplicavel: (r.regime === 'simples_nacional' && acimaDaFaixaSimples) ||
-                 (r.regime === 'mei' && acimaDaFaixaMEI),
-    acimaDaFaixaSimples,
-    acimaDaFaixaMEI,
-  }))
+  // Um regime é INAPLICÁVEL quando a empresa não pode optar por ele:
+  // Simples acima do limite OU vedado por atividade; MEI acima do limite.
+  const ehInaplicavel = (r: ResultadoCalculo): boolean =>
+    (r.regime === 'simples_nacional' && (acimaDaFaixaSimples || r.setorVedadoSimples)) ||
+    (r.regime === 'mei' && acimaDaFaixaMEI)
+
+  // "Melhor" é sempre pelo CONJUNTO de tributos, não por um imposto isolado, e SÓ entre
+  // os regimes aplicáveis — um regime que a empresa não pode adotar nunca é "melhor".
+  const aplicaveis = resultados.filter(r => !ehInaplicavel(r))
+  const menorAtual = aplicaveis.length ? Math.min(...aplicaveis.map(r => r.impostoAtualMensal)) : Infinity
+  const menorIVA   = aplicaveis.length ? Math.min(...aplicaveis.map(r => r.cargaTotalReformaMensal)) : Infinity
+  const menorDelta = aplicaveis.length ? Math.min(...aplicaveis.map(r => Math.abs(r.variacaoAbsolutaMensal))) : Infinity
+
+  return resultados.map(r => {
+    const inaplicavel = ehInaplicavel(r)
+    return {
+      ...r,
+      melhorAtual:  !inaplicavel && r.impostoAtualMensal === menorAtual,
+      melhorIVA:    !inaplicavel && r.cargaTotalReformaMensal === menorIVA,
+      menorImpacto: !inaplicavel && Math.abs(r.variacaoAbsolutaMensal) === menorDelta,
+      inaplicavel,
+      acimaDaFaixaSimples,
+      acimaDaFaixaMEI,
+      vedadoSimplesAtividade: r.regime === 'simples_nacional' && r.setorVedadoSimples,
+    }
+  })
 }
 
 // ─── Simulador de Crescimento de Faturamento ────────────────────────────────
