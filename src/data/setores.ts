@@ -75,6 +75,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 70% — Locação de Imóveis',
     reducao: 0.70,
     tipo: 'servico',
+    vedadoSimples: true,   // LC 123/2006 Art. 17 XV: locação de imóveis próprios é vedada ao Simples (apuração por LP/LR)
   },
 
   // ─── REDUÇÃO 60% ──────────────────────────────────────────────────────────
@@ -201,13 +202,25 @@ export const SETORES: Setor[] = [
   // ─── REDUÇÃO 50% — Construção e Incorporação Imobiliária ─────────────────
   {
     value: 'construcao_civil',
-    label: 'Construção Civil e Incorporação Imobiliária',
+    label: 'Construção Civil e Obras de Engenharia',
     grupo: 'Redução 50% — Construção e Imóveis',
     reducao: 0.50,
     tipo: 'servico',
     presuncaoLPIRPJ: 0.08,
     presuncaoLPCSLL: 0.12,
     regimeImobiliario: true,  // Arts. 369-376 Dec. 12.955: CBS sobre base reduzida (custo + redutor social)
+    // Construção civil / empreitada é PERMITIDA no Simples (Anexo IV) — não vedada.
+  },
+  {
+    value: 'incorporacao_imoveis',
+    label: 'Incorporação, Loteamento e Compra/Venda de Imóveis',
+    grupo: 'Redução 50% — Construção e Imóveis',
+    reducao: 0.50,
+    tipo: 'servico',
+    presuncaoLPIRPJ: 0.08,
+    presuncaoLPCSLL: 0.12,
+    regimeImobiliario: true,  // Arts. 369-376 Dec. 12.955: CBS sobre base reduzida
+    vedadoSimples: true,   // LC 123/2006 Art. 17 XIV: loteamento e incorporação de imóveis são vedados ao Simples
   },
 
   // ─── REDUÇÃO 40% — Hospitalidade e Alimentação ───────────────────────────
