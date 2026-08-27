@@ -244,7 +244,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
 
   return (
     <div className="flex min-h-screen bg-page">
-      <div className="relative flex-shrink-0 h-screen sticky top-0 z-30" style={{ width: collapsed ? 68 : 240, transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
+      <div className="relative flex-shrink-0 h-screen sticky top-0 z-30 no-print" style={{ width: collapsed ? 68 : 240, transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
         <Sidebar
           etapa={etapa}
           collapsed={collapsed}
