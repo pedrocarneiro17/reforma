@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { fmt, calcularIRPF, INSS_TETO_2026, INSS_ALIQ_AUTONOMO, INSS_ALIQ_PATRONAL } from '../engine/calculadora'
+import { fmt, calcularIRPF, INSS_TETO_2026, INSS_ALIQ_SEGURADO_SOCIO, INSS_ALIQ_PATRONAL } from '../engine/calculadora'
 import type { SocioAdministrador } from '../types'
 
 function mascaraMoeda(input: string): string {
@@ -114,7 +114,7 @@ export default function SociosAdministradores({ regime, numeroCard, onChange }: 
               {socios.map((s, i) => {
                 const pl = parseMoeda(s.prolaboreStr)
                 const irpf = pl > 0 ? calcularIRPF(pl) : 0
-                const inssEmp = pl > 0 ? Math.min(pl, INSS_TETO_2026) * INSS_ALIQ_AUTONOMO : 0
+                const inssEmp = pl > 0 ? Math.min(pl, INSS_TETO_2026) * INSS_ALIQ_SEGURADO_SOCIO : 0
                 const inssPatronal = pl > 0 ? pl * INSS_ALIQ_PATRONAL : 0
                 const beneficioLR = isLR && pl > 0 ? pl * 0.24 : 0
                 const custoLiquido = Math.max(0, irpf + inssEmp + inssPatronal - beneficioLR)
@@ -195,7 +195,7 @@ export default function SociosAdministradores({ regime, numeroCard, onChange }: 
             const validos = socios.filter(s => parseMoeda(s.prolaboreStr) > 0)
             const totalPL     = validos.reduce((a, s) => a + parseMoeda(s.prolaboreStr), 0)
             const totalIRPF   = validos.reduce((a, s) => a + calcularIRPF(parseMoeda(s.prolaboreStr)), 0)
-            const totalInssE  = validos.reduce((a, s) => a + Math.min(parseMoeda(s.prolaboreStr), INSS_TETO_2026) * INSS_ALIQ_AUTONOMO, 0)
+            const totalInssE  = validos.reduce((a, s) => a + Math.min(parseMoeda(s.prolaboreStr), INSS_TETO_2026) * INSS_ALIQ_SEGURADO_SOCIO, 0)
             const totalInssP  = validos.reduce((a, s) => a + parseMoeda(s.prolaboreStr) * INSS_ALIQ_PATRONAL, 0)
             const beneficioLR = isLR ? totalPL * 0.24 : 0
             const custoLiq    = Math.max(0, totalIRPF + totalInssE + totalInssP - beneficioLR)
