@@ -860,10 +860,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   // Fator R — para atividades sujeitas (setor.fatorR), a folha determina o anexo por lei:
   // folha ÷ faturamento ≥ 28% → Anexo III; < 28% → Anexo V (LC 123/2006 Art. 18 §5-J/§5-M).
-  // O campo folhaMensal é opcional; quando preenchido, exibe a análise E define o anexo do DAS.
+  // Folha do Fator R: usa o campo próprio (folhaMensal, coletado quando o regime atual é Simples)
+  // ou, quando ausente — caso do comparador para uma empresa hoje LP/LR —, reconstrói com a
+  // folha de empregados + pró-labore, para que o cenário Simples do comparador aplique o Fator R.
+  const folhaFatorR = folhaMensal > 0
+    ? folhaMensal
+    : folhaPagamentoLRMensal + sociosAdministradores.reduce((s, so) => s + so.prolaboreMensal, 0)
   const analiseFatorR: AnaliseFatorR | null =
-    regime === 'simples_nacional' && setor.fatorR === true && folhaMensal > 0
-      ? calcularFatorR(faturamentoMensal, folhaMensal)
+    regime === 'simples_nacional' && setor.fatorR === true && folhaFatorR > 0
+      ? calcularFatorR(faturamentoMensal, folhaFatorR)
       : null
 
   // Anexo efetivo: para setores sujeitos ao Fator R com folha informada, o Fator R decide
