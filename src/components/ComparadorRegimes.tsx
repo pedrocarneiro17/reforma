@@ -101,7 +101,7 @@ interface ComparadorRegimesProps {
 
 export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps) {
   const comparativo = useMemo(
-    () => calcularTodosOsRegimes(dadosBase),
+    () => calcularTodosOsRegimes(dadosBase, { desdobrarFatorR: true }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.perfilClientes,
      dadosBase.folhaPagamentoLRMensal, dadosBase.aliquotaICMSEfetiva, dadosBase.aliquotaISSEfetiva,
@@ -110,19 +110,35 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
 
+  // Simples pode vir desdobrado em dois cenários (Anexo III e V) para atividades sujeitas ao Fator R.
+  const snEntries = comparativo.filter(r => r.regime === 'simples_nacional')
+  const desdobrado = snEntries.length > 1
+  const lp = comparativo.find(r => r.regime === 'lucro_presumido')!
+  const lr = comparativo.find(r => r.regime === 'lucro_real')!
+  const snIII = snEntries.find(r => r.anexoComparado === 'III')
+  const snV   = snEntries.find(r => r.anexoComparado === 'V')
+  const snUnico = !desdobrado ? snEntries[0] : null
+  const R = Math.round
+
   const dataGrafico = [
     {
       cenario: 'Hoje (atual)',
-      'SN Pleno':        Math.round(comparativo[0].impostoAtualMensal),
-      'Lucro Presumido': Math.round(comparativo[1].impostoAtualMensal),
-      'Lucro Real':      Math.round(comparativo[2].impostoAtualMensal),
+      ...(desdobrado
+        ? { 'SN Anexo III': R(snIII!.impostoAtualMensal), 'SN Anexo V': R(snV!.impostoAtualMensal) }
+        : { 'SN Pleno': R(snUnico!.impostoAtualMensal) }),
+      'Lucro Presumido': R(lp.impostoAtualMensal),
+      'Lucro Real':      R(lr.impostoAtualMensal),
     },
     {
       cenario: 'Pós-reforma (2033)',
-      'SN Pleno':        Math.round(comparativo[0].cargaTotalReformaMensal),
-      'SN Híbrido':      snHibridoMensal != null ? Math.round(snHibridoMensal) : undefined,
-      'Lucro Presumido': Math.round(comparativo[1].cargaTotalReformaMensal),
-      'Lucro Real':      Math.round(comparativo[2].cargaTotalReformaMensal),
+      ...(desdobrado
+        ? { 'SN Anexo III': R(snIII!.cargaTotalReformaMensal), 'SN Anexo V': R(snV!.cargaTotalReformaMensal) }
+        : {
+            'SN Pleno':   R(snUnico!.cargaTotalReformaMensal),
+            'SN Híbrido': snHibridoMensal != null ? R(snHibridoMensal) : undefined,
+          }),
+      'Lucro Presumido': R(lp.cargaTotalReformaMensal),
+      'Lucro Real':      R(lr.cargaTotalReformaMensal),
     },
   ]
 
@@ -172,7 +188,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
           return (
             <div
-              key={r.regime}
+              key={`${r.regime}-${r.anexoComparado ?? ''}`}
               className={`rounded-xl border p-5 space-y-4 transition-all
                 ${isAtual
                   ? `ring-2 ${COR_RING[meta.color]} bg-[#EFEAE1] border-[#9A9286]`
@@ -195,9 +211,15 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
               <div>
                 <div className="mb-0.5">
-                  <span className={`font-bold text-sm ${COR_TEXT[meta.color]}`}>{meta.label}</span>
+                  <span className={`font-bold text-sm ${COR_TEXT[meta.color]}`}>
+                    {meta.label}{r.anexoComparado ? ` — Anexo ${r.anexoComparado}` : ''}
+                  </span>
                 </div>
-                <p className="text-ink-muted text-xs">{meta.desc}</p>
+                <p className="text-ink-muted text-xs">
+                  {r.anexoComparado
+                    ? (r.anexoComparado === 'III' ? 'Fator R ≥ 28% da folha' : 'Fator R < 28% da folha')
+                    : meta.desc}
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -242,7 +264,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {r.regime === 'simples_nacional' && snHibridoMensal != null ? (
+                {r.regime === 'simples_nacional' && snHibridoMensal != null && !r.anexoComparado ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-2.5">
@@ -369,8 +391,17 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
               <Legend wrapperStyle={{ fontSize: '11px', color: '#9A9286', paddingTop: '8px' }} />
-              <Bar dataKey="SN Pleno"        fill="rgba(47,125,87,0.7)"   radius={[4, 4, 0, 0]} barSize={22} />
-              <Bar dataKey="SN Híbrido"      fill="rgba(220,38,38,0.55)"  radius={[4, 4, 0, 0]} barSize={22} />
+              {desdobrado ? (
+                <>
+                  <Bar dataKey="SN Anexo III" fill="rgba(47,125,87,0.75)"  radius={[4, 4, 0, 0]} barSize={22} />
+                  <Bar dataKey="SN Anexo V"   fill="rgba(47,125,87,0.4)"   radius={[4, 4, 0, 0]} barSize={22} />
+                </>
+              ) : (
+                <>
+                  <Bar dataKey="SN Pleno"     fill="rgba(47,125,87,0.7)"   radius={[4, 4, 0, 0]} barSize={22} />
+                  <Bar dataKey="SN Híbrido"   fill="rgba(220,38,38,0.55)"  radius={[4, 4, 0, 0]} barSize={22} />
+                </>
+              )}
               <Bar dataKey="Lucro Presumido" fill="rgba(49,92,140,0.7)"   radius={[4, 4, 0, 0]} barSize={22} />
               <Bar dataKey="Lucro Real"      fill="rgba(163,132,89,0.7)"  radius={[4, 4, 0, 0]} barSize={22} />
             </BarChart>
@@ -397,14 +428,16 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               const isAtual = r.regime === dadosBase.regime
               const isSN = r.regime === 'simples_nacional'
               return (
-                <React.Fragment key={r.regime}>
+                <React.Fragment key={`${r.regime}-${r.anexoComparado ?? ''}`}>
                   <tr className={`transition-colors ${isAtual ? 'bg-subtle' : 'hover:bg-subtle'}`}>
                     <td className="py-3">
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`font-semibold text-sm ${COR_TEXT[meta.color]}`}>{meta.label}</span>
+                          <span className={`font-semibold text-sm ${COR_TEXT[meta.color]}`}>
+                            {meta.label}{r.anexoComparado ? ` — Anexo ${r.anexoComparado}` : ''}
+                          </span>
                           {isAtual && <span className="text-xs text-ink-muted font-normal">(atual)</span>}
-                          {isSN && snHibridoMensal != null && (
+                          {isSN && snHibridoMensal != null && !r.anexoComparado && (
                             <span className="text-[10px] text-ink-muted font-normal">— Pleno</span>
                           )}
                         </div>
@@ -445,7 +478,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                       </span>
                     </td>
                   </tr>
-                  {isSN && snHibridoMensal != null && (
+                  {isSN && snHibridoMensal != null && !r.anexoComparado && (
                     <tr key="sn-hibrido" className="transition-colors hover:bg-subtle bg-danger-soft/30">
                       <td className="py-3 pl-4">
                         <div className="flex items-center gap-1.5">

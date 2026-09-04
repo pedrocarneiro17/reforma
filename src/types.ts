@@ -62,6 +62,7 @@ export interface DadosEntrada {
   analiseHolding?: AnaliseHolding | null
   uf?: string
   anexoSimples?: AnexoSimples
+  anexoForcado?: AnexoSimples   // força o anexo no cálculo, ignorando o Fator R e a seleção manual (usado para desdobrar III/V no comparador)
   pctFornecedoresSimples?: number
   // Imóveis — redutor de ajuste + social (Arts. 369-376 Dec. 12.955/2026)
   pctCustoImovel?: number        // % do faturamento que representa custo/redutor de ajuste (ex: 70%)
@@ -357,6 +358,7 @@ export interface ResultadoComparativo extends ResultadoCalculo {
   acimaDaFaixaSimples: boolean
   acimaDaFaixaMEI: boolean
   vedadoSimplesAtividade: boolean   // Simples vedado pela atividade (LC 123/2006 Art. 17 / Art. 3º §4º)
+  anexoComparado?: AnexoSimples     // quando o Simples é desdobrado por anexo (atividades sujeitas ao Fator R), indica III ou V
 }
 
 // ─── Ponto na curva de crescimento ───────────────────────────────────────────

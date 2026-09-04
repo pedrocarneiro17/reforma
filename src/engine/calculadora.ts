@@ -871,12 +871,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       ? calcularFatorR(faturamentoMensal, folhaFatorR)
       : null
 
-  // Anexo efetivo: para setores sujeitos ao Fator R com folha informada, o Fator R decide
+  // Anexo efetivo: se um anexo foi forçado (desdobramento III/V no comparador), ele vence tudo.
+  // Caso contrário, para setores sujeitos ao Fator R com folha informada, o Fator R decide
   // (III ou V) e sobrepõe a escolha manual — pois nesses casos o anexo é determinado por lei.
   // Sem folha informada (ou setor sem Fator R), usa o anexo informado/inferido.
-  const anexoEfetivoComFatorR = analiseFatorR != null
-    ? (analiseFatorR.jaEstaNoIII ? 'III' : 'V')
-    : anexoEfetivo
+  const anexoEfetivoComFatorR = dados.anexoForcado != null
+    ? dados.anexoForcado
+    : analiseFatorR != null
+      ? (analiseFatorR.jaEstaNoIII ? 'III' : 'V')
+      : anexoEfetivo
 
   // ── Contribuição Previdenciária Patronal e ICMS/ISS — comuns a LP e LR ──────
   // (LC 8.212/1991): CPP 20% sobre folha de EMPREGADOS + terceiros (Sistema S) conforme atividade;
@@ -1585,7 +1588,10 @@ function calcularSimplesHibrido(
  * Roda calcularTodosOsCenarios para os 3 regimes tributários (+ MEI/PF se aplicável)
  * com os mesmos dados financeiros, permitindo comparação lado a lado.
  */
-export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativo[] {
+export function calcularTodosOsRegimes(
+  dados: DadosEntrada,
+  opcoes: { desdobrarFatorR?: boolean } = {},
+): ResultadoComparativo[] {
   const LIMITE_SIMPLES_ANUAL = 4_800_000
   const faturamentoAnual = dados.faturamentoMensal * 12
 
@@ -1594,11 +1600,23 @@ export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativ
   const regimesExtras: TipoRegime[] = (['mei', 'profissional_liberal'] as TipoRegime[]).includes(regimeAtual) ? [regimeAtual] : []
   const REGIMES: TipoRegime[] = [...new Set([...REGIMES_BASE, ...regimesExtras])]
 
-  const resultados = REGIMES.map(regime => {
+  // Para atividades sujeitas ao Fator R, o comparador pode pedir o desdobramento do Simples
+  // em dois cenários (Anexo III e Anexo V), já que o enquadramento depende da folha.
+  const desdobrarSimples = opcoes.desdobrarFatorR === true && dados.setor?.fatorR === true
+
+  // Cada "spec" vira um resultado; o Simples pode gerar dois quando desdobrado.
+  const specs: { regime: TipoRegime; anexoForcado?: import('../types').AnexoSimples }[] = REGIMES.flatMap(regime =>
+    regime === 'simples_nacional' && desdobrarSimples
+      ? [{ regime, anexoForcado: 'III' as const }, { regime, anexoForcado: 'V' as const }]
+      : [{ regime }],
+  )
+
+  const resultados = specs.map(({ regime, anexoForcado }) => {
     const override = regime === regimeAtual ? (dados.aliquotaAtualOverride ?? null) : null
     return calcularTodosOsCenarios({
       ...dados,
       regime,
+      anexoForcado,
       aliquotaAtualOverride: override,
       dadosMensais: null,
     })
@@ -1620,17 +1638,24 @@ export function calcularTodosOsRegimes(dados: DadosEntrada): ResultadoComparativ
   const menorIVA   = aplicaveis.length ? Math.min(...aplicaveis.map(r => r.cargaTotalReformaMensal)) : Infinity
   const menorDelta = aplicaveis.length ? Math.min(...aplicaveis.map(r => Math.abs(r.variacaoAbsolutaMensal))) : Infinity
 
-  return resultados.map(r => {
+  // Marca apenas UM vencedor por critério (o primeiro a atingir o mínimo) — evita dois cards
+  // "melhor" empatados quando o Simples é desdobrado em Anexo III e V.
+  const idxMelhorAtual = resultados.findIndex(r => !ehInaplicavel(r) && r.impostoAtualMensal === menorAtual)
+  const idxMelhorIVA   = resultados.findIndex(r => !ehInaplicavel(r) && r.cargaTotalReformaMensal === menorIVA)
+  const idxMenorDelta  = resultados.findIndex(r => !ehInaplicavel(r) && Math.abs(r.variacaoAbsolutaMensal) === menorDelta)
+
+  return resultados.map((r, i) => {
     const inaplicavel = ehInaplicavel(r)
     return {
       ...r,
-      melhorAtual:  !inaplicavel && r.impostoAtualMensal === menorAtual,
-      melhorIVA:    !inaplicavel && r.cargaTotalReformaMensal === menorIVA,
-      menorImpacto: !inaplicavel && Math.abs(r.variacaoAbsolutaMensal) === menorDelta,
+      melhorAtual:  !inaplicavel && i === idxMelhorAtual,
+      melhorIVA:    !inaplicavel && i === idxMelhorIVA,
+      menorImpacto: !inaplicavel && i === idxMenorDelta,
       inaplicavel,
       acimaDaFaixaSimples,
       acimaDaFaixaMEI,
       vedadoSimplesAtividade: r.regime === 'simples_nacional' && r.setorVedadoSimples,
+      anexoComparado: desdobrarSimples && r.regime === 'simples_nacional' ? r.anexoSimples ?? undefined : undefined,
     }
   })
 }
