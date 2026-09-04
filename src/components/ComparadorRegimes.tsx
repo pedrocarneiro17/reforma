@@ -142,9 +142,13 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     },
   ]
 
-  // Recomendação só entre regimes aplicáveis (exclui Simples vedado/acima do limite, MEI acima do limite)
+  // Recomendação só entre regimes aplicáveis E atingíveis: exclui Simples vedado/acima do limite,
+  // MEI acima do limite, o anexo não atingível pelo Fator R e os anexos de atingibilidade
+  // desconhecida (folha não informada) — nesses casos não se coroa um Simples.
+  const coroavel = (r: typeof comparativo[number]) =>
+    !r.inaplicavel && r.anexoAtingivel !== false && !(r.anexoComparado != null && r.anexoAtingivel == null)
   const scoreTotal = comparativo
-    .filter(r => !r.inaplicavel)
+    .filter(coroavel)
     .map(r => ({
       regime: r.regime,
       total: r.impostoAtualMensal + r.cargaTotalReformaMensal,
@@ -180,6 +184,8 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
         {comparativo.map(r => {
           const meta = META[r.regime]
           const isAtual = r.regime === dadosBase.regime
+          const naoAtingivel = r.anexoAtingivel === false
+          const atingibilidadeIndefinida = r.anexoComparado != null && r.anexoAtingivel == null
           const badges: { txt: string; cls: string }[] = []
           if (r.melhorAtual) badges.push({ txt: 'Menor custo hoje', cls: 'badge badge-warning' })
           if (r.melhorIVA)   badges.push({ txt: 'Menor custo pós-reforma', cls: 'badge badge-info' })
@@ -195,10 +201,11 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   : 'bg-white border-[#C4BDB4]'
                 }
                 ${r.inaplicavel ? 'opacity-50' : ''}
+                ${naoAtingivel ? 'opacity-60' : ''}
               `}
             >
               {/* Linha de indicador — todos os cards têm a mesma altura aqui */}
-              <div className="h-5 flex items-center">
+              <div className="h-5 flex items-center gap-1.5">
                 {isAtual && (
                   <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">
                     Regime atual
@@ -206,6 +213,12 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 )}
                 {r.inaplicavel && (
                   <span className="badge badge-danger">{r.vedadoSimplesAtividade ? 'atividade vedada' : 'acima do limite'}</span>
+                )}
+                {naoAtingivel && (
+                  <span className="badge badge-danger">não atingível · Fator R</span>
+                )}
+                {atingibilidadeIndefinida && (
+                  <span className="badge badge-neutral">depende da folha</span>
                 )}
               </div>
 
@@ -364,6 +377,19 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                     : 'Seu faturamento anual ultrapassa R$ 4,8M — empresa não é elegível ao Simples Nacional.'}
                 </p>
               )}
+
+              {!r.inaplicavel && naoAtingivel && (
+                <p className="text-danger text-xs leading-relaxed">
+                  Com a folha informada, o Fator R não enquadra a empresa neste anexo — ela ficaria no
+                  Anexo {r.anexoComparado === 'III' ? 'V' : 'III'}. Mostrado apenas para referência; não entra como "melhor".
+                </p>
+              )}
+              {!r.inaplicavel && atingibilidadeIndefinida && (
+                <p className="text-ink-muted text-xs leading-relaxed">
+                  O enquadramento neste anexo depende do Fator R (folha ÷ faturamento ≥ 28% → Anexo III).
+                  Informe a folha para saber qual anexo se aplica — por isso nenhum é marcado como "melhor".
+                </p>
+              )}
             </div>
           )
         })}
@@ -437,6 +463,12 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                             {meta.label}{r.anexoComparado ? ` — Anexo ${r.anexoComparado}` : ''}
                           </span>
                           {isAtual && <span className="text-xs text-ink-muted font-normal">(atual)</span>}
+                          {r.anexoAtingivel === false && (
+                            <span className="text-[10px] text-danger font-medium">não atingível</span>
+                          )}
+                          {r.anexoComparado != null && r.anexoAtingivel == null && (
+                            <span className="text-[10px] text-ink-muted font-normal">depende da folha</span>
+                          )}
                           {isSN && snHibridoMensal != null && !r.anexoComparado && (
                             <span className="text-[10px] text-ink-muted font-normal">— Pleno</span>
                           )}

@@ -1631,21 +1631,36 @@ export function calcularTodosOsRegimes(
     (r.regime === 'simples_nacional' && (acimaDaFaixaSimples || r.setorVedadoSimples)) ||
     (r.regime === 'mei' && acimaDaFaixaMEI)
 
-  // "Melhor" é sempre pelo CONJUNTO de tributos, não por um imposto isolado, e SÓ entre
-  // os regimes aplicáveis — um regime que a empresa não pode adotar nunca é "melhor".
-  const aplicaveis = resultados.filter(r => !ehInaplicavel(r))
-  const menorAtual = aplicaveis.length ? Math.min(...aplicaveis.map(r => r.impostoAtualMensal)) : Infinity
-  const menorIVA   = aplicaveis.length ? Math.min(...aplicaveis.map(r => r.cargaTotalReformaMensal)) : Infinity
-  const menorDelta = aplicaveis.length ? Math.min(...aplicaveis.map(r => Math.abs(r.variacaoAbsolutaMensal))) : Infinity
+  // Atingibilidade do anexo no desdobramento do Fator R: para uma empresa estar no Anexo III,
+  // a folha precisa levar o Fator R a ≥ 28% (senão fica no V). Se a folha não foi informada,
+  // a atingibilidade é desconhecida (não dá para afirmar em qual anexo a empresa estaria).
+  const atingibilidade = (r: ResultadoCalculo): boolean | undefined => {
+    if (!(desdobrarSimples && r.regime === 'simples_nacional')) return true
+    if (!r.analiseFatorR) return undefined
+    return r.anexoSimples === 'III' ? r.analiseFatorR.jaEstaNoIII : !r.analiseFatorR.jaEstaNoIII
+  }
+  // Entra na disputa do mínimo tudo que é aplicável e não é um anexo comprovadamente NÃO atingível.
+  const noPool = (r: ResultadoCalculo): boolean => !ehInaplicavel(r) && atingibilidade(r) !== false
+  // Só pode ser coroado "melhor" o que está no pool E cujo anexo é comprovadamente atingível
+  // (atingibilidade === true). Anexos de atingibilidade desconhecida (sem folha) não são coroados.
+  const coroavel = (r: ResultadoCalculo): boolean => noPool(r) && atingibilidade(r) === true
 
-  // Marca apenas UM vencedor por critério (o primeiro a atingir o mínimo) — evita dois cards
-  // "melhor" empatados quando o Simples é desdobrado em Anexo III e V.
-  const idxMelhorAtual = resultados.findIndex(r => !ehInaplicavel(r) && r.impostoAtualMensal === menorAtual)
-  const idxMelhorIVA   = resultados.findIndex(r => !ehInaplicavel(r) && r.cargaTotalReformaMensal === menorIVA)
-  const idxMenorDelta  = resultados.findIndex(r => !ehInaplicavel(r) && Math.abs(r.variacaoAbsolutaMensal) === menorDelta)
+  // "Melhor" é sempre pelo CONJUNTO de tributos, não por um imposto isolado, e SÓ entre
+  // os regimes aplicáveis e atingíveis — um regime que a empresa não pode adotar nunca é "melhor".
+  const pool = resultados.filter(noPool)
+  const menorAtual = pool.length ? Math.min(...pool.map(r => r.impostoAtualMensal)) : Infinity
+  const menorIVA   = pool.length ? Math.min(...pool.map(r => r.cargaTotalReformaMensal)) : Infinity
+  const menorDelta = pool.length ? Math.min(...pool.map(r => Math.abs(r.variacaoAbsolutaMensal))) : Infinity
+
+  // Marca apenas UM vencedor por critério (o primeiro coroável a atingir o mínimo). Se o mínimo
+  // pertence a um anexo de atingibilidade desconhecida, ninguém é coroado (findIndex → -1).
+  const idxMelhorAtual = resultados.findIndex(r => coroavel(r) && r.impostoAtualMensal === menorAtual)
+  const idxMelhorIVA   = resultados.findIndex(r => coroavel(r) && r.cargaTotalReformaMensal === menorIVA)
+  const idxMenorDelta  = resultados.findIndex(r => coroavel(r) && Math.abs(r.variacaoAbsolutaMensal) === menorDelta)
 
   return resultados.map((r, i) => {
     const inaplicavel = ehInaplicavel(r)
+    const ehSimplesDesdobrado = desdobrarSimples && r.regime === 'simples_nacional'
     return {
       ...r,
       melhorAtual:  !inaplicavel && i === idxMelhorAtual,
@@ -1655,7 +1670,8 @@ export function calcularTodosOsRegimes(
       acimaDaFaixaSimples,
       acimaDaFaixaMEI,
       vedadoSimplesAtividade: r.regime === 'simples_nacional' && r.setorVedadoSimples,
-      anexoComparado: desdobrarSimples && r.regime === 'simples_nacional' ? r.anexoSimples ?? undefined : undefined,
+      anexoComparado: ehSimplesDesdobrado ? r.anexoSimples ?? undefined : undefined,
+      anexoAtingivel: ehSimplesDesdobrado ? atingibilidade(r) : undefined,
     }
   })
 }

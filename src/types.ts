@@ -359,6 +359,7 @@ export interface ResultadoComparativo extends ResultadoCalculo {
   acimaDaFaixaMEI: boolean
   vedadoSimplesAtividade: boolean   // Simples vedado pela atividade (LC 123/2006 Art. 17 / Art. 3º §4º)
   anexoComparado?: AnexoSimples     // quando o Simples é desdobrado por anexo (atividades sujeitas ao Fator R), indica III ou V
+  anexoAtingivel?: boolean          // no desdobramento III/V: true se a folha atinge o Fator R para esse anexo, false se não, undefined se a folha não foi informada
 }
 
 // ─── Ponto na curva de crescimento ───────────────────────────────────────────
