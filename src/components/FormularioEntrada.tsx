@@ -1039,9 +1039,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       {mostrarFatorR && (
         <div className="card p-5 space-y-3 border-l-4 border-l-info">
           <div>
-            <h3 className="text-sm font-semibold text-ink">Fator R — Análise de Anexo (opcional)</h3>
+            <h3 className="text-sm font-semibold text-ink">Fator R — Enquadramento de Anexo (opcional)</h3>
             <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
-              LC 123/2006 Art. 18 §5-I: se folha ÷ faturamento ≥ 28%, o serviço migra para Anexo III (mais barato que o V). Preencha para ver a análise — o anexo que você selecionou acima <strong>não será alterado</strong>.
+              LC 123/2006 Art. 18 §5-J: se folha ÷ faturamento ≥ 28%, o serviço fica no Anexo III (mais barato que o V); abaixo disso, no Anexo V. Como essa atividade está sujeita ao Fator R, ao informar a folha o <strong>anexo do cálculo passa a ser definido pelo Fator R</strong> (sobrepõe a seleção manual acima).
             </p>
           </div>
           <div>

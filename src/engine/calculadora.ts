@@ -858,16 +858,20 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     ? (anexoSimples ?? inferirAnexo(setor.tipo))
     : undefined
 
-  // Fator R — disponível para análise, mas não sobrepõe o anexo informado pelo usuário.
-  // O usuário conhece sua classificação; o campo folhaMensal é opcional e serve
-  // para exibir a análise de Fator R na UI quando preenchido.
+  // Fator R — para atividades sujeitas (setor.fatorR), a folha determina o anexo por lei:
+  // folha ÷ faturamento ≥ 28% → Anexo III; < 28% → Anexo V (LC 123/2006 Art. 18 §5-J/§5-M).
+  // O campo folhaMensal é opcional; quando preenchido, exibe a análise E define o anexo do DAS.
   const analiseFatorR: AnaliseFatorR | null =
     regime === 'simples_nacional' && setor.fatorR === true && folhaMensal > 0
       ? calcularFatorR(faturamentoMensal, folhaMensal)
       : null
 
-  // Anexo efetivo = sempre o informado pelo usuário (ou inferido pelo setor)
-  const anexoEfetivoComFatorR = anexoEfetivo
+  // Anexo efetivo: para setores sujeitos ao Fator R com folha informada, o Fator R decide
+  // (III ou V) e sobrepõe a escolha manual — pois nesses casos o anexo é determinado por lei.
+  // Sem folha informada (ou setor sem Fator R), usa o anexo informado/inferido.
+  const anexoEfetivoComFatorR = analiseFatorR != null
+    ? (analiseFatorR.jaEstaNoIII ? 'III' : 'V')
+    : anexoEfetivo
 
   // ── Contribuição Previdenciária Patronal e ICMS/ISS — comuns a LP e LR ──────
   // (LC 8.212/1991): CPP 20% sobre folha de EMPREGADOS + terceiros (Sistema S) conforme atividade;
