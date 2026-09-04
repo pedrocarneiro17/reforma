@@ -118,7 +118,7 @@ export interface SocioAdministrador {
 export interface DetalheSocio {
   socio: SocioAdministrador
   irpfMensal: number
-  inssEmpregado: number   // 20% × min(prolabore, teto) — contribuinte individual
+  inssEmpregado: number   // 11% × min(prolabore, teto) — segurado contribuinte individual (empresa recolhe os 20% patronais)
   inssPatronal: number    // 20% × prolabore — custo da empresa
   custoTotal: number      // irpf + inssEmpregado + inssPatronal
 }

@@ -70,6 +70,7 @@ export const ALIQUOTA_CBS_SIMPLES_MEDIA = 0.0588
  * Em LR, a economia de IRPJ/CSLL pode compensar parcialmente esse custo.
  */
 export const INSS_ALIQ_PATRONAL  = 0.20   // INSS patronal padrão sobre pró-labore
+export const INSS_ALIQ_SEGURADO_SOCIO = 0.11 // Segurado contribuinte individual (sócio) sobre pró-labore, quando a empresa recolhe os 20% patronais (Lei 9.876/1999)
 export const IRPJ_CSLL_RATE_LR   = 0.24   // IRPJ 15% + CSLL 9% sobre lucro real
 
 export function calcularProlabore(
@@ -78,7 +79,7 @@ export function calcularProlabore(
 ): AnaliseProlabore {
   const detalhes: import('../types').DetalheSocio[] = socios.map(s => {
     const irpfMensal    = calcularIRPF(s.prolaboreMensal)
-    const inssEmpregado = Math.min(s.prolaboreMensal, INSS_TETO_2026) * INSS_ALIQ_AUTONOMO
+    const inssEmpregado = Math.min(s.prolaboreMensal, INSS_TETO_2026) * INSS_ALIQ_SEGURADO_SOCIO
     const inssPatronal  = s.prolaboreMensal * INSS_ALIQ_PATRONAL
     return { socio: s, irpfMensal, inssEmpregado, inssPatronal, custoTotal: irpfMensal + inssEmpregado + inssPatronal }
   })

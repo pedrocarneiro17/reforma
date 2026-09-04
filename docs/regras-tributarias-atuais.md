@@ -18,7 +18,8 @@ Documentação técnica das regras de cálculo dos regimes tributários **vigent
 | CPP patronal | **20%** | sobre folha de empregados e sobre pró-labore |
 | Terceiros (Sistema S) | **5,8%** | sobre folha de empregados (não incide sobre pró-labore) |
 | INSS teto (2026) | **R$ 8.157,41** | base máxima do contribuinte individual |
-| INSS autônomo/individual | **20%** | contribuinte individual (sócio/autônomo), até o teto → máx **R$ 1.631,48/mês** |
+| INSS segurado — sócio (pró-labore) | **11%** | contribuinte individual quando a empresa recolhe os 20% patronais (Lei 9.876/1999), até o teto → máx **R$ 897,32/mês** |
+| INSS autônomo/individual (PF sem empresa) | **20%** | contribuinte individual (profissional liberal), até o teto → máx **R$ 1.631,48/mês** |
 | Limite Simples Nacional | **R$ 4.800.000/ano** | receita bruta 12 meses (RBT12) |
 | Limite MEI | **R$ 81.000/ano** (R$ 6.750/mês) | LC 155/2016 |
 
@@ -316,7 +317,7 @@ Para cada sócio com pró-labore:
 | Item | Fórmula | Quem paga |
 |---|---|---|
 | **IRPF** | `calcularIRPF(prolabore)` (tabela progressiva, Seção 0.5) | sócio |
-| **INSS (contribuinte individual)** | `min(prolabore, 8.157,41) × 20%` | sócio |
+| **INSS (segurado contribuinte individual)** | `min(prolabore, 8.157,41) × 11%` (empresa recolhe os 20% patronais) | sócio |
 | **INSS patronal (CPP)** | `prolabore × 20%` | empresa |
 | **Custo total do sócio** | `IRPF + INSS individual + INSS patronal` | — |
 
