@@ -454,7 +454,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                     <span className="num text-sm font-bold text-ink">{pctClientesPJ}% PJ</span>
                   </div>
                   <input
-                    type="range" min={0} max={100} step={5}
+                    type="range" min={0} max={100} step={1}
                     value={pctClientesPJ}
                     onChange={e => setPctClientesPJ(Number(e.target.value))}
                     className="w-full accent-[var(--color-ink)]"
