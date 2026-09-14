@@ -256,7 +256,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 30% — Profissões Regulamentadas',
     reducao: 0.30,
     tipo: 'servico',
-    fatorR: true,
+    anexoFixo: 'IV',   // §5-C VII (serviços advocatícios): Anexo IV — CPP 20% recolhida FORA do DAS, sem Fator R
   },
   {
     value: 'contabilidade_auditoria',

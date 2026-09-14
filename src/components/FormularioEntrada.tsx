@@ -299,6 +299,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarGorjeta = dados.setor === 'restaurantes_bares'
   const mostrarCreditoPresumido = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime) && parseMoeda(dados.insumosMensais) > 0
   const mostrarFatorR = dados.regime === 'simples_nacional' && (setorSelecionado?.fatorR === true)
+  // Anexo IV (§5-C, ex.: advocacia): no Simples a CPP 20% é paga por fora do DAS → precisa da folha.
+  const mostrarFolhaAnexoIV = dados.regime === 'simples_nacional' && setorSelecionado?.anexoFixo === 'IV'
   // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Serviços não têm ICMS.
   const circulaMercadoria = ['comercio', 'industria', 'misto'].includes(setorSelecionado?.tipo ?? '')
   const mostrarCapital = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime)
@@ -374,7 +376,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctInsumosProdutorRural: mostrarCreditoPresumido ? pctInsumosProdutorRural : 0,
       pctFreteAutonomo: mostrarCreditoPresumido ? pctFreteAutonomo : 0,
       vendaImobilizadoMensal: parseMoeda(vendaImobilizadoMensalStr),
-      folhaMensal: mostrarFatorR ? parseMoeda(folhaMensal) : 0,
+      folhaMensal: (mostrarFatorR || mostrarFolhaAnexoIV) ? parseMoeda(folhaMensal) : 0,
       investimentoCapitalMensal: mostrarCapital ? parseMoeda(investimentoCapitalStr) : 0,
       pctVendasAliqZeroRural: mostrarAliqZeroRural ? pctVendasAliqZeroRural : 0,
       pctVendasAliqZeroTransp: mostrarAliqZeroTransp ? pctVendasAliqZeroTransp : 0,
@@ -1128,6 +1130,34 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             <h3 className="text-sm font-semibold text-ink">Fator R — Enquadramento de Anexo (opcional)</h3>
             <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
               LC 123/2006 Art. 18 §5-J: se folha ÷ faturamento ≥ 28%, o serviço fica no Anexo III (mais barato que o V); abaixo disso, no Anexo V. Como essa atividade está sujeita ao Fator R, ao informar a folha o <strong>anexo do cálculo passa a ser definido pelo Fator R</strong> (sobrepõe a seleção manual acima).
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Folha de Pagamento Mensal (pró-labore + CLT)</label>
+            <div className="relative mt-1">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm font-medium select-none">R$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={folhaMensal}
+                onChange={e => setFolhaMensal(mascaraMoeda(e.target.value))}
+                placeholder="0"
+                className="input-field pl-10 num"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Anexo IV (§5-C) — folha para a CPP paga por fora do DAS ─────────── */}
+      {mostrarFolhaAnexoIV && (
+        <div className="card p-5 space-y-3 border-l-4 border-l-warning">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">Anexo IV — Folha para a CPP (opcional)</h3>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+              LC 123/2006 Art. 18 §5-C: atividades como advocacia são tributadas pelo <strong>Anexo IV</strong>, em que a
+              <strong> CPP patronal (20%) fica FORA do DAS</strong> — recolhida sobre a folha (empregados + pró-labore), sem terceiros.
+              Informe a folha para somar essa contribuição à carga de hoje.
             </p>
           </div>
           <div>

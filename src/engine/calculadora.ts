@@ -853,9 +853,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 / Art. 3º §4º)
   const setorVedadoSimples = setor.vedadoSimples === true
 
-  // Anexo efetivo: usa o informado pelo usuário ou infere pelo tipo de setor
+  // Anexo efetivo: anexo fixado por lei no setor (ex.: advocacia → IV) vence; senão o informado; senão inferido.
   const anexoEfetivo: import('../types').AnexoSimples | undefined = (regime === 'simples_nacional' || regime === 'mei')
-    ? (anexoSimples ?? inferirAnexo(setor.tipo))
+    ? (setor.anexoFixo ?? anexoSimples ?? inferirAnexo(setor.tipo))
     : undefined
 
   // Fator R — para atividades sujeitas (setor.fatorR), a folha determina o anexo por lei:
@@ -895,6 +895,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const cppProLaboreMensal     = ehLPouLR ? totalProLaboreMensal * INSS_ALIQ_PATRONAL : 0
   // Contribuição previdenciária total da empresa (folha empregados + terceiros + pró-labore)
   const contribPrevidenciariaMensal   = cppFolhaEmpregados + terceirosFolhaMensal + cppProLaboreMensal
+  // Anexo IV (§5-C: advocacia, construção, vigilância/limpeza): no Simples a CPP patronal (20%) fica
+  // FORA do DAS, recolhida sobre a folha (empregados + pró-labore), sem terceiros (Simples é dispensado).
+  const ehSimplesAnexoIV = regime === 'simples_nacional' && anexoEfetivoComFatorR === 'IV'
+  const cppSimplesAnexoIVMensal = ehSimplesAnexoIV ? folhaMensal * INSS_ALIQ_PATRONAL : 0
   // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
   const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
   // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
@@ -941,10 +945,12 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
   } else if (regime === 'simples_nacional') {
     const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
-    aliquotaAtual = isMisto
+    const aliquotaDAS = isMisto
       ? getAliquotaSimplesNacionalMisto(faturamentoAnual, anexoEfetivoComFatorR!, pctAnexo1! / 100, anexoSimples2!)
       : getAliquotaSimplesNacional(setor.tipo, faturamentoAnual, anexoEfetivoComFatorR)
-    impostoAtualMensal = faturamentoMensal * aliquotaAtual
+    // No Anexo IV soma-se a CPP paga por fora do DAS; a alíquota "atual" vira a efetiva total.
+    impostoAtualMensal = faturamentoMensal * aliquotaDAS + cppSimplesAnexoIVMensal
+    aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaDAS
   } else if (regime === 'lucro_presumido') {
     // Carga hoje decomposta por tributo (RIR/2018, Lei 9.249/1995, Lei 9.718/1998):
     // IRPJ 15% × presunção + adicional 10% + CSLL 9% × presunção + PIS/COFINS cumulativo 3,65%
@@ -1237,7 +1243,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Contribuição previdenciária (folha + terceiros + pró-labore) persiste após a reforma
   const cargaTotalReformaMensal = ehLPouLR
     ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
-    : impostoIVALiquidoMensal
+    : impostoIVALiquidoMensal + cppSimplesAnexoIVMensal
 
   // ── 3. Projeção de Transição por Ano ────────────────────────────────────────
   // Arts. 501 (ICMS) e 508 (ISS) LC 214/2025: redução de 10%/ano de 2029 a 2032 (base: 31/12/2028).
@@ -1490,6 +1496,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     terceirosFolhaMensal,
     cppProLaboreMensal,
     contribPrevidenciariaMensal,
+    cppSimplesAnexoIVMensal,
     icmsAtualMensal,
     issAtualMensal,
 

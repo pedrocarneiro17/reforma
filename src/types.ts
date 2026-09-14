@@ -16,6 +16,7 @@ export interface Setor {
   reducao: number
   tipo: TipoSetor
   fatorR?: boolean              // true = sujeito ao Fator R no Simples Nacional (Anexo III ou V)
+  anexoFixo?: AnexoSimples      // anexo fixado por lei no Simples (ex.: advocacia → Anexo IV §5-C), sobrepõe inferência/seleção
   baseReduzidaMargem?: boolean  // true = CBS incide só na margem (bens usados de PF — Cap. X Dec. 12.955/2026)
   presuncaoLPIRPJ?: number      // override da presunção IRPJ no LP (padrão: 8% comércio/indústria, 32% serviço)
   presuncaoLPCSLL?: number      // override da presunção CSLL no LP (padrão: 12% comércio/indústria, 32% serviço)
@@ -307,6 +308,7 @@ export interface ResultadoCalculo {
   terceirosFolhaMensal: number   // terceiros (Sistema S) sobre folha de empregados, conforme atividade
   cppProLaboreMensal: number     // 20% × pró-labore dos sócios (sem terceiros)
   contribPrevidenciariaMensal: number  // CPP folha + terceiros + CPP pró-labore
+  cppSimplesAnexoIVMensal: number       // CPP 20% paga POR FORA do DAS no Anexo IV do Simples (§5-C); 0 nos demais
   // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
   icmsAtualMensal: number
   issAtualMensal: number
