@@ -110,11 +110,15 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
 
+  // Anexos comprovadamente NÃO atingíveis pelo Fator R não são exibidos — com a folha informada,
+  // mostra-se só o anexo em que a empresa realmente se enquadra; sem folha, mostram-se III e V.
+  const comparativoVis = comparativo.filter(r => r.anexoAtingivel !== false)
+
   // Simples pode vir desdobrado em dois cenários (Anexo III e V) para atividades sujeitas ao Fator R.
-  const snEntries = comparativo.filter(r => r.regime === 'simples_nacional')
+  const snEntries = comparativoVis.filter(r => r.regime === 'simples_nacional')
   const desdobrado = snEntries.length > 1
-  const lp = comparativo.find(r => r.regime === 'lucro_presumido')!
-  const lr = comparativo.find(r => r.regime === 'lucro_real')!
+  const lp = comparativoVis.find(r => r.regime === 'lucro_presumido')!
+  const lr = comparativoVis.find(r => r.regime === 'lucro_real')!
   const snIII = snEntries.find(r => r.anexoComparado === 'III')
   const snV   = snEntries.find(r => r.anexoComparado === 'V')
   const snUnico = !desdobrado ? snEntries[0] : null
@@ -147,7 +151,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
   // desconhecida (folha não informada) — nesses casos não se coroa um Simples.
   const coroavel = (r: typeof comparativo[number]) =>
     !r.inaplicavel && r.anexoAtingivel !== false && !(r.anexoComparado != null && r.anexoAtingivel == null)
-  const scoreTotal = comparativo
+  const scoreTotal = comparativoVis
     .filter(coroavel)
     .map(r => ({
       regime: r.regime,
@@ -181,10 +185,9 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
       {/* ── Cards por regime ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {comparativo.map(r => {
+        {comparativoVis.map(r => {
           const meta = META[r.regime]
           const isAtual = r.regime === dadosBase.regime
-          const naoAtingivel = r.anexoAtingivel === false
           const atingibilidadeIndefinida = r.anexoComparado != null && r.anexoAtingivel == null
           const badges: { txt: string; cls: string }[] = []
           if (r.melhorAtual) badges.push({ txt: 'Menor custo hoje', cls: 'badge badge-warning' })
@@ -201,7 +204,6 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   : 'bg-white border-[#C4BDB4]'
                 }
                 ${r.inaplicavel ? 'opacity-50' : ''}
-                ${naoAtingivel ? 'opacity-60' : ''}
               `}
             >
               {/* Linha de indicador — todos os cards têm a mesma altura aqui */}
@@ -213,9 +215,6 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 )}
                 {r.inaplicavel && (
                   <span className="badge badge-danger">{r.vedadoSimplesAtividade ? 'atividade vedada' : 'acima do limite'}</span>
-                )}
-                {naoAtingivel && (
-                  <span className="badge badge-danger">não atingível · Fator R</span>
                 )}
                 {atingibilidadeIndefinida && (
                   <span className="badge badge-neutral">depende da folha</span>
@@ -277,7 +276,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   <div className="flex-1 h-px bg-border" />
                 </div>
 
-                {r.regime === 'simples_nacional' && snHibridoMensal != null && !r.anexoComparado ? (
+                {r.regime === 'simples_nacional' && snHibridoMensal != null && !desdobrado ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
                       <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-2.5">
@@ -378,12 +377,6 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 </p>
               )}
 
-              {!r.inaplicavel && naoAtingivel && (
-                <p className="text-danger text-xs leading-relaxed">
-                  Com a folha informada, o Fator R não enquadra a empresa neste anexo — ela ficaria no
-                  Anexo {r.anexoComparado === 'III' ? 'V' : 'III'}. Mostrado apenas para referência; não entra como "melhor".
-                </p>
-              )}
               {!r.inaplicavel && atingibilidadeIndefinida && (
                 <p className="text-ink-muted text-xs leading-relaxed">
                   O enquadramento neste anexo depende do Fator R (folha ÷ faturamento ≥ 28% → Anexo III).
@@ -449,7 +442,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {comparativo.map(r => {
+            {comparativoVis.map(r => {
               const meta = META[r.regime]
               const isAtual = r.regime === dadosBase.regime
               const isSN = r.regime === 'simples_nacional'
@@ -463,13 +456,10 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                             {meta.label}{r.anexoComparado ? ` — Anexo ${r.anexoComparado}` : ''}
                           </span>
                           {isAtual && <span className="text-xs text-ink-muted font-normal">(atual)</span>}
-                          {r.anexoAtingivel === false && (
-                            <span className="text-[10px] text-danger font-medium">não atingível</span>
-                          )}
                           {r.anexoComparado != null && r.anexoAtingivel == null && (
                             <span className="text-[10px] text-ink-muted font-normal">depende da folha</span>
                           )}
-                          {isSN && snHibridoMensal != null && !r.anexoComparado && (
+                          {isSN && snHibridoMensal != null && !desdobrado && (
                             <span className="text-[10px] text-ink-muted font-normal">— Pleno</span>
                           )}
                         </div>
@@ -510,7 +500,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                       </span>
                     </td>
                   </tr>
-                  {isSN && snHibridoMensal != null && !r.anexoComparado && (
+                  {isSN && snHibridoMensal != null && !desdobrado && (
                     <tr key="sn-hibrido" className="transition-colors hover:bg-subtle bg-danger-soft/30">
                       <td className="py-3 pl-4">
                         <div className="flex items-center gap-1.5">

@@ -900,9 +900,13 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
   // débito = alíquota × vendas ; crédito = alíquota × compras de mercadorias informadas (insumos).
   // ICMS a recolher = max(0, débito − crédito). Sem alíquota informada, cai na média por setor.
-  const icmsAliquotaAtual = aliquotaICMSEfetiva != null
-    ? aliquotaICMSEfetiva
-    : (setor.tipo === 'comercio' || setor.tipo === 'industria') ? 0.12 : 0
+  // ICMS só incide sobre circulação de mercadoria — serviços puros nunca têm ICMS,
+  // mesmo que uma alíquota tenha sido informada por engano.
+  const icmsAliquotaAtual = setor.tipo === 'servico'
+    ? 0
+    : aliquotaICMSEfetiva != null
+      ? aliquotaICMSEfetiva
+      : (setor.tipo === 'comercio' || setor.tipo === 'industria') ? 0.12 : 0
   const icmsDebitoAtualMensal  = ehLPouLR ? faturamentoMensal * icmsAliquotaAtual : 0
   const icmsCreditoAtualMensal = ehLPouLR ? insumosMensais * icmsAliquotaAtual : 0
   const icmsAtualMensal = Math.max(0, icmsDebitoAtualMensal - icmsCreditoAtualMensal)
@@ -1432,7 +1436,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     analiseHolding,
     analiseFatorR,
     nomePrincipal,
-    analiseICMS: uf ? calcularICMS(regime, uf, faturamentoMensal, insumosMensais) : null,
+    // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Atividades de
+    // serviço não têm ICMS — a análise por estado nem é montada nesses casos.
+    analiseICMS: uf && (setor.tipo === 'comercio' || setor.tipo === 'industria' || setor.tipo === 'misto')
+      ? calcularICMS(regime, uf, faturamentoMensal, insumosMensais)
+      : null,
     gorjetaMensal,
     creditoProdutorRural,
     creditoTranspAutonomo,

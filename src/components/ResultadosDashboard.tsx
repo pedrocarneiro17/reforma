@@ -64,6 +64,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
   const cargaReducao = variacaoAbsolutaMensal < 0
   const isento = setor.reducao === 1
   const vendeB2B = perfilClientes === 'b2b' || perfilClientes === 'misto'
+  // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Serviços não têm ICMS.
+  const circulaMercadoria = setor.tipo === 'comercio' || setor.tipo === 'industria' || setor.tipo === 'misto'
 
   // ── Resumo executivo — o recado factual mais relevante para este caso ──────
   const resumo: { texto: string; tom: 'success' | 'danger' | 'info' } = (() => {
@@ -1130,8 +1132,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <div className="flex justify-between text-ink-secondary"><span>PIS/COFINS cumulativo (3,65%)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.pisCofins)}</span></div>
             </div>
             <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
-              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">ICMS / ISS / Encargos</div>
-              {apuracaoLucroPresumido.icmsCredito > 0 ? (
+              <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">{circulaMercadoria ? 'ICMS / ISS / Encargos' : 'ISS / Encargos'}</div>
+              {circulaMercadoria && (apuracaoLucroPresumido.icmsCredito > 0 ? (
                 <>
                   <div className="flex justify-between text-ink-muted text-xs"><span>ICMS débito (vendas)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.icmsDebito)}</span></div>
                   <div className="flex justify-between text-success text-xs"><span>(−) Crédito ICMS (compras)</span><span className="num">−{fmt.moeda(apuracaoLucroPresumido.icmsCredito)}</span></div>
@@ -1139,7 +1141,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 </>
               ) : (
                 <div className="flex justify-between text-ink-secondary"><span>ICMS{apuracaoLucroPresumido.icmsIssInformado ? ' (alíquota informada)' : ' (média 12%)'}</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.icms)}</span></div>
-              )}
+              ))}
               <div className="flex justify-between text-ink-secondary"><span>ISS{apuracaoLucroPresumido.icmsIssInformado ? ' (alíquota informada)' : ' (média 3%)'}</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.iss)}</span></div>
               {apuracaoLucroPresumido.ipi > 0 && (
                 <div className="flex justify-between text-ink-secondary"><span>IPI (média 5% — indústria)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.ipi)}</span></div>
@@ -1203,7 +1205,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               {apuracaoLucroReal.despesasOperacionais > 0 && (
                 <div className="flex justify-between text-ink-muted"><span>(−) Despesas operacionais</span><span className="num">−{fmt.moeda(apuracaoLucroReal.despesasOperacionais)}</span></div>
               )}
-              <div className="flex justify-between text-ink-muted"><span>(−) ICMS{apuracaoLucroReal.icmsCredito > 0 ? ' líquido (débito − crédito compras)' : ''}</span><span className="num">−{fmt.moeda(apuracaoLucroReal.icmsLiquido)}</span></div>
+              {circulaMercadoria && <div className="flex justify-between text-ink-muted"><span>(−) ICMS{apuracaoLucroReal.icmsCredito > 0 ? ' líquido (débito − crédito compras)' : ''}</span><span className="num">−{fmt.moeda(apuracaoLucroReal.icmsLiquido)}</span></div>}
               <div className="flex justify-between text-ink-muted"><span>(−) ISS</span><span className="num">−{fmt.moeda(apuracaoLucroReal.issLiquido)}</span></div>
               <div className="flex justify-between text-ink-muted"><span>(−) PIS/COFINS líquido</span><span className="num">−{fmt.moeda(apuracaoLucroReal.pisCofinsLiquido)}</span></div>
               <div className="flex justify-between font-bold text-ink border-t border-border pt-2 mt-1">
@@ -1216,7 +1218,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <div className="flex justify-between text-ink-secondary"><span>IRPJ adicional (10% acima de R$ 20 mil)</span><span className="num">{fmt.moeda(apuracaoLucroReal.irpjAdicional)}</span></div>
               <div className="flex justify-between text-ink-secondary"><span>CSLL (9%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.csll)}</span></div>
               <div className="flex justify-between text-ink-secondary"><span>PIS/COFINS líquido (9,25%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.pisCofinsLiquido)}</span></div>
-              {apuracaoLucroReal.icmsCredito > 0 ? (
+              {circulaMercadoria && (apuracaoLucroReal.icmsCredito > 0 ? (
                 <>
                   <div className="flex justify-between text-ink-muted text-xs"><span>ICMS débito (vendas)</span><span className="num">{fmt.moeda(apuracaoLucroReal.icmsDebito)}</span></div>
                   <div className="flex justify-between text-success text-xs"><span>(−) Crédito ICMS (compras)</span><span className="num">−{fmt.moeda(apuracaoLucroReal.icmsCredito)}</span></div>
@@ -1224,7 +1226,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 </>
               ) : (
                 <div className="flex justify-between text-ink-secondary"><span>ICMS líquido</span><span className="num">{fmt.moeda(apuracaoLucroReal.icmsLiquido)}</span></div>
-              )}
+              ))}
               <div className="flex justify-between text-ink-secondary"><span>ISS</span><span className="num">{fmt.moeda(apuracaoLucroReal.issLiquido)}</span></div>
               {apuracaoLucroReal.inssPatronal > 0 && (
                 <div className="flex justify-between text-warning font-medium"><span>CPP patronal (20% folha)</span><span className="num">{fmt.moeda(apuracaoLucroReal.inssPatronal)}</span></div>
@@ -1256,8 +1258,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       {/* ── JCP — Lucro Real ─────────────────────────────────────────────── */}
       {regime === 'lucro_real' && <CardJCP faturamentoMensal={faturamentoMensal} />}
 
-      {/* ── Créditos de ICMS na Transição ────────────────────────────────── */}
-      {(regime === 'lucro_presumido' || regime === 'lucro_real') && (
+      {/* ── Créditos de ICMS na Transição — só p/ atividades que circulam mercadoria ── */}
+      {(regime === 'lucro_presumido' || regime === 'lucro_real') && circulaMercadoria && (
         <CardCreditosICMS faturamentoMensal={faturamentoMensal} />
       )}
 

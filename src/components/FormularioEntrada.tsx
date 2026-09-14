@@ -233,6 +233,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarGorjeta = dados.setor === 'restaurantes_bares'
   const mostrarCreditoPresumido = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime) && parseMoeda(dados.insumosMensais) > 0
   const mostrarFatorR = dados.regime === 'simples_nacional' && (setorSelecionado?.fatorR === true)
+  // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Serviços não têm ICMS.
+  const circulaMercadoria = ['comercio', 'industria', 'misto'].includes(setorSelecionado?.tipo ?? '')
   const mostrarCapital = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime)
   const mostrarAliqZeroRural  = setorSelecionado?.produtorRural === true || dados.setor === 'maquinario_agricola'
   const mostrarAliqZeroTransp = setorSelecionado?.transporteAutonomo === true || dados.setor === 'concessionarias_veiculos' || dados.setor === 'fabricante_veiculos'
@@ -319,7 +321,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctCestaReduzida: mostrarCestaMista ? pctCestaReduzida : 0,
       folhaPagamentoLRMensal: parseMoeda(folhaPagamentoLRStr),
       despesasOperacionaisMensais: parseMoeda(despesasOperacionaisStr),
-      aliquotaICMSEfetiva: aliquotaICMSStr ? parseFloat(aliquotaICMSStr.replace(',', '.')) / 100 : undefined,
+      aliquotaICMSEfetiva: (circulaMercadoria && aliquotaICMSStr) ? parseFloat(aliquotaICMSStr.replace(',', '.')) / 100 : undefined,
       aliquotaISSEfetiva:  aliquotaISSStr  ? parseFloat(aliquotaISSStr.replace(',', '.'))  / 100 : undefined,
     })
   }
@@ -1104,7 +1106,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               </div>
             </div>
 
-            {/* ICMS */}
+            {/* ICMS — só para atividades que circulam mercadoria (comércio, indústria, misto) */}
+            {circulaMercadoria && (
             <div>
               <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">
                 ICMS — Alíquota
@@ -1122,6 +1125,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm select-none">%</span>
               </div>
             </div>
+            )}
 
             {/* ISS */}
             <div>
@@ -1196,7 +1200,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                     <div className="flex justify-between text-ink-muted"><span>(−) CPP pró-labore (20%)</span><span className="num">−{fmt.moeda(cppProLabore)}</span></div>
                   </>}
                   <div className="flex justify-between text-ink-muted"><span>(−) Despesas operacionais</span><span className="num">−{fmt.moeda(despOp)}</span></div>
-                  <div className="flex justify-between text-ink-muted"><span>(−) ICMS {ins > 0 && aliqICMS > 0 ? '(vendas − compras)' : 'líquido'}</span><span className="num">−{fmt.moeda(icms)}</span></div>
+                  {circulaMercadoria && <div className="flex justify-between text-ink-muted"><span>(−) ICMS {ins > 0 && aliqICMS > 0 ? '(vendas − compras)' : 'líquido'}</span><span className="num">−{fmt.moeda(icms)}</span></div>}
                   <div className="flex justify-between text-ink-muted"><span>(−) ISS</span><span className="num">−{fmt.moeda(iss)}</span></div>
                   <div className="flex justify-between text-ink-muted"><span>(−) PIS/COFINS líquido (9,25%)</span><span className="num">−{fmt.moeda(pisCofins)}</span></div>
                   <div className="flex justify-between font-semibold text-ink border-t border-border pt-1.5"><span>Lucro Real</span><span className="num">{fmt.moeda(lucro)}</span></div>
