@@ -591,11 +591,19 @@ export const SETORES: Setor[] = [
   },
   {
     value: 'rh_recrutamento',
-    label: 'Recursos Humanos e Recrutamento',
+    label: 'Recursos Humanos e Recrutamento (consultivo)',
     grupo: 'Alíquota Cheia (26,5%)',
     reducao: 0.00,
     tipo: 'servico',
-    fatorR: true,
+    fatorR: true,   // §5-I: recrutamento/seleção consultivo sujeito ao Fator R
+  },
+  {
+    value: 'fornecimento_mao_obra',
+    label: 'Fornecimento / Cessão de Mão de Obra',
+    grupo: 'Alíquota Cheia (26,5%)',
+    reducao: 0.00,
+    tipo: 'servico',
+    vedadoSimples: true,   // LC 123/2006 Art. 17 XII: cessão ou locação de mão de obra é vedada ao Simples
   },
   {
     value: 'petshop',
