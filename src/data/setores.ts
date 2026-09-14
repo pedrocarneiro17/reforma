@@ -264,7 +264,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 30% — Profissões Regulamentadas',
     reducao: 0.30,
     tipo: 'servico',
-    fatorR: true,
+    // §5-B XIV (escritórios de serviços contábeis): sempre Anexo III, NÃO sujeito ao Fator R.
   },
   {
     value: 'engenharia_arquitetura',
@@ -322,7 +322,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 60%',
     reducao: 0.60,
     tipo: 'servico',
-    fatorR: true,
+    // §5-B (incluída pela LC 155/2016): sempre Anexo III, NÃO sujeito ao Fator R.
   },
   {
     value: 'nutricionista',
@@ -559,7 +559,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 60%',
     reducao: 0.60,  // Art. 141 I LC 214/2025: serviço de educação desportiva (NBS 1.2205.12.00) tem redução 60% — seção específica de atividades desportivas, prevalece sobre o Art. 127 X (30% dos profissionais de educação física)
     tipo: 'servico',
-    fatorR: true,
+    // §5-B (academias de atividades físicas/desportivas, LC 155/2016): sempre Anexo III, NÃO sujeito ao Fator R.
   },
   {
     value: 'beleza_estetica',
