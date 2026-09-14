@@ -5,7 +5,30 @@ import DadosMensais from './DadosMensais'
 import GrupoEmpresas from './GrupoEmpresas'
 import HoldingPatrimonial from './HoldingPatrimonial'
 import SociosAdministradores from './SociosAdministradores'
+import ImportarPGDAS from './ImportarPGDAS'
+import type { DadosPGDAS } from '../utils/pgdas'
 import type { Setor, TipoRegime, PerfilClientes, DadosEntrada, AggregateMeses, EmpresaGrupo, AnaliseHolding, SocioAdministrador } from '../types'
+
+// Remove acentos e baixa a caixa — para casar palavras-chave do PGDAS com os setores.
+function normalizar(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+}
+
+// Tenta identificar o setor a partir do nome/atividade do PGDAS, por palavras-chave distintivas.
+function detectarSetor(texto: string): Setor | null {
+  const alvo = normalizar(texto)
+  const GENERICAS = new Set(['servicos', 'servico', 'comercio', 'varejista', 'atacadista', 'geral',
+    'outros', 'outras', 'atividades', 'demais', 'especializado', 'material', 'produtos', 'exceto',
+    'prestacao', 'para', 'com', 'sem', 'nao', 'pelo', 'anexo'])
+  let melhor: Setor | null = null
+  let melhorScore = 0
+  for (const setor of SETORES) {
+    const palavras = normalizar(setor.label).split(/[^a-z0-9]+/).filter(p => p.length >= 5 && !GENERICAS.has(p))
+    const score = palavras.filter(p => alvo.includes(p)).length
+    if (score > melhorScore) { melhorScore = score; melhor = setor }
+  }
+  return melhorScore > 0 ? melhor : null
+}
 
 // ─── Dados estáticos ──────────────────────────────────────────────────────────
 
@@ -193,6 +216,40 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
   const [aliquotaICMSStr, setAliquotaICMSStr] = useState('')   // % efetivo líquido, ex: "8" para 8%
   const [aliquotaISSStr, setAliquotaISSStr] = useState('')     // % efetivo, ex: "3" para 3%
+  // Importação de PGDAS
+  const [overridePGDAS, setOverridePGDAS] = useState<number | null>(null)  // alíquota real (DAS/receita) do extrato
+  const [resumoPGDAS, setResumoPGDAS] = useState<string[] | null>(null)    // itens preenchidos para conferência
+
+  // Preenche o formulário a partir de um PGDAS-D já lido (o PDF já foi descartado).
+  const aplicarPGDAS = (d: DadosPGDAS) => {
+    const resumo: string[] = []
+    const setorDetectado = detectarSetor(`${d.nomeEmpresa ?? ''} ${d.descricaoAtividade ?? ''}`)
+
+    setDados(prev => ({
+      ...prev,
+      regime: d.optanteSimples ? 'simples_nacional' : prev.regime,
+      setor: setorDetectado?.value ?? prev.setor,
+      faturamentoMensal: d.faturamentoMensal != null ? valorParaMascara(d.faturamentoMensal) : prev.faturamentoMensal,
+    }))
+    if (d.optanteSimples) resumo.push('Regime: Simples Nacional')
+    if (d.nomeEmpresa) { setNomePrincipal(d.nomeEmpresa); resumo.push(`Empresa: ${d.nomeEmpresa}`) }
+    if (d.faturamentoMensal != null) resumo.push(`Faturamento (RPA): ${fmt.moeda(d.faturamentoMensal)}`)
+    if (d.uf) { setUf(d.uf); resumo.push(`UF: ${d.uf}`) }
+    if (d.anexo) { setAnexoSimples(d.anexo); resumo.push(`Anexo do Simples: ${d.anexo}`) }
+    if (d.aliquotaEfetiva != null) {
+      setOverridePGDAS(d.aliquotaEfetiva)
+      resumo.push(`Alíquota real do DAS: ${(d.aliquotaEfetiva * 100).toFixed(2).replace('.', ',')}% (${fmt.moeda(d.totalDebito ?? 0)}/mês)`)
+    } else {
+      setOverridePGDAS(null)
+    }
+    if (setorDetectado) resumo.push(`Setor detectado: ${setorDetectado.label} — confira`)
+    else resumo.push('Setor não identificado — selecione manualmente')
+    if (d.fatorRAplicavel === false) resumo.push('Fator R: não se aplica a esta atividade')
+    if (d.periodoApuracao) resumo.push(`Período: ${d.periodoApuracao}`)
+
+    setResumoPGDAS(resumo)
+    setErros({})
+  }
 
   const setorSelecionado = useMemo<Setor | null>(
     () => SETORES.find(s => s.value === dados.setor) ?? null,
@@ -288,7 +345,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       insumosMensais: insEfetivo,
       perfilClientes: dados.perfilClientes as PerfilClientes,
       pctClientesPJ: dados.perfilClientes === 'misto' ? pctClientesPJ : undefined,
-      aliquotaAtualOverride: agregado12m?.aliquotaRealApurada ?? null,
+      aliquotaAtualOverride: agregado12m?.aliquotaRealApurada ?? overridePGDAS ?? null,
       dadosMensais: modoEntrada === 'detalhado' ? (agregado12m?.meses ?? null) : null,
       exportacoesMensais: modoEntrada === 'detalhado' ? (agregado12m?.medias.exportacoes ?? 0) : parseMoeda(exportacoesMensaisStr),
       empresasGrupo,
@@ -328,6 +385,23 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
+
+      {/* ── Importar PGDAS-D (preenche o formulário automaticamente) ────────── */}
+      <ImportarPGDAS onImport={aplicarPGDAS} />
+      {resumoPGDAS && (
+        <div className="card p-4 border-l-4 border-l-success bg-success-soft space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-success">PGDAS importado — confira os dados</p>
+            <button type="button" onClick={() => setResumoPGDAS(null)} className="text-xs text-ink-muted hover:text-ink underline">ocultar</button>
+          </div>
+          <ul className="text-xs text-ink-secondary space-y-1 list-disc pl-5">
+            {resumoPGDAS.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+          <p className="text-[11px] text-ink-muted leading-relaxed">
+            A alíquota real do DAS foi usada como carga de hoje. Complete o perfil de clientes e demais campos abaixo e clique em calcular.
+          </p>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
           CARD 1 — Perfil da Empresa
