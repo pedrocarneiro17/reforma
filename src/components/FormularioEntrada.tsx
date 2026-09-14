@@ -225,20 +225,29 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
     const resumo: string[] = []
     const setorDetectado = detectarSetor(`${d.nomeEmpresa ?? ''} ${d.descricaoAtividade ?? ''}`)
 
+    // Faturamento base = média dos 12 meses (RBT12 ÷ 12): representa o run-rate e faz
+    // faturamento × 12 = RBT12, deixando a faixa do anexo exata. Cai para a RPA se não houver RBT12.
+    const faturamentoBase = d.rbt12 != null ? d.rbt12 / 12 : d.faturamentoMensal
+
     setDados(prev => ({
       ...prev,
       regime: d.optanteSimples ? 'simples_nacional' : prev.regime,
       setor: setorDetectado?.value ?? prev.setor,
-      faturamentoMensal: d.faturamentoMensal != null ? valorParaMascara(d.faturamentoMensal) : prev.faturamentoMensal,
+      faturamentoMensal: faturamentoBase != null ? valorParaMascara(faturamentoBase) : prev.faturamentoMensal,
     }))
     if (d.optanteSimples) resumo.push('Regime: Simples Nacional')
     if (d.nomeEmpresa) { setNomePrincipal(d.nomeEmpresa); resumo.push(`Empresa: ${d.nomeEmpresa}`) }
-    if (d.faturamentoMensal != null) resumo.push(`Faturamento (RPA): ${fmt.moeda(d.faturamentoMensal)}`)
+    if (d.rbt12 != null) {
+      resumo.push(`Faturamento médio (RBT12÷12): ${fmt.moeda(d.rbt12 / 12)}`)
+      resumo.push(`RBT12 (acumulado 12 meses → define a faixa): ${fmt.moeda(d.rbt12)}`)
+    } else if (d.faturamentoMensal != null) {
+      resumo.push(`Faturamento (RPA): ${fmt.moeda(d.faturamentoMensal)}`)
+    }
     if (d.uf) { setUf(d.uf); resumo.push(`UF: ${d.uf}`) }
     if (d.anexo) { setAnexoSimples(d.anexo); resumo.push(`Anexo do Simples: ${d.anexo}`) }
     if (d.aliquotaEfetiva != null) {
       setOverridePGDAS(d.aliquotaEfetiva)
-      resumo.push(`Alíquota real do DAS: ${(d.aliquotaEfetiva * 100).toFixed(2).replace('.', ',')}% (${fmt.moeda(d.totalDebito ?? 0)}/mês)`)
+      resumo.push(`Alíquota efetiva do DAS: ${(d.aliquotaEfetiva * 100).toFixed(2).replace('.', ',')}% (DAS de ${d.periodoApuracao ?? 'referência'}: ${fmt.moeda(d.totalDebito ?? 0)})`)
     } else {
       setOverridePGDAS(null)
     }
@@ -398,7 +407,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {resumoPGDAS.map((item, i) => <li key={i}>{item}</li>)}
           </ul>
           <p className="text-[11px] text-ink-muted leading-relaxed">
-            A alíquota real do DAS foi usada como carga de hoje. Complete o perfil de clientes e demais campos abaixo e clique em calcular.
+            O faturamento é a média dos 12 meses (RBT12÷12) e a alíquota efetiva do DAS é aplicada como carga de hoje.
+            Complete o perfil de clientes e demais campos abaixo e clique em calcular.
           </p>
         </div>
       )}

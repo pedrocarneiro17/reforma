@@ -25,6 +25,7 @@ export interface DadosPGDAS {
     irpj: number; csll: number; cofins: number; pis: number
     cpp: number; icms: number; ipi: number; iss: number
   } | null
+  historico12m: { mes: string; receita: number }[]  // receitas brutas mês a mês (seção 2.2.1)
 }
 
 /** "1.092.257,77" → 1092257.77 */
@@ -121,11 +122,21 @@ export function parsePGDAS(texto: string): DadosPGDAS {
   const aliquotaEfetiva =
     totalDebito != null && faturamentoMensal ? totalDebito / faturamentoMensal : null
 
+  // Receitas brutas mês a mês — seção "2.2.1) Mercado Interno"
+  const blocoMI = t.match(/2\.2\.1\)?\s*Mercado Interno(.*?)2\.2\.2\)/is)?.[1] ?? ''
+  const historico12m: { mes: string; receita: number }[] = []
+  const reMes = /(\d{2}\/\d{4})\s+([\d.]+,\d{2})/g
+  let mm: RegExpExecArray | null
+  while ((mm = reMes.exec(blocoMI)) !== null) {
+    const r = parseBRL(mm[2])
+    if (r != null) historico12m.push({ mes: mm[1], receita: r })
+  }
+
   return {
     nomeEmpresa, cnpj, optanteSimples, uf, municipio,
     periodoApuracao: per, faturamentoMensal, rbt12, anexo,
     fatorRAplicavel, totalDebito, aliquotaEfetiva, impedidoICMSISS,
-    descricaoAtividade, tributos,
+    descricaoAtividade, tributos, historico12m,
   }
 }
 
