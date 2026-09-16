@@ -110,6 +110,10 @@ export function calcularProlabore(
 }
 
 export const INSS_TETO_2026       = 8_157.41
+// Salário mínimo 2026 — piso da retirada de pró-labore do sócio-administrador (aplicado
+// automaticamente quando não há pró-labore maior informado; gera CPP 20% patronal por fora do DAS).
+export const SALARIO_MINIMO_2026  = 1_621
+export const PROLABORE_MINIMO     = SALARIO_MINIMO_2026
 export const INSS_ALIQ_AUTONOMO   = 0.20
 export const INSS_MAXIMO_AUTONOMO = INSS_TETO_2026 * INSS_ALIQ_AUTONOMO  // ≈ R$ 1.631/mês
 
@@ -901,13 +905,20 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const cppFolhaEmpregados     = ehLPouLR ? folhaEmpregadosMensal * INSS_ALIQ_PATRONAL : 0
   const terceirosFolhaMensal   = ehLPouLR ? folhaEmpregadosMensal * terceirosAliq : 0
   const totalProLaboreMensal   = sociosAdministradores.reduce((s, so) => s + so.prolaboreMensal, 0)
-  const cppProLaboreMensal     = ehLPouLR ? totalProLaboreMensal * INSS_ALIQ_PATRONAL : 0
+  // Regra: retirada de pró-labore MÍNIMA = 1 salário mínimo, aplicada automaticamente em LP/LR
+  // (o sócio-administrador deve retirar ao menos o piso, gerando CPP 20% patronal por fora do DAS).
+  // Usada só para encargos/dedução; o `totalProLaboreMensal` informado segue definindo se há dados de LR.
+  const proLaboreEncargosMensal = ehLPouLR ? Math.max(totalProLaboreMensal, PROLABORE_MINIMO) : totalProLaboreMensal
+  const proLaboreMinimoAplicado = ehLPouLR && totalProLaboreMensal < PROLABORE_MINIMO
+  const cppProLaboreMensal     = ehLPouLR ? proLaboreEncargosMensal * INSS_ALIQ_PATRONAL : 0
   // Contribuição previdenciária total da empresa (folha empregados + terceiros + pró-labore)
   const contribPrevidenciariaMensal   = cppFolhaEmpregados + terceirosFolhaMensal + cppProLaboreMensal
   // Anexo IV (§5-C: advocacia, construção, vigilância/limpeza): no Simples a CPP patronal (20%) fica
   // FORA do DAS, recolhida sobre a folha (empregados + pró-labore), sem terceiros (Simples é dispensado).
   const ehSimplesAnexoIV = regime === 'simples_nacional' && anexoEfetivoComFatorR === 'IV'
-  const cppSimplesAnexoIVMensal = ehSimplesAnexoIV ? folhaMensal * INSS_ALIQ_PATRONAL : 0
+  // No Anexo IV a CPP também respeita a retirada mínima (1 salário mínimo) quando a folha informada é menor.
+  const folhaCPPAnexoIV = Math.max(folhaMensal, PROLABORE_MINIMO)
+  const cppSimplesAnexoIVMensal = ehSimplesAnexoIV ? folhaCPPAnexoIV * INSS_ALIQ_PATRONAL : 0
   // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
   const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
   // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
@@ -1009,7 +1020,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
       const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
       const lucroReal = Math.max(0,
-        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal
+        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - proLaboreEncargosMensal - cppProLaboreMensal
         - despesasOperacionaisMensais - icmsAtualMensal - issAtualMensal - pisCofinsLiquido
       )
       const irpjBase    = lucroReal * 0.15
@@ -1238,7 +1249,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
         // Pós-reforma (2033): ICMS/ISS/PIS-COFINS extintos; IBS/CBS é "por fora" e não
         // reduz a base de IRPJ/CSLL — o lucro tributável fica MAIOR que o atual.
         const lucroReal = Math.max(0,
-          faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal - despesasOperacionaisMensais
+          faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - proLaboreEncargosMensal - cppProLaboreMensal - despesasOperacionaisMensais
         )
         return lucroReal * 0.15 + Math.max(0, lucroReal - IRPJ_ADICIONAL_LIMIAR) * 0.10 + lucroReal * 0.09
       }
@@ -1508,6 +1519,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     cppProLaboreMensal,
     contribPrevidenciariaMensal,
     cppSimplesAnexoIVMensal,
+    proLaboreMinimoAplicado: proLaboreMinimoAplicado || (ehSimplesAnexoIV && folhaMensal < PROLABORE_MINIMO),
     icmsAtualMensal,
     issAtualMensal,
 
@@ -1524,7 +1536,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
       const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
       const lucroRealBase  = Math.max(0,
-        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - totalProLaboreMensal - cppProLaboreMensal
+        faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - proLaboreEncargosMensal - cppProLaboreMensal
         - despesasOperacionaisMensais - icmsAtualMensal - issAtualMensal - pisCofinsLiquido
       )
       const irpj = lucroRealBase * 0.15
@@ -1539,7 +1551,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
         inssPatronal: cppFolhaEmpregados,
         terceiros: terceirosFolhaMensal,
         cppProLabore: cppProLaboreMensal,
-        proLabore: totalProLaboreMensal,
+        proLabore: proLaboreEncargosMensal,
         folhaPagamento: folhaEmpregadosMensal,
         despesasOperacionais: despesasOperacionaisMensais,
         lucroRealBase,

@@ -309,6 +309,7 @@ export interface ResultadoCalculo {
   cppProLaboreMensal: number     // 20% × pró-labore dos sócios (sem terceiros)
   contribPrevidenciariaMensal: number  // CPP folha + terceiros + CPP pró-labore
   cppSimplesAnexoIVMensal: number       // CPP 20% paga POR FORA do DAS no Anexo IV do Simples (§5-C); 0 nos demais
+  proLaboreMinimoAplicado: boolean       // true = retirada de pró-labore mínima (1 salário mínimo) foi aplicada automaticamente
   // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
   icmsAtualMensal: number
   issAtualMensal: number

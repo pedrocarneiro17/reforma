@@ -53,6 +53,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     irpjCsllLPMensal,
     apuracaoLucroReal, apuracaoLucroPresumido,
     cargaTotalReformaMensal, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
+    proLaboreMinimoAplicado,
   } = resultados
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
@@ -1252,6 +1253,11 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               </div>
             </div>
           </div>
+          {proLaboreMinimoAplicado && (
+            <p className="text-[11px] text-warning leading-relaxed font-medium">
+              Retirada de pró-labore mínima de 1 salário mínimo (R$ 1.621) aplicada automaticamente — o sócio-administrador deve retirar ao menos o piso, gerando CPP de 20% (R$ 324,20/mês). Informe o pró-labore real dos sócios para ajustar.
+            </p>
+          )}
           <p className="text-ink-muted text-[11px] leading-relaxed">
             Inclui CPP patronal (20%) + terceiros (Sistema S, 5,8%) sobre a folha e CPP (20%) sobre o pró-labore.
             Modelo simplificado: não considera adições/exclusões do LALUR, compensação de prejuízos fiscais (trava de 30%),
