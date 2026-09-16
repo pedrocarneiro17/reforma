@@ -43,6 +43,15 @@ import type {
 export const ALIQUOTA_IVA_PADRAO = 0.265
 
 /**
+ * Fatia da CBS em 2027 (quando substitui o PIS/COFINS): estimada em 9,25%. O IBS entra a partir
+ * de 2029 e o IVA Dual pleno (26,5%) só em 2033. As alíquotas de REFERÊNCIA (CBS e IBS) serão
+ * definidas por resolução — previsão de out/2026 — com base em cálculo do TCU/MF.
+ */
+export const ALIQUOTA_CBS_2027 = 0.0925
+export const ALERTA_DEFINICAO_ALIQUOTA =
+  'Alíquotas de referência (CBS/IBS) ainda serão definidas por resolução — previsão de outubro/2026. Os percentuais usados aqui (CBS 9,25% em 2027; 26,5% total em 2033) são estimativas.'
+
+/**
  * INSS — Contribuinte Individual (Autônomo / Profissional Liberal)
  * Alíquota: 20% (RPS — Art. 21 Lei 8.212/1991)
  * Teto do salário de contribuição 2026: R$ 8.157,41 (Portaria MPS/MF — atualização estimada)
@@ -1137,8 +1146,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const creditoDespesasAdicionais = (despesasCrediteisAdicionais ?? 0) * aliquotaIVABruta
 
   // Comparativo PIS/COFINS (DAS) vs CBS (IVA Dual) — exclusivo Simples Nacional
-  // CBS representa ~33,2% do IVA Dual (8,8% / 26,5% — estimativa de mercado)
-  const CBS_SHARE_IVA = 8.8 / 26.5
+  // Fatia da CBS dentro do IVA Dual: 9,25% de 26,5% (a CBS substitui o PIS/COFINS a partir de
+  // 2027 e é estimada em 9,25%). O IBS (17,25%) completa os 26,5% e só entra a partir de 2029.
+  // ⚠️ Alíquotas de referência a serem DEFINIDAS por resolução em out/2026 (ver ALERTA_DEFINICAO_ALIQUOTA).
+  const CBS_SHARE_IVA = 9.25 / 26.5
   const pisCofinsNoDAsMensal = (regime === 'simples_nacional' && cbsSimplesEfetivo != null)
     ? faturamentoMensal * cbsSimplesEfetivo
     : 0
@@ -1167,9 +1178,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : 0
 
   // Zona Franca de Manaus — créditos presumidos IBS e CBS (Art. 450 LC 214/2025)
-  // Estimativa da partilha IBS/CBS dentro dos 26,5%: CBS ~8,8% (federal) + IBS ~17,7% (estadual/municipal).
-  // A partilha exata depende da alíquota de referência fixada pelo Senado — usada como estimativa, igual aos 26,5%.
-  const IBS_SHARE_ESTIMADO = 0.668  // ≈ 17,7 ÷ 26,5
+  // Estimativa da partilha IBS/CBS dentro dos 26,5%: CBS 9,25% (federal) + IBS 17,25% (estadual/municipal).
+  // A partilha exata depende da alíquota de referência a ser fixada por resolução em out/2026.
+  const IBS_SHARE_ESTIMADO = 17.25 / 26.5  // ≈ 0,651
   const PCT_ZFM_IBS: Record<import('../types').TipoBemZFM, number> = {
     consumo_final: 0.55,    // Art. 450 §1º I
     capital:       0.75,    // Art. 450 §1º II

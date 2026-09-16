@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { fmt, labelTerceiros } from '../engine/calculadora'
+import { fmt, labelTerceiros, ALERTA_DEFINICAO_ALIQUOTA } from '../engine/calculadora'
 import GraficoTransicao from './GraficoTransicao'
 import PainelHistorico12m from './PainelHistorico12m'
 import ComparadorRegimes from './ComparadorRegimes'
@@ -492,8 +492,14 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       )}
 
       {/* ── Gráfico de transição ─────────────────────────────────────────── */}
-      <div className="card p-6">
+      <div className="card p-6 space-y-3">
         <GraficoTransicao resultados={resultados} />
+        <div className="rounded-lg border border-warning-border bg-warning-soft px-4 py-3 flex items-start gap-2">
+          <span className="text-warning flex-shrink-0" aria-hidden>⏰</span>
+          <p className="text-xs text-ink-secondary leading-relaxed">
+            <strong>Alíquotas ainda não definidas.</strong> {ALERTA_DEFINICAO_ALIQUOTA}
+          </p>
+        </div>
       </div>
 
       {/* ── Comparador de Regimes ────────────────────────────────────────── */}
