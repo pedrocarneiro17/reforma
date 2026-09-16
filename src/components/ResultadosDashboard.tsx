@@ -1708,6 +1708,8 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
     folhaMensal, faturamentoMensal, fatorR, anexo,
     aliquotaAnexoIII, aliquotaAnexoV,
     diferencaMensal, folhaMinimaPara28pct, jaEstaNoIII,
+    proLaboreParaAnexoIIIMensal, irpfProLaboreMensal, inssSeguradoProLaboreMensal,
+    custoManterAnexoIIIMensal, valeManterAnexoIII,
   } = analise
 
   const faltaParaIII = Math.max(0, folhaMinimaPara28pct - folhaMensal)
@@ -1778,6 +1780,28 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
           <strong className="num">{fmt.moeda(diferencaMensal)}/mês</strong> em DAS.
         </div>
       )}
+
+      {/* Planejamento do Anexo III — pró-labore para manter o Fator R + impacto no IRPF */}
+      <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-2">
+        <p className="text-xs font-semibold text-ink uppercase tracking-wide">Manter o Anexo III — pró-labore x IRPF</p>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+          <span className="text-ink-muted">Pró-labore alvo (28% do fat.)</span>
+          <span className="text-right num text-ink font-medium">{fmt.moeda(proLaboreParaAnexoIIIMensal)}/mês</span>
+          <span className="text-ink-muted">(−) IRPF do sócio</span>
+          <span className="text-right num text-danger">{fmt.moeda(irpfProLaboreMensal)}/mês</span>
+          <span className="text-ink-muted">(−) INSS segurado (11%)</span>
+          <span className="text-right num text-danger">{fmt.moeda(inssSeguradoProLaboreMensal)}/mês</span>
+          <span className="text-ink-secondary font-medium border-t border-[#E4DDD2] pt-1">Custo pessoal de manter o III</span>
+          <span className="text-right num text-danger font-semibold border-t border-[#E4DDD2] pt-1">{fmt.moeda(custoManterAnexoIIIMensal)}/mês</span>
+          <span className="text-ink-secondary font-medium">(+) Economia no DAS (V→III)</span>
+          <span className="text-right num text-success font-semibold">{fmt.moeda(diferencaMensal)}/mês</span>
+        </div>
+        <p className={`text-xs leading-relaxed font-medium ${valeManterAnexoIII ? 'text-success' : 'text-warning'}`}>
+          {valeManterAnexoIII
+            ? `Compensa: a economia no DAS (${fmt.moeda(diferencaMensal)}) supera o custo pessoal de IRPF+INSS (${fmt.moeda(custoManterAnexoIIIMensal)}) do pró-labore necessário para manter o Fator R ≥ 28%.`
+            : `Atenção: o custo pessoal de IRPF+INSS (${fmt.moeda(custoManterAnexoIIIMensal)}) do pró-labore para atingir 28% supera a economia no DAS (${fmt.moeda(diferencaMensal)}) — manter o Anexo III pode não compensar.`}
+        </p>
+      </div>
 
       <p className="text-xs text-ink-muted">
         Fator R = Folha 12 meses ÷ Receita bruta 12 meses (LC 123/2006, Art. 18, §5º-M).

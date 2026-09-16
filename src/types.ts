@@ -148,8 +148,16 @@ export interface AnaliseFatorR {
   aliquotaAnexoIII: number
   aliquotaAnexoV: number
   diferencaMensal: number       // imposto Anexo V − Anexo III (positivo = III vantajoso)
-  folhaMinimaPara28pct: number  // pró-labore mínimo para cruzar o limiar
+  folhaMinimaPara28pct: number  // folha mínima (pró-labore) para cruzar o limiar de 28%
   jaEstaNoIII: boolean
+  // Planejamento do Anexo III (pró-labore necessário para manter o Fator R ≥ 28% + impacto no IRPF)
+  proLaboreParaAnexoIIIMensal: number    // pró-labore alvo = 28% do faturamento
+  proLaboreAdicionalMensal: number       // quanto falta de folha para atingir os 28%
+  irpfProLaboreMensal: number            // IRPF do sócio sobre esse pró-labore (impacto do Fator R)
+  inssSeguradoProLaboreMensal: number    // INSS segurado 11% sobre esse pró-labore
+  custoManterAnexoIIIMensal: number      // IRPF + INSS segurado (custo pessoal de subir o pró-labore)
+  economiaDASNoIIIMensal: number         // economia no DAS ao ficar no III em vez do V (= diferencaMensal)
+  valeManterAnexoIII: boolean            // economia no DAS supera o custo pessoal?
 }
 
 // ─── Resultado das projeções ─────────────────────────────────────────────────

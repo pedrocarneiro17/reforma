@@ -362,6 +362,16 @@ export function calcularFatorR(
   const impostoV   = faturamentoMensal * aliquotaAnexoV
   const diferencaMensal = impostoV - impostoIII
 
+  // Planejamento do Anexo III: pró-labore que leva a folha a 28% do faturamento e seu impacto pessoal.
+  const folhaMinimaPara28pct = faturamentoMensal * FATOR_R_LIMIAR
+  const proLaboreParaAnexoIIIMensal = folhaMinimaPara28pct
+  const proLaboreAdicionalMensal = Math.max(0, folhaMinimaPara28pct - folhaMensal)
+  const irpfProLaboreMensal = calcularIRPF(proLaboreParaAnexoIIIMensal)
+  const inssSeguradoProLaboreMensal = Math.min(proLaboreParaAnexoIIIMensal, INSS_TETO_2026) * INSS_ALIQ_SEGURADO_SOCIO
+  const custoManterAnexoIIIMensal = irpfProLaboreMensal + inssSeguradoProLaboreMensal
+  // Economia no DAS (V→III) vs custo pessoal de manter o pró-labore alto no requisito do Fator R.
+  const valeManterAnexoIII = diferencaMensal > custoManterAnexoIIIMensal
+
   return {
     aplicavel: true,
     folhaMensal,
@@ -371,8 +381,15 @@ export function calcularFatorR(
     aliquotaAnexoIII,
     aliquotaAnexoV,
     diferencaMensal,
-    folhaMinimaPara28pct: faturamentoMensal * FATOR_R_LIMIAR,
+    folhaMinimaPara28pct,
     jaEstaNoIII,
+    proLaboreParaAnexoIIIMensal,
+    proLaboreAdicionalMensal,
+    irpfProLaboreMensal,
+    inssSeguradoProLaboreMensal,
+    custoManterAnexoIIIMensal,
+    economiaDASNoIIIMensal: diferencaMensal,
+    valeManterAnexoIII,
   }
 }
 
