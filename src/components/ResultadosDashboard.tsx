@@ -54,6 +54,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     apuracaoLucroReal, apuracaoLucroPresumido,
     cargaTotalReformaMensal, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
     proLaboreMinimoAplicado,
+    distribuicaoLucrosMensal, dividendosExcedenteMensal, irrfDividendosMensal,
   } = resultados
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
@@ -515,6 +516,37 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
 
       {/* ── Pró-labore ───────────────────────────────────────────────── */}
       {analiseProlabore && <CardProlabore analise={analiseProlabore} />}
+
+      {/* ── Tributação de Dividendos (Lei 15.270/2025) ─────────────────── */}
+      {distribuicaoLucrosMensal > 0 && (
+        <div className="card-elevated p-6 space-y-4">
+          <h3 className="section-title">
+            <span className="font-display">Tributação de Dividendos</span>
+            <span className="badge badge-warning text-xs">Lei 15.270/2025</span>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-1">
+              <p className="text-xs text-ink-muted uppercase tracking-wide font-semibold">Lucros distribuídos</p>
+              <p className="text-lg font-bold num text-ink">{fmt.moeda(distribuicaoLucrosMensal)}/mês</p>
+              <p className="text-xs text-ink-muted">Isento até R$ 50.000/mês por sócio (PF)</p>
+            </div>
+            <div className={`rounded-xl border p-4 space-y-1 ${irrfDividendosMensal > 0 ? 'bg-[#FDECEC] border-[#F4A9A5]' : 'bg-[#E7F4ED] border-[#A8D5BC]'}`}>
+              <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: irrfDividendosMensal > 0 ? '#B42318' : '#2F7D57' }}>IRRF sobre dividendos (10%)</p>
+              <p className={`text-lg font-bold num ${irrfDividendosMensal > 0 ? 'text-danger' : 'text-success'}`}>{fmt.moeda(irrfDividendosMensal)}/mês</p>
+              <p className="text-xs text-ink-muted">
+                {irrfDividendosMensal > 0
+                  ? `10% sobre o excedente de ${fmt.moeda(dividendosExcedenteMensal)}`
+                  : 'Distribuição dentro do limite isento'}
+              </p>
+            </div>
+          </div>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            A partir de 2026, lucros/dividendos pagos por uma mesma pessoa jurídica a uma mesma pessoa física acima de
+            R$ 50.000/mês passam a ter IRRF de 10% (Lei 15.270/2025). Aqui o imposto é calculado sobre o <strong>excedente</strong>;
+            pelo texto legal a alíquota pode incidir sobre o total — confirme o enquadramento com o contador.
+          </p>
+        </div>
+      )}
 
       {/* ── Split Payment ────────────────────────────────────────────── */}
       {(regime === 'lucro_presumido' || regime === 'lucro_real' || regime === 'simples_nacional') && (

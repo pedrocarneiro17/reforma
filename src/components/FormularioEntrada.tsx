@@ -216,6 +216,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
   const [aliquotaICMSStr, setAliquotaICMSStr] = useState('')   // % efetivo líquido, ex: "8" para 8%
   const [aliquotaISSStr, setAliquotaISSStr] = useState('')     // % efetivo, ex: "3" para 3%
+  const [distribuicaoLucrosStr, setDistribuicaoLucrosStr] = useState('')  // lucros distribuídos/mês (Lei 15.270/2025)
   // Importação de PGDAS
   const [overridePGDAS, setOverridePGDAS] = useState<number | null>(null)  // alíquota real (DAS/receita) do extrato
   const [resumoPGDAS, setResumoPGDAS] = useState<string[] | null>(null)    // itens preenchidos para conferência
@@ -377,6 +378,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctFreteAutonomo: mostrarCreditoPresumido ? pctFreteAutonomo : 0,
       vendaImobilizadoMensal: parseMoeda(vendaImobilizadoMensalStr),
       folhaMensal: (mostrarFatorR || mostrarFolhaAnexoIV) ? parseMoeda(folhaMensal) : 0,
+      distribuicaoLucrosMensal: parseMoeda(distribuicaoLucrosStr),
       investimentoCapitalMensal: mostrarCapital ? parseMoeda(investimentoCapitalStr) : 0,
       pctVendasAliqZeroRural: mostrarAliqZeroRural ? pctVendasAliqZeroRural : 0,
       pctVendasAliqZeroTransp: mostrarAliqZeroTransp ? pctVendasAliqZeroTransp : 0,
@@ -1716,6 +1718,32 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
         numeroCard={4}
         onChange={setSociosAdministradores}
       />
+
+      {/* ── Distribuição de lucros — tributação de dividendos (Lei 15.270/2025) ── */}
+      {['lucro_presumido', 'lucro_real', 'simples_nacional'].includes(dados.regime) && (
+        <div className="card p-5 space-y-3 border-l-4 border-l-warning">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">Distribuição de Lucros (opcional)</h3>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+              Lei 15.270/2025: lucros/dividendos pagos a uma mesma pessoa física acima de <strong>R$ 50.000/mês</strong> passam a ter <strong>IRRF de 10%</strong>. Informe o valor distribuído por mês para calcular o imposto sobre o excedente.
+            </p>
+          </div>
+          <div>
+            <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">Lucros distribuídos por mês</label>
+            <div className="relative mt-1">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-muted text-sm font-medium select-none">R$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={distribuicaoLucrosStr}
+                onChange={e => setDistribuicaoLucrosStr(mascaraMoeda(e.target.value))}
+                placeholder="0"
+                className="input-field pl-10 num"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════════════════════
           CARD Holding Patrimonial — disponível para todos os regimes

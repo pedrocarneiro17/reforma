@@ -73,6 +73,7 @@ export interface DadosEntrada {
   // Vendas ao governo (Arts. 441-443 Dec. 12.955/2026)
   pctVendasGoverno?: number      // % da receita proveniente de compras governamentais
   sociosAdministradores?: SocioAdministrador[]
+  distribuicaoLucrosMensal?: number  // lucros/dividendos distribuídos por mês (tributação de dividendos — Lei 15.270/2025)
   folhaMensal?: number       // folha de pagamento mensal — usado no Fator R (Simples Nacional serviços §5-I)
   anexoSimples2?: AnexoSimples  // segundo anexo quando empresa tem atividades mistas (LC 123/2006 Art. 18 §4-A)
   pctAnexo1?: number            // % da receita no primeiro anexo (0–100); restante vai para anexoSimples2
@@ -318,6 +319,10 @@ export interface ResultadoCalculo {
   contribPrevidenciariaMensal: number  // CPP folha + terceiros + CPP pró-labore
   cppSimplesAnexoIVMensal: number       // CPP 20% paga POR FORA do DAS no Anexo IV do Simples (§5-C); 0 nos demais
   proLaboreMinimoAplicado: boolean       // true = retirada de pró-labore mínima (1 salário mínimo) foi aplicada automaticamente
+  // Tributação de dividendos (Lei 15.270/2025): IRRF 10% sobre a distribuição de lucros acima de R$ 50 mil/mês
+  distribuicaoLucrosMensal: number       // lucros distribuídos informados por mês
+  dividendosExcedenteMensal: number      // parcela acima de R$ 50.000/mês
+  irrfDividendosMensal: number           // IRRF 10% sobre o excedente
   // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
   icmsAtualMensal: number
   issAtualMensal: number

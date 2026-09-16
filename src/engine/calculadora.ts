@@ -114,6 +114,13 @@ export const INSS_TETO_2026       = 8_157.41
 // automaticamente quando não há pró-labore maior informado; gera CPP 20% patronal por fora do DAS).
 export const SALARIO_MINIMO_2026  = 1_621
 export const PROLABORE_MINIMO     = SALARIO_MINIMO_2026
+
+// Tributação de dividendos — Lei 15.270/2025 (vigência 2026): IRRF de 10% sobre lucros/dividendos
+// pagos por uma mesma PJ a uma mesma PF. Limite de isenção mensal de R$ 50.000.
+// Obs.: pelo texto legal a alíquota incide sobre o TOTAL quando ultrapassa o limite; aqui é aplicada
+// sobre o EXCEDENTE (parcela acima de R$ 50 mil), conforme parametrização adotada.
+export const LIMITE_DIVIDENDOS_MENSAL  = 50_000
+export const ALIQUOTA_IRRF_DIVIDENDOS  = 0.10
 export const INSS_ALIQ_AUTONOMO   = 0.20
 export const INSS_MAXIMO_AUTONOMO = INSS_TETO_2026 * INSS_ALIQ_AUTONOMO  // ≈ R$ 1.631/mês
 
@@ -850,6 +857,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     folhaMensal = 0,
     pctFornecedoresSimples = 0,
     sociosAdministradores = [],
+    distribuicaoLucrosMensal = 0,
     pctCustoImovel = 0,
     redutorSocialMensal = 0,
     pctRepasseAgencia = 0,
@@ -936,6 +944,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // No Anexo IV a CPP também respeita a retirada mínima (1 salário mínimo) quando a folha informada é menor.
   const folhaCPPAnexoIV = Math.max(folhaMensal, PROLABORE_MINIMO)
   const cppSimplesAnexoIVMensal = ehSimplesAnexoIV ? folhaCPPAnexoIV * INSS_ALIQ_PATRONAL : 0
+  // Tributação de dividendos (Lei 15.270/2025): IRRF 10% sobre a distribuição de lucros acima de R$ 50 mil/mês.
+  const dividendosExcedenteMensal = Math.max(0, distribuicaoLucrosMensal - LIMITE_DIVIDENDOS_MENSAL)
+  const irrfDividendosMensal = dividendosExcedenteMensal * ALIQUOTA_IRRF_DIVIDENDOS
   // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
   const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
   // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
@@ -1537,6 +1548,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     contribPrevidenciariaMensal,
     cppSimplesAnexoIVMensal,
     proLaboreMinimoAplicado: proLaboreMinimoAplicado || (ehSimplesAnexoIV && folhaMensal < PROLABORE_MINIMO),
+    distribuicaoLucrosMensal,
+    dividendosExcedenteMensal,
+    irrfDividendosMensal,
     icmsAtualMensal,
     issAtualMensal,
 
