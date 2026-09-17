@@ -323,6 +323,8 @@ export interface ResultadoCalculo {
   distribuicaoLucrosMensal: number       // lucros distribuídos informados por mês
   dividendosExcedenteMensal: number      // parcela acima de R$ 50.000/mês
   irrfDividendosMensal: number           // IRRF 10% sobre o excedente
+  proLaboreConsideradoMensal: number     // pró-labore/folha do sócio considerado (para o risco de reclassificação)
+  riscoReclassificacaoNivel: 'nenhum' | 'baixo' | 'medio' | 'alto'  // grau de atenção p/ reclassificação de lucros em pró-labore
   // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
   icmsAtualMensal: number
   issAtualMensal: number

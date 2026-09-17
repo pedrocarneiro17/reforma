@@ -55,6 +55,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     cargaTotalReformaMensal, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
     proLaboreMinimoAplicado,
     distribuicaoLucrosMensal, dividendosExcedenteMensal, irrfDividendosMensal,
+    proLaboreConsideradoMensal, riscoReclassificacaoNivel,
   } = resultados
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
@@ -546,6 +547,15 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             pelo texto legal a alíquota pode incidir sobre o total — confirme o enquadramento com o contador.
           </p>
         </div>
+      )}
+
+      {/* ── Riscos fiscais — pró-labore x distribuição de lucros (regras 11 e 13) ── */}
+      {(distribuicaoLucrosMensal > 0 || proLaboreMinimoAplicado) && ehLPouLR && (
+        <CardRiscoProLabore
+          distribuicao={distribuicaoLucrosMensal}
+          proLabore={proLaboreConsideradoMensal}
+          nivel={riscoReclassificacaoNivel}
+        />
       )}
 
       {/* ── Split Payment ────────────────────────────────────────────── */}
@@ -1728,6 +1738,70 @@ function CardProlabore({ analise }: { analise: AnaliseProlabore }) {
 
       <p className="text-xs text-ink-muted">
         Distribuição de lucros isenta de IRPF (Lei 9.249/1995, Art. 10). INSS patronal: 20%. INSS contribuinte individual: 20% até o teto de {fmt.moeda(8_157.41)}/mês.
+      </p>
+    </div>
+  )
+}
+
+// ─── CardRiscoProLabore ────────────────────────────────────────────────────────
+// Riscos fiscais da relação pró-labore x distribuição de lucros (reclassificação previdenciária).
+// Não conclui irregularidade — sinaliza o grau de atenção e o que documentar.
+
+function CardRiscoProLabore({ distribuicao, proLabore, nivel }: { distribuicao: number; proLabore: number; nivel: 'nenhum' | 'baixo' | 'medio' | 'alto' }) {
+  const meta = {
+    alto:   { cls: 'bg-danger-soft border-danger-border',   txt: 'text-danger',  label: 'Atenção alta' },
+    medio:  { cls: 'bg-warning-soft border-warning-border', txt: 'text-warning', label: 'Atenção moderada' },
+    baixo:  { cls: 'bg-[#FBFAF7] border-[#E4DDD2]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
+    nenhum: { cls: 'bg-[#FBFAF7] border-[#E4DDD2]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
+  }[nivel]
+
+  const riscos = [
+    { t: 'Reclassificação de lucros em pró-labore (previdenciário)', d: 'Se o Fisco entender que a distribuição remunera o trabalho do sócio, pode exigir contribuição previdenciária sobre a parcela reclassificada.' },
+    { t: 'Passivo de contribuições e encargos', d: 'A reclassificação gera cobrança de CPP + juros + multa sobre a base reclassificada, conforme o enquadramento e o período fiscalizado.' },
+    { t: 'Distribuição sem lucro apurado (contábil/societário)', d: 'Distribuir sem demonstrar lucro disponível compromete a operação. É preciso lastro contábil (balanço/balancete) e deliberações/registros regulares.' },
+    { t: 'Substância da operação (fiscal)', d: 'Sócio que atua no dia a dia com pró-labore mínimo e lucros altos pode precisar justificar documentalmente a natureza de cada pagamento (funções, outros empregados, apuração real).' },
+  ]
+
+  return (
+    <div className="card-elevated p-6 space-y-4">
+      <h3 className="section-title">
+        <span className="font-display">Riscos Fiscais — Pró-labore x Distribuição de Lucros</span>
+        <span className={`badge text-xs ${nivel === 'alto' ? 'badge-danger' : nivel === 'medio' ? 'badge-warning' : 'badge-neutral'}`}>{meta.label}</span>
+      </h3>
+
+      {distribuicao > 0 && (
+        <div className={`rounded-xl border p-4 flex flex-wrap items-center gap-x-6 gap-y-1 ${meta.cls}`}>
+          <div>
+            <p className="text-xs text-ink-muted uppercase tracking-wide font-semibold">Distribuição de lucros</p>
+            <p className="text-base font-bold num text-ink">{fmt.moeda(distribuicao)}/mês</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-muted uppercase tracking-wide font-semibold">Pró-labore do sócio</p>
+            <p className="text-base font-bold num text-ink">{fmt.moeda(proLabore)}/mês</p>
+          </div>
+          <div>
+            <p className="text-xs text-ink-muted uppercase tracking-wide font-semibold">Proporção lucro/pró-labore</p>
+            <p className={`text-base font-bold num ${meta.txt}`}>{proLabore > 0 ? `${(distribuicao / proLabore).toFixed(1)}×` : '—'}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {riscos.map((r, i) => (
+          <div key={i} className="flex gap-2.5">
+            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${nivel === 'alto' ? 'bg-danger' : nivel === 'medio' ? 'bg-warning' : 'bg-[#9A9286]'}`} />
+            <div>
+              <p className="text-sm font-semibold text-ink">{r.t}</p>
+              <p className="text-xs text-ink-secondary leading-relaxed">{r.d}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <p className="text-xs text-ink-muted leading-relaxed border-t border-border pt-3">
+        <strong>Importante:</strong> não se conclui irregularidade apenas pela diferença entre pró-labore e distribuição.
+        A análise deve considerar as funções do sócio, a existência de outros trabalhadores, a forma de apuração dos lucros e a
+        realidade operacional. Este painel é um alerta de atenção, não um parecer.
       </p>
     </div>
   )

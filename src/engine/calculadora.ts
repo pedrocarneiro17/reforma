@@ -947,6 +947,21 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Tributação de dividendos (Lei 15.270/2025): IRRF 10% sobre a distribuição de lucros acima de R$ 50 mil/mês.
   const dividendosExcedenteMensal = Math.max(0, distribuicaoLucrosMensal - LIMITE_DIVIDENDOS_MENSAL)
   const irrfDividendosMensal = dividendosExcedenteMensal * ALIQUOTA_IRRF_DIVIDENDOS
+
+  // Risco de reclassificação de lucros em pró-labore (previdenciário): sinaliza quando há
+  // distribuição de lucros com pró-labore baixo em relação a ela. NÃO é conclusão de irregularidade
+  // — apenas grau de atenção para justificar documentalmente a natureza dos pagamentos.
+  const proLaboreConsideradoMensal = ehLPouLR ? proLaboreEncargosMensal
+    : ehSimplesAnexoIV ? folhaCPPAnexoIV
+    : (folhaMensal > 0 ? folhaMensal : totalProLaboreMensal)
+  const razaoDistribProLabore = proLaboreConsideradoMensal > 0
+    ? distribuicaoLucrosMensal / proLaboreConsideradoMensal
+    : (distribuicaoLucrosMensal > 0 ? Infinity : 0)
+  const riscoReclassificacaoNivel: 'nenhum' | 'baixo' | 'medio' | 'alto' =
+    distribuicaoLucrosMensal <= 0 ? 'nenhum'
+    : razaoDistribProLabore >= 3 ? 'alto'
+    : razaoDistribProLabore >= 1 ? 'medio'
+    : 'baixo'
   // Encargos dedutíveis do lucro real (folha bruta + CPP + terceiros)
   const encargosFolhaEmpregadosMensal = folhaEmpregadosMensal + cppFolhaEmpregados + terceirosFolhaMensal
   // ICMS "hoje" (LP/LR) — apuração por débito/crédito (não-cumulativo):
@@ -1551,6 +1566,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     distribuicaoLucrosMensal,
     dividendosExcedenteMensal,
     irrfDividendosMensal,
+    proLaboreConsideradoMensal,
+    riscoReclassificacaoNivel,
     icmsAtualMensal,
     issAtualMensal,
 
