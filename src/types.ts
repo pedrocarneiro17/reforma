@@ -17,6 +17,7 @@ export interface Setor {
   tipo: TipoSetor
   fatorR?: boolean              // true = sujeito ao Fator R no Simples Nacional (Anexo III ou V)
   anexoFixo?: AnexoSimples      // anexo fixado por lei no Simples (ex.: advocacia → Anexo IV §5-C), sobrepõe inferência/seleção
+  duasVersoesMedicina?: boolean // medicina: alterna redução IBS/CBS entre 30% (serviço profissional) e 60% (serviço de saúde)
   baseReduzidaMargem?: boolean  // true = CBS incide só na margem (bens usados de PF — Cap. X Dec. 12.955/2026)
   presuncaoLPIRPJ?: number      // override da presunção IRPJ no LP (padrão: 8% comércio/indústria, 32% serviço)
   presuncaoLPCSLL?: number      // override da presunção CSLL no LP (padrão: 12% comércio/indústria, 32% serviço)
@@ -74,6 +75,7 @@ export interface DadosEntrada {
   pctVendasGoverno?: number      // % da receita proveniente de compras governamentais
   sociosAdministradores?: SocioAdministrador[]
   distribuicaoLucrosMensal?: number  // lucros/dividendos distribuídos por mês (tributação de dividendos — Lei 15.270/2025)
+  versaoMedicina?: 'profissional' | 'saude'  // medicina: 'profissional' → redução 30%; 'saude' → redução 60%
   folhaMensal?: number       // folha de pagamento mensal — usado no Fator R (Simples Nacional serviços §5-I)
   anexoSimples2?: AnexoSimples  // segundo anexo quando empresa tem atividades mistas (LC 123/2006 Art. 18 §4-A)
   pctAnexo1?: number            // % da receita no primeiro anexo (0–100); restante vai para anexoSimples2
@@ -325,6 +327,9 @@ export interface ResultadoCalculo {
   irrfDividendosMensal: number           // IRRF 10% sobre o excedente
   proLaboreConsideradoMensal: number     // pró-labore/folha do sócio considerado (para o risco de reclassificação)
   riscoReclassificacaoNivel: 'nenhum' | 'baixo' | 'medio' | 'alto'  // grau de atenção p/ reclassificação de lucros em pró-labore
+  // Despesas creditáveis necessárias para zerar o débito líquido de IBS/CBS (não-cumulatividade ampla)
+  despesasParaZerarIVAMensal: number     // despesas creditáveis adicionais que anulam o IVA a pagar
+  pctFatParaZerarIVA: number             // essas despesas como % do faturamento
   // ICMS/ISS apurados na carga atual (LP/LR) — alíquotas informadas ou médias
   icmsAtualMensal: number
   issAtualMensal: number

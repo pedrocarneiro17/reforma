@@ -4,8 +4,8 @@ import {
   Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
 import type { TooltipProps } from 'recharts'
-import { calcularTodosOsRegimes, fmt } from '../engine/calculadora'
-import type { ResultadoCalculo, TipoRegime } from '../types'
+import { calcularTodosOsRegimes, calcularTodosOsCenarios, fmt } from '../engine/calculadora'
+import type { ResultadoCalculo, TipoRegime, DadosEntrada } from '../types'
 
 type RegimeColor = 'emerald' | 'blue' | 'violet' | 'orange' | 'amber'
 
@@ -109,6 +109,18 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
   )
 
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
+
+  // Simples híbrido projetado com faturamento +10% (regra: híbrido no faturamento atual e +10%).
+  const hibrido10 = useMemo(() => {
+    if (dadosBase.regime !== 'simples_nacional' || !dadosBase.cenarioHibridoVerdadeiro) return null
+    const r = calcularTodosOsCenarios({
+      ...(dadosBase as unknown as DadosEntrada),
+      faturamentoMensal: dadosBase.faturamentoMensal * 1.1,
+      dadosMensais: null,
+    })
+    return r.cenarioHibridoVerdadeiro
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.regime, dadosBase.perfilClientes])
 
   // Anexos comprovadamente NÃO atingíveis pelo Fator R não são exibidos — com a folha informada,
   // mostra-se só o anexo em que a empresa realmente se enquadra; sem folha, mostram-se III e V.
@@ -619,6 +631,26 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               </div>
             </div>
           </div>
+
+          {hibrido10 && (
+            <div className="rounded-lg border border-border bg-surface p-4 flex flex-wrap items-center gap-x-6 gap-y-1">
+              <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">Projeção do Híbrido com faturamento +10%</span>
+              <div>
+                <span className="text-xs text-ink-muted">Faturamento</span>{' '}
+                <span className="num text-ink font-medium">{fmt.moeda(dadosBase.faturamentoMensal * 1.1)}/mês</span>
+              </div>
+              <div>
+                <span className="text-xs text-ink-muted">Híbrido total</span>{' '}
+                <span className="num text-danger font-bold">{fmt.moeda(hibrido10.totalMensal)}/mês</span>
+              </div>
+              {snHibridoMensal != null && (
+                <div>
+                  <span className="text-xs text-ink-muted">vs atual</span>{' '}
+                  <span className="num text-ink-secondary font-medium">+{fmt.moeda(hibrido10.totalMensal - snHibridoMensal)}/mês</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <p className="text-ink-muted text-[11px] leading-relaxed border-t border-success-border pt-3">
             <strong>Quando o Híbrido compensa?</strong> Se seus clientes são empresas (B2B) que se beneficiam do crédito pleno de CBS/IBS,

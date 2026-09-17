@@ -82,6 +82,19 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
         </p>
       </div>
 
+      {/* ── Alerta de inconsistência — teto do Simples Nacional ───────────── */}
+      {isSimples && (acimaDaFaixaAtual || (limiteSimplesPct > 0 && limiteSimplesPct <= 200)) && (
+        <div className="rounded-xl border border-danger-border bg-danger-soft px-4 py-3 flex items-start gap-2">
+          <span className="text-danger flex-shrink-0" aria-hidden>⚠️</span>
+          <p className="text-xs text-ink-secondary leading-relaxed">
+            <strong>Alerta de inconsistência:</strong>{' '}
+            {acimaDaFaixaAtual
+              ? 'No faturamento atual a empresa já ultrapassa o teto do Simples Nacional (R$ 400.000/mês · R$ 4,8M/ano) — o enquadramento no Simples fica inconsistente e exige migração de regime.'
+              : `Com crescimento de aproximadamente +${Math.ceil(limiteSimplesPct)}% o faturamento atinge R$ 400.000/mês (R$ 4,8M/ano) e ultrapassa o teto do Simples Nacional. A partir desse ponto a empresa precisa migrar para Lucro Presumido/Real.`}
+          </p>
+        </div>
+      )}
+
       {/* ── Slider + KPIs em tempo real (oculto na impressão) ───────── */}
       <div className="card-elevated p-5 space-y-5 print:hidden">
         {/* Slider */}

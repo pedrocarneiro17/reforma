@@ -217,6 +217,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [aliquotaICMSStr, setAliquotaICMSStr] = useState('')   // % efetivo líquido, ex: "8" para 8%
   const [aliquotaISSStr, setAliquotaISSStr] = useState('')     // % efetivo, ex: "3" para 3%
   const [distribuicaoLucrosStr, setDistribuicaoLucrosStr] = useState('')  // lucros distribuídos/mês (Lei 15.270/2025)
+  const [versaoMedicina, setVersaoMedicina] = useState<'profissional' | 'saude'>('saude')  // medicina: 30% x 60%
   // Importação de PGDAS
   const [overridePGDAS, setOverridePGDAS] = useState<number | null>(null)  // alíquota real (DAS/receita) do extrato
   const [resumoPGDAS, setResumoPGDAS] = useState<string[] | null>(null)    // itens preenchidos para conferência
@@ -379,6 +380,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       vendaImobilizadoMensal: parseMoeda(vendaImobilizadoMensalStr),
       folhaMensal: (mostrarFatorR || mostrarFolhaAnexoIV) ? parseMoeda(folhaMensal) : 0,
       distribuicaoLucrosMensal: parseMoeda(distribuicaoLucrosStr),
+      versaoMedicina: setorSelecionado?.duasVersoesMedicina ? versaoMedicina : undefined,
       investimentoCapitalMensal: mostrarCapital ? parseMoeda(investimentoCapitalStr) : 0,
       pctVendasAliqZeroRural: mostrarAliqZeroRural ? pctVendasAliqZeroRural : 0,
       pctVendasAliqZeroTransp: mostrarAliqZeroTransp ? pctVendasAliqZeroTransp : 0,
@@ -1175,6 +1177,31 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 className="input-field pl-10 num"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Medicina — duas versões de redução (IBS/CBS) ──────────────────── */}
+      {setorSelecionado?.duasVersoesMedicina && (
+        <div className="card p-5 space-y-3 border-l-4 border-l-info">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">Medicina — Enquadramento da redução IBS/CBS</h3>
+            <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
+              A atividade médica pode ser enquadrada de duas formas na reforma: como <strong>serviço profissional/sociedade de profissionais</strong> (redução de 30% da alíquota) ou como <strong>serviço de saúde</strong> (redução de 60%). Escolha o enquadramento aplicável.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {([['profissional', 'Serviço profissional', '−30%'], ['saude', 'Serviço de saúde', '−60%']] as const).map(([val, titulo, pct]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setVersaoMedicina(val)}
+                className={`rounded-xl border px-4 py-3 text-left transition-colors ${versaoMedicina === val ? 'border-info bg-info-soft' : 'border-[#C4BDB4] hover:border-info bg-white'}`}
+              >
+                <span className="block text-sm font-semibold text-ink">{titulo}</span>
+                <span className="block text-xs text-ink-muted num">redução {pct}</span>
+              </button>
+            ))}
           </div>
         </div>
       )}

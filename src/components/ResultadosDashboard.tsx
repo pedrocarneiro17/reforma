@@ -56,6 +56,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     proLaboreMinimoAplicado,
     distribuicaoLucrosMensal, dividendosExcedenteMensal, irrfDividendosMensal,
     proLaboreConsideradoMensal, riscoReclassificacaoNivel,
+    despesasParaZerarIVAMensal, pctFatParaZerarIVA,
   } = resultados
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
@@ -545,6 +546,31 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             A partir de 2026, lucros/dividendos pagos por uma mesma pessoa jurídica a uma mesma pessoa física acima de
             R$ 50.000/mês passam a ter IRRF de 10% (Lei 15.270/2025). Aqui o imposto é calculado sobre o <strong>excedente</strong>;
             pelo texto legal a alíquota pode incidir sobre o total — confirme o enquadramento com o contador.
+          </p>
+        </div>
+      )}
+
+      {/* ── Não-cumulatividade: despesas que zeram o IBS/CBS (regra 8) ──────── */}
+      {impostoIVALiquidoMensal > 0 && despesasParaZerarIVAMensal > 0 && (
+        <div className="card p-6 space-y-3">
+          <h3 className="section-title"><span className="font-display">Créditos para zerar o IBS/CBS</span></h3>
+          <p className="text-xs text-ink-muted leading-relaxed">
+            Na não-cumulatividade ampla, despesas com CBS/IBS embutido geram crédito (crédito = despesa × alíquota).
+            Para <strong>anular o IVA a pagar</strong> de {fmt.moeda(impostoIVALiquidoMensal)}/mês seriam necessárias despesas creditáveis adicionais de:
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-[#A8D5BC] bg-[#E7F4ED] p-4 space-y-1">
+              <p className="text-xs uppercase tracking-wide font-semibold text-[#2F7D57]">Despesas creditáveis necessárias</p>
+              <p className="text-lg font-bold num text-[#2F7D57]">{fmt.moeda(despesasParaZerarIVAMensal)}/mês</p>
+            </div>
+            <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-1">
+              <p className="text-xs uppercase tracking-wide font-semibold text-ink-muted">% do faturamento</p>
+              <p className="text-lg font-bold num text-ink">{fmt.pct(pctFatParaZerarIVA)}</p>
+            </div>
+          </div>
+          <p className="text-[11px] text-ink-muted leading-relaxed">
+            Estimativa: mapeie aluguel, energia, marketing, TI, serviços de terceiros e demais insumos com CBS/IBS destacado.
+            Créditos reais dependem de documento fiscal idôneo e de a despesa não estar em regime específico/vedado.
           </p>
         </div>
       )}

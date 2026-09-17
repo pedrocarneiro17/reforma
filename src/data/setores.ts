@@ -281,6 +281,7 @@ export const SETORES: Setor[] = [
     reducao: 0.60,
     tipo: 'servico',
     fatorR: true,
+    duasVersoesMedicina: true,
   },
   {
     value: 'sociedade_medica',
@@ -289,6 +290,7 @@ export const SETORES: Setor[] = [
     reducao: 0.60,
     tipo: 'servico',
     fatorR: true,
+    duasVersoesMedicina: true,
     presuncaoLPIRPJ: 0.32,  // S/S médica não é "serviço hospitalar" → presunção 32% (RFB/STJ)
     presuncaoLPCSLL: 0.32,
   },

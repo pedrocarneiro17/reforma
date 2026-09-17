@@ -858,6 +858,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctFornecedoresSimples = 0,
     sociosAdministradores = [],
     distribuicaoLucrosMensal = 0,
+    versaoMedicina,
     pctCustoImovel = 0,
     redutorSocialMensal = 0,
     pctRepasseAgencia = 0,
@@ -1106,7 +1107,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // ── 2. Carga Nova — IVA Dual ────────────────────────────────────────────────
   // Alíquota bruta do setor. Para farmácias (cesta mista), faz a média ponderada:
   // parcela de medicamentos tem 60% de redução (Art. 133); o restante fica na alíquota do setor.
-  let aliquotaIVABruta = ALIQUOTA_IVA_PADRAO * (1 - setor.reducao)
+  // Medicina em duas versões (regra): serviço profissional/sociedade → redução 30%; serviço de saúde → 60%.
+  const reducaoEfetiva = (setor.duasVersoesMedicina && versaoMedicina)
+    ? (versaoMedicina === 'saude' ? 0.60 : 0.30)
+    : setor.reducao
+  let aliquotaIVABruta = ALIQUOTA_IVA_PADRAO * (1 - reducaoEfetiva)
   if (setor.vendeMedicamentos && pctMedicamentos > 0) {
     const fracMed = Math.min(1, Math.max(0, pctMedicamentos / 100))
     const aliqMedicamentos = ALIQUOTA_IVA_PADRAO * (1 - 0.60)  // Art. 133: medicamentos 60% de redução
@@ -1260,6 +1265,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   const impostoIVALiquidoAnual = impostoIVALiquidoMensal * 12
   const cbsIVADualMensal = impostoIVALiquidoMensal * CBS_SHARE_IVA
+
+  // Não-cumulatividade ampla: quanto de despesa creditável (a mais) anularia o IVA a pagar.
+  // crédito = despesa × alíquota bruta; para zerar o líquido: despesa = IVA_líquido ÷ alíquota bruta.
+  const despesasParaZerarIVAMensal = aliquotaIVABruta > 0 ? impostoIVALiquidoMensal / aliquotaIVABruta : 0
+  const pctFatParaZerarIVA = faturamentoMensal > 0 ? despesasParaZerarIVAMensal / faturamentoMensal : 0
 
   // Imposto Seletivo (Anexo XVII + Arts. 419-423 LC 214/2025)
   const alertaImpostoSeletivo = setor.impostSeletivo === true
@@ -1568,6 +1578,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     irrfDividendosMensal,
     proLaboreConsideradoMensal,
     riscoReclassificacaoNivel,
+    despesasParaZerarIVAMensal,
+    pctFatParaZerarIVA,
     icmsAtualMensal,
     issAtualMensal,
 
