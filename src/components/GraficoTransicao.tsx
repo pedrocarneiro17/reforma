@@ -46,7 +46,9 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
   const { projecaoAnos, impostoAtualAnual, impostoIVALiquidoAnual, cargaTotalReformaMensal, regime } = resultados
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
   // LP/LR: referência final é a carga total pós-reforma (IVA + IRPJ/CSLL + contrib. prev.)
-  const referenciaFinalAnual = ehLPouLR ? cargaTotalReformaMensal * 12 : impostoIVALiquidoAnual
+  // Simples/MEI: carga pós-reforma = DAS inalterado (cargaTotalReformaMensal já reflete isso)
+  const ehSimplesOuMEI = regime === 'simples_nacional' || regime === 'mei'
+  const referenciaFinalAnual = ehLPouLR || ehSimplesOuMEI ? cargaTotalReformaMensal * 12 : impostoIVALiquidoAnual
 
   const data: GraficoData[] = projecaoAnos
     .filter(p => ANOS_CHAVE.includes(p.ano))

@@ -292,7 +292,10 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     </Bloco>
   ))
 
-  const cargaPosReforma = ehLPouLR ? cargaTotalReformaMensal : impostoIVALiquidoMensal
+  // Simples/MEI: carga pós-reforma = DAS inalterado (cargaTotalReformaMensal já reflete isso)
+  const cargaPosReforma = ehLPouLR || regime === 'simples_nacional' || regime === 'mei'
+    ? cargaTotalReformaMensal
+    : impostoIVALiquidoMensal
   blocos.push(n => (
     <Bloco key="comp" numero={n} titulo="Comparativo — hoje vs pós-reforma">
       <Linha label="Carga hoje" valor={impostoAtualMensal} />

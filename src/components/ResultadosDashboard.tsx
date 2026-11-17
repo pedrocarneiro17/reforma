@@ -63,6 +63,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
 
   const isMEI = regime === 'mei'
   const isPF  = regime === 'profissional_liberal'
+  // Simples/MEI permanecendo no regime único: DAS total inalterado pela reforma (Anexos I–V LC 214/2025)
+  const ehSimplesOuMEI = regime === 'simples_nacional' || isMEI
 
   const cargaAumentou = variacaoAbsolutaMensal > 0
   const cargaReducao = variacaoAbsolutaMensal < 0
@@ -77,6 +79,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       return { tom: 'success', texto: 'Setor isento — alíquota zero no IVA Dual. Não há IBS/CBS sobre suas vendas.' }
     if (produtorRuralNaoContribuinte)
       return { tom: 'success', texto: 'Produtor rural não-contribuinte — sem IBS/CBS abaixo de R$ 3,6M/ano.' }
+    if (isMEI)
+      return { tom: 'info', texto: 'No MEI, o DAS fixo mensal continua o mesmo com a reforma — CBS e IBS não mudam o valor da sua guia.' }
+    if (ehSimplesOuMEI)
+      return { tom: 'info', texto: `No Simples Nacional, o DAS total não muda com a reforma: CBS e IBS substituem PIS/COFINS e ICMS/ISS dentro da mesma guia.${vendeB2B ? ` Seus clientes empresas, porém, só creditam a parcela embutida no DAS (${fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}) — veja no comparador a opção de recolher IBS/CBS por fora.` : ''}` }
     if (cargaReducao)
       return { tom: 'success', texto: `Com o IVA Dual, sua carga líquida cai ${Math.abs(variacaoPercentual).toFixed(1)}% — economia de ${fmt.moeda(Math.abs(variacaoAbsolutaMensal))}/mês.` }
     if (cargaAumentou && vendeB2B)
@@ -221,7 +227,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           {/* Carga Nova */}
           <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
             <span className="stat-label flex items-center gap-1.5">
-              {ehLPouLR ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
+              {ehLPouLR || ehSimplesOuMEI ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
               {!isento && (
                 <span
                   className="badge badge-neutral text-[10px] font-medium cursor-help"
@@ -232,15 +238,22 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               )}
             </span>
             <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
-              {fmt.moeda(ehLPouLR ? cargaTotalReformaMensal : impostoIVALiquidoMensal)}
+              {fmt.moeda(ehLPouLR || ehSimplesOuMEI ? cargaTotalReformaMensal : impostoIVALiquidoMensal)}
             </span>
             <span className="text-xs text-ink-muted num">
-              {ehLPouLR
+              {ehLPouLR || ehSimplesOuMEI
                 ? <>{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)} total · {fmt.moeda(cargaTotalReformaMensal * 12)}/ano</>
                 : <>{fmt.pct(aliquotaIVAEfetiva)} líquido · {fmt.moeda(impostoIVALiquidoAnual)}/ano</>}
             </span>
             <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed">
-              {ehLPouLR
+              {isMEI
+                ? <>DAS fixo inalterado — o valor da guia não depende do IVA Dual</>
+                : ehSimplesOuMEI
+                ? <>DAS inalterado · CBS <strong className="text-ink num">{fmt.pct(cbsSimplesEfetivo ?? 0)}</strong>
+                    {' '}+ IBS <strong className="text-ink num">{fmt.pct(ibsSimplesEfetivo ?? 0)}</strong> dentro da guia
+                    {cenarioHibridoVerdadeiro && <> · por fora: <strong className="text-ink num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</strong></>}
+                  </>
+                : ehLPouLR
                 ? <>IVA <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
                     {' '}+ IR/CSLL <strong className="text-ink num">{fmt.moeda(irpjCsllPersistenteMensal)}</strong>
                     {contribPrevidenciariaMensal > 0 && <> + prev. <strong className="text-ink num">{fmt.moeda(contribPrevidenciariaMensal)}</strong></>}
@@ -257,7 +270,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               {cargaAumentou ? '+' : ''}{fmt.moeda(variacaoAbsolutaMensal)}
             </span>
             <span className="text-xs text-ink-muted num">
-              {cargaAumentou ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(1)}% em relação à carga atual
+              {ehSimplesOuMEI ? '=' : cargaAumentou ? '▲' : '▼'} {Math.abs(variacaoPercentual).toFixed(1)}% em relação à carga atual
             </span>
             <div className={`mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border
               ${cargaAumentou
@@ -265,7 +278,9 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 : 'bg-success-soft border-success-border text-success'
               }`}
             >
-              {isento
+              {ehSimplesOuMEI
+                ? 'DAS inalterado — CBS/IBS passam a ser cobrados dentro da guia'
+                : isento
                 ? 'Setor isento — alíquota zero no IVA Dual'
                 : cargaAumentou && vendeB2B
                 ? 'Sobe, mas repassável — cliente PJ credita o IVA'
@@ -943,7 +958,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 </div>
                 <div className="bg-surface border border-warning-border rounded-md p-3">
                   <div className="text-ink-muted text-xs mb-1">IVA Dual (se migrar)/mês</div>
-                  <div className={`font-bold text-lg num ${variacaoAbsolutaMensal > 0 ? 'text-danger' : 'text-success'}`}>
+                  <div className={`font-bold text-lg num ${impostoIVALiquidoMensal > alertaMEI.dasFixoMensal ? 'text-danger' : 'text-success'}`}>
                     {fmt.moeda(impostoIVALiquidoMensal)}
                   </div>
                   <div className="text-ink-muted text-xs mt-0.5">com crédito de insumos</div>

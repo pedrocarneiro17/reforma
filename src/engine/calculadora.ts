@@ -1315,9 +1315,19 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   })()
 
   // Contribuição previdenciária (folha + terceiros + pró-labore) persiste após a reforma
+  //
+  // Simples Nacional/MEI (permanecendo no regime único — "Simples Pleno"): o DAS total NÃO muda.
+  // Os Anexos I–V da LC 214/2025 mantêm as mesmas alíquotas nominais e parcelas a deduzir de 2027
+  // a 2033; só a partilha interna troca PIS/COFINS → CBS e ICMS/ISS → IBS. Logo a carga pós-reforma
+  // é o próprio DAS atual (já inclui a CPP fora do DAS do Anexo IV). O IVA do regime regular
+  // (impostoIVALiquidoMensal) só vale se a empresa optar por recolher IBS/CBS por fora — esse
+  // cenário é tratado à parte (cenarioHibridoVerdadeiro / analiseSimplesHibrido).
+  const ehSimplesOuMEI = regime === 'simples_nacional' || regime === 'mei'
   const cargaTotalReformaMensal = ehLPouLR
     ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
-    : impostoIVALiquidoMensal + cppSimplesAnexoIVMensal
+    : ehSimplesOuMEI
+      ? impostoAtualMensal
+      : impostoIVALiquidoMensal
 
   // ── 3. Projeção de Transição por Ano ────────────────────────────────────────
   // Arts. 501 (ICMS) e 508 (ISS) LC 214/2025: redução de 10%/ano de 2029 a 2032 (base: 31/12/2028).
@@ -1384,7 +1394,28 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       }
     }
 
-    // Modelo legado (SN/MEI/PF/produtor rural e LR sem dados): ICMS/ISS reduzem
+    if (ehSimplesOuMEI) {
+      // DAS constante; só a partilha migra para o IVA Dual dentro da guia:
+      // • PIS/COFINS → CBS a partir de 2027 (cbsSimplesEfetivo)
+      // • ICMS/ISS → IBS na proporção dos Arts. 501/508 (10%/ano 2029-2032, integral em 2033)
+      // MEI (DAS fixo, sem partilha percentual) fica todo como "Regime Atual".
+      const parcelaNovaBruta = faturamentoMensal * (
+        (ano >= 2027 ? (cbsSimplesEfetivo ?? 0) : 0) + (ibsSimplesEfetivo ?? 0) * reducaoAnual
+      )
+      const parcelaNova  = Math.min(impostoAtualMensal, Math.max(0, parcelaNovaBruta))
+      const parcelaAtual = impostoAtualMensal - parcelaNova
+      return {
+        ano,
+        impostoMensal: impostoAtualMensal,
+        impostoAnual: impostoAtualMensal * 12,
+        parcelaAtual,
+        parcelaAtualAnual: parcelaAtual * 12,
+        parcelaNovaAnual:  parcelaNova * 12,
+        aliquotaEfetiva: faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0,
+      }
+    }
+
+    // Modelo legado (PF/produtor rural e LR sem dados): ICMS/ISS reduzem
     // per Arts. 501/508; IBS cresce na mesma proporção; demais tributos constantes.
     const icmsIssResidual = icmsIssMensalEstimado * (1 - reducaoAnual)
     const ibsProporcional  = impostoIVAAjustado   * reducaoAnual
