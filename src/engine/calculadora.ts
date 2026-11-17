@@ -286,6 +286,16 @@ export const PARTILHA_IBS_SIMPLES: Record<import('../types').AnexoSimples, numbe
   V:   [0.1414, 0.1414, 0.1700, 0.1800, 0.1950, 0.1485], // ISS
 }
 
+/** Teto da 5ª faixa do Simples (RBT12) — acima disso, 6ª faixa */
+export const LIMITE_FAIXA5_SIMPLES_ANUAL = 3_600_000
+
+/**
+ * Redução da CBS em 2027 e 2028: 0,1 ponto percentual (art. 347 LC 214/2025).
+ * No Simples, aparece na alíquota nominal da 6ª faixa dos Anexos I–V da LC 214
+ * (ex.: Anexo I 18,90% em 2027–2028; volta a 19,00% em 2029).
+ */
+export const REDUCAO_CBS_2027_2028 = 0.001
+
 function getFaixaIdx(faturamentoAnual: number, tabela: FaixaSimples[]): number {
   for (let i = 0; i < tabela.length; i++) {
     if (faturamentoAnual <= tabela[i].limite) return i
@@ -1399,19 +1409,29 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       // • PIS/COFINS → CBS a partir de 2027 (cbsSimplesEfetivo)
       // • ICMS/ISS → IBS na proporção dos Arts. 501/508 (10%/ano 2029-2032, integral em 2033)
       // MEI (DAS fixo, sem partilha percentual) fica todo como "Regime Atual".
+      //
+      // Exceção 2027–2028 na 6ª faixa: a CBS é reduzida em 0,1 p.p. (art. 347 LC 214/2025) e os
+      // Anexos I–V da LC 214 baixam a alíquota nominal da 6ª faixa em 0,1 p.p. (ex.: Anexo I 18,90%
+      // em vez de 19,00%). Com a mesma parcela a deduzir, o DAS efetivo cai 0,1% do faturamento.
+      // Nas faixas 1–5 o IBS de teste (0,1%) compensa dentro da partilha e a nominal não muda.
+      const reducaoCBSFaixa6 =
+        regime === 'simples_nacional' && (ano === 2027 || ano === 2028) && faturamentoAnual > LIMITE_FAIXA5_SIMPLES_ANUAL
+          ? faturamentoMensal * REDUCAO_CBS_2027_2028
+          : 0
+      const dasAno = Math.max(0, impostoAtualMensal - reducaoCBSFaixa6)
       const parcelaNovaBruta = faturamentoMensal * (
         (ano >= 2027 ? (cbsSimplesEfetivo ?? 0) : 0) + (ibsSimplesEfetivo ?? 0) * reducaoAnual
-      )
-      const parcelaNova  = Math.min(impostoAtualMensal, Math.max(0, parcelaNovaBruta))
-      const parcelaAtual = impostoAtualMensal - parcelaNova
+      ) - reducaoCBSFaixa6
+      const parcelaNova  = Math.min(dasAno, Math.max(0, parcelaNovaBruta))
+      const parcelaAtual = dasAno - parcelaNova
       return {
         ano,
-        impostoMensal: impostoAtualMensal,
-        impostoAnual: impostoAtualMensal * 12,
+        impostoMensal: dasAno,
+        impostoAnual: dasAno * 12,
         parcelaAtual,
         parcelaAtualAnual: parcelaAtual * 12,
         parcelaNovaAnual:  parcelaNova * 12,
-        aliquotaEfetiva: faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0,
+        aliquotaEfetiva: faturamentoMensal > 0 ? dasAno / faturamentoMensal : 0,
       }
     }
 
