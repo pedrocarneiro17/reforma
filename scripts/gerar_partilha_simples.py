@@ -58,8 +58,75 @@ def ler_anexo(path):
     return tabelas
 
 
+CAP_ISS = re.compile(r'efetivo m.ximo devido ao ISS ser. de ([\d,]+)\s*%')
+LIMIAR = re.compile(r'efetiva for superior a ([\d,]+)\s*%')
+MULT = re.compile(r'\(Al.quota efetiva - ([\d,]+)\s*%\)\s*x\s*([\d,]+)\s*%')
+FIXO = re.compile(r'Percentual de ISS fixo em ([\d,]+)\s*%')
+
+
+def _num(s):
+    return float(s.replace(',', '.'))
+
+
+def ler_limites_iss(path):
+    """
+    Notas "(*)" da 5ª faixa dos Anexos III e IV: acima de um limiar de alíquota efetiva o ISS
+    fica limitado a um teto e a diferença é repartida entre os demais tributos na proporção
+    informada. Devolve {ano: {limiar, iss_max, mult:{tributo: % do excedente}}} em pontos
+    percentuais. Redação mais recente (LC 227/2026) sobrescreve a anterior; blocos que não
+    seguem o formato esperado são ignorados (a redação seguinte do mesmo ano os substitui).
+    """
+    linhas = io.open(path, encoding='utf-8', errors='replace').read().splitlines()
+    ctx, limites, i = None, {}, 0
+    while i < len(linhas):
+        linha = linhas[i]
+        m = ANOS.search(linha)
+        if m:
+            a = int(m.group(1))
+            b = int(m.group(2)) if m.group(2) else a
+            ctx = list(range(a, b + 1))
+        mc = CAP_ISS.search(linha)
+        if mc and ctx:
+            cap = _num(mc.group(1))
+            limiar = _num(LIMIAR.search(linha).group(1))
+            i += 1
+            cols = []
+            while i < len(linhas) and not re.match(r'^\s*5\S*\s*Faixa, com al.quota efetiva', linhas[i]):
+                c = linhas[i].replace('(*)', '').strip()
+                if c in ORDEM:  # ignora rótulos soltos (ex.: "Faixa") que alguns blocos trazem
+                    cols.append(c)
+                i += 1
+                if len(cols) > 8:
+                    break
+            i += 1
+            mult, ok = {}, True
+            for col in cols:
+                if i >= len(linhas):
+                    ok = False
+                    break
+                if col == 'ISS':
+                    f = FIXO.match(linhas[i].strip())
+                    ok = ok and bool(f) and abs(_num(f.group(1)) - cap) < 1e-9
+                else:
+                    mm = MULT.match(linhas[i].strip())
+                    ok = ok and bool(mm) and abs(_num(mm.group(1)) - cap) < 1e-9
+                    if mm:
+                        mult[col] = _num(mm.group(2))
+                i += 1
+            if ok and abs(sum(mult.values()) - 100) < 0.05:
+                for ano in ctx:
+                    limites[ano] = {'limiar': limiar, 'iss_max': cap, 'mult': mult}
+            continue
+        i += 1
+    return limites
+
+
 def fmt(v):
     return ('%.2f' % (v * 100)).rstrip('0').rstrip('.')
+
+
+def fmt_pp(v):
+    return ('%.5f' % v).rstrip('0').rstrip('.')
 
 
 CABECALHO = """/**
@@ -89,6 +156,21 @@ export const PARTILHA_SIMPLES_LC214: Record<AnexoSimples, Record<number, LinhaPa
 
 RODAPE = """}
 
+/**
+ * Teto do ISS na 5ª faixa (Anexos III e IV): quando a alíquota efetiva do DAS passa do limiar, o ISS
+ * fica limitado a `issMax` (% da receita) e o excedente (alíquota efetiva − issMax) é repartido entre
+ * os demais tributos na proporção `mult` (% do excedente). Valores em pontos percentuais.
+ * Só 2027–2032: em 2033 o ISS é extinto e a lei não traz a nota.
+ */
+export interface LimiteIssSN {
+  limiar: number
+  issMax: number
+  mult: Partial<Record<TributoPartilhaSN, number>>
+}
+
+export const LIMITE_ISS_5A_FAIXA: Partial<Record<AnexoSimples, Record<number, LimiteIssSN>>> = {
+{LIMITES}}
+
 /** Parcelas de tributos sobre consumo dentro do DAS (frações do DAS, 0–1) num ano */
 export interface PartilhaConsumoSN {
   pisCofins: number  // até 2026 (LC 123)
@@ -102,12 +184,26 @@ export interface PartilhaConsumoSN {
  * Antes de 2027 vale a LC 123/2006 — cujos PIS/COFINS e ICMS/ISS coincidem, linha a linha,
  * com a CBS e o IBS da tabela de 2033 da LC 214.
  */
-export function partilhaConsumoSimples(anexo: AnexoSimples, faixaIdx: number, ano: number): PartilhaConsumoSN {
+export function partilhaConsumoSimples(
+  anexo: AnexoSimples, faixaIdx: number, ano: number,
+  /** alíquota efetiva do DAS (fração) — necessária para o teto do ISS na 5ª faixa */
+  aliquotaEfetiva?: number,
+): PartilhaConsumoSN {
   const tabela = PARTILHA_SIMPLES_LC214[anexo]
   const f = Math.min(5, Math.max(0, faixaIdx))
   if (ano < 2027) {
     const pleno = tabela[2033][f]
     return { pisCofins: (pleno.CBS ?? 0) / 100, cbs: 0, icmsIss: (pleno.IBS ?? 0) / 100, ibs: 0 }
+  }
+  const lim = f === 4 && aliquotaEfetiva ? LIMITE_ISS_5A_FAIXA[anexo]?.[ano] : undefined
+  if (lim && aliquotaEfetiva! * 100 > lim.limiar) {
+    const excesso = aliquotaEfetiva! - lim.issMax / 100
+    return {
+      pisCofins: 0,
+      cbs: (excesso * (lim.mult.CBS ?? 0)) / 100 / aliquotaEfetiva!,
+      icmsIss: lim.issMax / 100 / aliquotaEfetiva!,
+      ibs: (excesso * (lim.mult.IBS ?? 0)) / 100 / aliquotaEfetiva!,
+    }
   }
   const linha = tabela[Math.min(2033, ano)][f]
   return {
@@ -125,8 +221,13 @@ def main():
     base = os.path.join(raiz, '.claude', 'skills', 'reforma-tributaria', 'lcp214')
     arquivos = {'I': '088', 'II': '089', 'III': '090', 'IV': '091', 'V': '092'}
     out = [CABECALHO]
+    limites = {}
     for anexo, num in arquivos.items():
-        tabelas = ler_anexo(glob.glob(os.path.join(base, num + '-*.md'))[0])
+        arquivo = glob.glob(os.path.join(base, num + '-*.md'))[0]
+        if anexo in ('III', 'IV'):
+            limites[anexo] = ler_limites_iss(arquivo)
+            assert sorted(limites[anexo]) == list(range(2027, 2033)), (anexo, sorted(limites[anexo]))
+        tabelas = ler_anexo(arquivo)
         assert sorted(tabelas) == list(range(2027, 2034)), (anexo, sorted(tabelas))
         out.append('  %s: {' % anexo)
         for ano in sorted(tabelas):
@@ -140,8 +241,16 @@ def main():
                 out.append('      { %s },' % campos)
             out.append('    ],')
         out.append('  },')
-    out.append(RODAPE)
-    dest = os.path.join(raiz, 'src', 'data', 'partilhaSimples.ts')
+    blocos = []
+    for anexo in ('III', 'IV'):
+        blocos.append('  %s: {' % anexo)
+        for ano in sorted(limites[anexo]):
+            l = limites[anexo][ano]
+            mult = ', '.join('%s: %s' % (k, fmt_pp(l['mult'][k])) for k in ORDEM if k in l['mult'])
+            blocos.append('    %d: { limiar: %s, issMax: %s, mult: { %s } },' % (ano, fmt_pp(l['limiar']), fmt_pp(l['iss_max']), mult))
+        blocos.append('  },')
+    out.append(RODAPE.replace('{LIMITES}', '\n'.join(blocos) + '\n'))
+    dest =os.path.join(raiz, 'src', 'data', 'partilhaSimples.ts')
     io.open(dest, 'w', encoding='utf-8', newline='\n').write('\n'.join(out))
     print('ok:', dest)
 

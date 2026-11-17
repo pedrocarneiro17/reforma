@@ -18,6 +18,7 @@ export interface Setor {
   fatorR?: boolean              // true = sujeito ao Fator R no Simples Nacional (Anexo III ou V)
   anexoFixo?: AnexoSimples      // anexo fixado por lei no Simples (ex.: advocacia → Anexo IV §5-C), sobrepõe inferência/seleção
   anexoSimplesPadrao?: AnexoSimples // anexo usual da atividade quando o usuário não escolhe — ao contrário do anexoFixo, a seleção manual vence
+  tipoReceitaSimples?: import('./data/tiposReceitaSimples').CodigoTipoReceitaSN // tpRBSN da receita interna típica (padrão 1); ex.: livros → 2 (sem IBS/CBS)
   duasVersoesMedicina?: boolean // medicina: alterna redução IBS/CBS entre 30% (serviço profissional) e 60% (serviço de saúde)
   baseReduzidaMargem?: boolean  // true = CBS incide só na margem (bens usados de PF — Cap. X Dec. 12.955/2026)
   presuncaoLPIRPJ?: number      // override da presunção IRPJ no LP (padrão: 8% comércio/indústria, 32% serviço)
@@ -217,6 +218,14 @@ export interface ExportacaoSimples {
   suspensoMensal: number       // exportação indireta: CBS/IBS calculados e suspensos até a exportação
 }
 
+/** Receita interna do Simples sem IBS/CBS no DAS (tpRBSN 2 — ex.: livros, jornais e periódicos) */
+export interface ReceitaSemIBSCBSSimples {
+  tipoReceita: import('./data/tiposReceitaSimples').CodigoTipoReceitaSN
+  tipoReceitaDescricao: string
+  valorMensal: number
+  reducaoDASMensal: number  // parcela de CBS/IBS (hoje PIS/COFINS/ICMS/ISS) que sai do DAS
+}
+
 export interface ResultadoCalculo {
   regime: TipoRegime
   setor: Setor
@@ -226,6 +235,10 @@ export interface ResultadoCalculo {
   exportacoesMensais: number
   /** Simples: efeito do tipo de receita (tpRBSN) das exportações sobre o DAS — null sem exportação */
   exportacaoSimples: ExportacaoSimples | null
+  /** Simples: receita interna sem IBS/CBS no DAS (tpRBSN 2, ex.: livros) — null quando não se aplica */
+  receitaSemIBSCBSSimples: ReceitaSemIBSCBSSimples | null
+  /** Simples: receita que carrega a parcela de CBS/IBS do DAS (faturamento − exportação − tpRBSN 2) */
+  receitaConsumoSimplesMensal: number
   perfilClientes: PerfilClientes
   fracClientesPJ: number             // fração das vendas a PJ (b2b=1, b2c=0, misto=pctClientesPJ/100)
   setorVedadoSimples: boolean        // atividade impedida de optar pelo Simples Nacional

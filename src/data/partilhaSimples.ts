@@ -314,6 +314,37 @@ export const PARTILHA_SIMPLES_LC214: Record<AnexoSimples, Record<number, LinhaPa
   },
 }
 
+/**
+ * Teto do ISS na 5ª faixa (Anexos III e IV): quando a alíquota efetiva do DAS passa do limiar, o ISS
+ * fica limitado a `issMax` (% da receita) e o excedente (alíquota efetiva − issMax) é repartido entre
+ * os demais tributos na proporção `mult` (% do excedente). Valores em pontos percentuais.
+ * Só 2027–2032: em 2033 o ISS é extinto e a lei não traz a nota.
+ */
+export interface LimiteIssSN {
+  limiar: number
+  issMax: number
+  mult: Partial<Record<TributoPartilhaSN, number>>
+}
+
+export const LIMITE_ISS_5A_FAIXA: Partial<Record<AnexoSimples, Record<number, LimiteIssSN>>> = {
+  III: {
+    2027: { limiar: 14.92537, issMax: 5, mult: { IRPJ: 6.02, CSLL: 5.26, CBS: 23.2, CPP: 65.26, IBS: 0.26 } },
+    2028: { limiar: 14.92537, issMax: 5, mult: { IRPJ: 6.02, CSLL: 5.26, CBS: 23.2, CPP: 65.26, IBS: 0.26 } },
+    2029: { limiar: 14.92537, issMax: 4.5, mult: { IRPJ: 5.73, CSLL: 5.01, CBS: 22.33, CPP: 62.13, IBS: 4.8 } },
+    2030: { limiar: 14.92537, issMax: 4, mult: { IRPJ: 5.46, CSLL: 4.78, CBS: 21.31, CPP: 59.29, IBS: 9.15 } },
+    2031: { limiar: 14.92537, issMax: 3.5, mult: { IRPJ: 5.23, CSLL: 4.57, CBS: 20.38, CPP: 56.69, IBS: 13.13 } },
+    2032: { limiar: 14.92537, issMax: 3, mult: { IRPJ: 5.01, CSLL: 4.38, CBS: 19.52, CPP: 54.32, IBS: 16.77 } },
+  },
+  IV: {
+    2027: { limiar: 12.5, issMax: 5, mult: { IRPJ: 31.33, CSLL: 32, CBS: 36.27, IBS: 0.4 } },
+    2028: { limiar: 12.5, issMax: 5, mult: { IRPJ: 31.33, CSLL: 32, CBS: 36.27, IBS: 0.4 } },
+    2029: { limiar: 12.5, issMax: 4.5, mult: { IRPJ: 29.38, CSLL: 30, CBS: 34.38, IBS: 6.25 } },
+    2030: { limiar: 12.5, issMax: 4, mult: { IRPJ: 27.65, CSLL: 28.24, CBS: 32.35, IBS: 11.76 } },
+    2031: { limiar: 12.5, issMax: 3.5, mult: { IRPJ: 26.11, CSLL: 26.67, CBS: 30.56, IBS: 16.67 } },
+    2032: { limiar: 12.5, issMax: 3, mult: { IRPJ: 24.74, CSLL: 25.26, CBS: 28.95, IBS: 21.05 } },
+  },
+}
+
 /** Parcelas de tributos sobre consumo dentro do DAS (frações do DAS, 0–1) num ano */
 export interface PartilhaConsumoSN {
   pisCofins: number  // até 2026 (LC 123)
@@ -327,12 +358,26 @@ export interface PartilhaConsumoSN {
  * Antes de 2027 vale a LC 123/2006 — cujos PIS/COFINS e ICMS/ISS coincidem, linha a linha,
  * com a CBS e o IBS da tabela de 2033 da LC 214.
  */
-export function partilhaConsumoSimples(anexo: AnexoSimples, faixaIdx: number, ano: number): PartilhaConsumoSN {
+export function partilhaConsumoSimples(
+  anexo: AnexoSimples, faixaIdx: number, ano: number,
+  /** alíquota efetiva do DAS (fração) — necessária para o teto do ISS na 5ª faixa */
+  aliquotaEfetiva?: number,
+): PartilhaConsumoSN {
   const tabela = PARTILHA_SIMPLES_LC214[anexo]
   const f = Math.min(5, Math.max(0, faixaIdx))
   if (ano < 2027) {
     const pleno = tabela[2033][f]
     return { pisCofins: (pleno.CBS ?? 0) / 100, cbs: 0, icmsIss: (pleno.IBS ?? 0) / 100, ibs: 0 }
+  }
+  const lim = f === 4 && aliquotaEfetiva ? LIMITE_ISS_5A_FAIXA[anexo]?.[ano] : undefined
+  if (lim && aliquotaEfetiva! * 100 > lim.limiar) {
+    const excesso = aliquotaEfetiva! - lim.issMax / 100
+    return {
+      pisCofins: 0,
+      cbs: (excesso * (lim.mult.CBS ?? 0)) / 100 / aliquotaEfetiva!,
+      icmsIss: lim.issMax / 100 / aliquotaEfetiva!,
+      ibs: (excesso * (lim.mult.IBS ?? 0)) / 100 / aliquotaEfetiva!,
+    }
   }
   const linha = tabela[Math.min(2033, ano)][f]
   return {

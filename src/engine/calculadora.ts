@@ -8,7 +8,7 @@
  */
 
 import { atividadeSimplesDoSetor } from '../data/atividadesSimples'
-import { tipoReceitaDaExportacao, efeitoTipoReceitaSimples } from '../data/tiposReceitaSimples'
+import { tipoReceitaDaExportacao, efeitoTipoReceitaSimples, getTipoReceitaSimples } from '../data/tiposReceitaSimples'
 import { PARTILHA_SIMPLES_LC214, partilhaConsumoSimples } from '../data/partilhaSimples'
 import type {
   TipoSetor,
@@ -1024,7 +1024,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
       const reducao = (ano === 2027 || ano === 2028) && faixaIdx === 5 ? REDUCAO_CBS_2027_2028 : 0
       const das = Math.max(0, getAliquotaDAS(anexo, faturamentoAnual) - reducao)
-      const p = partilhaConsumoSimples(anexo, faixaIdx, ano)
+      const p = partilhaConsumoSimples(anexo, faixaIdx, ano, das)  // das: p/ o teto do ISS na 5ª faixa
       return { cbs: acc.cbs + peso * das * p.cbs, ibs: acc.ibs + peso * das * p.ibs }
     }, { cbs: 0, ibs: 0 })
   }
@@ -1053,7 +1053,21 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     }
   })()
   // Receita sujeita à parcela de CBS/IBS do DAS (a exportada sai da conta)
+  // Receita interna sem IBS/CBS no Simples (tpRBSN 2 — ex.: livros, jornais e periódicos): a parcela
+  // de tributos sobre consumo do DAS não incide. Hoje idem (imunidade de ICMS + alíquota zero de
+  // PIS/COFINS segregadas no PGDAS-D). Não se aplica com alíquota informada.
+  const receitaSemIBSCBSSimples: import('../types').ReceitaSemIBSCBSSimples | null = (() => {
+    if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
+    if (aliquotaAtualOverride != null && aliquotaAtualOverride > 0) return null
+    if (setor.tipoReceitaSimples == null || setor.tipoReceitaSimples === 1) return null
+    const tipo = getTipoReceitaSimples(setor.tipoReceitaSimples)
+    const valor = Math.max(0, faturamentoMensal - (exportacaoSimples?.valorMensal ?? 0))
+    if (valor <= 0) return null
+    const efeito = efeitoTipoReceitaSimples(tipo, valor, cbsSimplesEfetivo + ibsSimplesEfetivo)
+    return { tipoReceita: tipo.codigo, tipoReceitaDescricao: tipo.descricao, valorMensal: valor, reducaoDASMensal: efeito.reducaoDAS }
+  })()
   const receitaConsumoSimplesMensal = faturamentoMensal - (exportacaoSimples?.valorMensal ?? 0)
+    - (receitaSemIBSCBSSimples?.valorMensal ?? 0)
 
   // ── 1. Carga Atual ──────────────────────────────────────────────────────────
   let aliquotaAtual: number
@@ -1071,7 +1085,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
   } else if (regime === 'profissional_liberal') {
     const irpfMensal = calcularIRPF(faturamentoMensal)
-    const issMensal  = faturamentoMensal * 0.03
+    // ISS não incide sobre serviço exportado (LC 116/2003 art. 2º I); IRPF e INSS sim
+    const issMensal  = Math.max(0, faturamentoMensal - Math.max(0, exportacoesMensais)) * 0.03
     const inssMensal = calcularINSSAutonomo(faturamentoMensal)
     impostoAtualMensal = irpfMensal + issMensal + inssMensal
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
@@ -1082,7 +1097,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : getAliquotaSimplesNacional(setor.tipo, faturamentoAnual, anexoEfetivoComFatorR)
     // No Anexo IV soma-se a CPP paga por fora do DAS; a alíquota "atual" vira a efetiva total.
     // Exportações: sai a parcela de tributos sobre consumo da receita exportada (tpRBSN 3/4).
-    impostoAtualMensal = faturamentoMensal * aliquotaDAS - (exportacaoSimples?.reducaoDASMensal ?? 0) + cppSimplesAnexoIVMensal
+    impostoAtualMensal = faturamentoMensal * aliquotaDAS - (exportacaoSimples?.reducaoDASMensal ?? 0)
+      - (receitaSemIBSCBSSimples?.reducaoDASMensal ?? 0) + cppSimplesAnexoIVMensal
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaDAS
   } else if (regime === 'lucro_presumido') {
     // Carga hoje decomposta por tributo (RIR/2018, Lei 9.249/1995, Lei 9.718/1998):
@@ -1158,7 +1174,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   } else if (regime === 'profissional_liberal') {
     const irpfMensal = calcularIRPF(faturamentoMensal)
     aliquotaAtualEstimada = faturamentoMensal > 0
-      ? (irpfMensal + faturamentoMensal * 0.03 + calcularINSSAutonomo(faturamentoMensal)) / faturamentoMensal
+      ? (irpfMensal + Math.max(0, faturamentoMensal - Math.max(0, exportacoesMensais)) * 0.03 + calcularINSSAutonomo(faturamentoMensal)) / faturamentoMensal
       : 0
   } else if (regime === 'simples_nacional') {
     const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
@@ -1406,7 +1422,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // LP/LR: usa ICMS/ISS já apurados (alíquotas informadas ou médias); demais regimes usam a estimativa
   const icmsIssMensalEstimado = ehLPouLR
     ? icmsAtualMensal + issAtualMensal
-    : estimarICMSISS(regime, setor.tipo, faturamentoMensal, insumosMensais, uf)
+    // Profissional liberal: o ISS de hoje já exclui o serviço exportado — a estimativa também
+    : estimarICMSISS(regime, setor.tipo,
+        regime === 'profissional_liberal' ? faturamentoMensal - exportacoesImunesMensal : faturamentoMensal,
+        insumosMensais, uf)
   const baseFixaMensal = impostoAtualMensal - icmsIssMensalEstimado  // IRPJ/CSLL + PIS/COFINS (este swap→CBS neutro)
 
   // Decomposição da carga atual (LP sempre; LR quando há dados efetivos) — permite projetar
@@ -1554,6 +1573,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     insumosMensais,
     exportacoesMensais,
     exportacaoSimples,
+    receitaSemIBSCBSSimples,
+    receitaConsumoSimplesMensal,
     perfilClientes,
     fracClientesPJ,
     setorVedadoSimples,

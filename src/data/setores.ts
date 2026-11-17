@@ -178,6 +178,9 @@ export const SETORES: Setor[] = [
     grupo: 'Isenção Total — Alíquota 0%',
     reducao: 1.00,  // Art. 10 IV Dec. 12.955: IMUNE — livros, jornais, periódicos e papel destinado à impressão
     tipo: 'comercio',
+    // Simples: tpRBSN 2 (cClassTrib 410008 — receita interna sem cálculo de IBS/CBS, NT 2026.005).
+    // Hoje: ICMS imune (CF art. 150 VI d) e PIS/COFINS alíquota zero (Lei 10.865/2004 art. 28 VI).
+    tipoReceitaSimples: 2,
   },
   {
     value: 'dispositivos_medicos',
@@ -580,10 +583,20 @@ export const SETORES: Setor[] = [
   },
   {
     value: 'energia_renovavel',
-    label: 'Energia Solar e Fontes Renováveis',
+    label: 'Energia Solar — Instalação e Manutenção de Sistemas',
     grupo: 'Alíquota Cheia (26,5%)',
     reducao: 0.00,
     tipo: 'servico',
+    // Instalação/manutenção de sistemas (LC 116 subitem 14.06) é permitida no Simples.
+    // Quem GERA ou COMERCIALIZA energia é vedado — ver 'geracao_energia'.
+  },
+  {
+    value: 'geracao_energia',
+    label: 'Geração e Comercialização de Energia (Solar, Eólica, PCH)',
+    grupo: 'Alíquota Cheia (26,5%)',
+    reducao: 0.00,
+    tipo: 'comercio',     // energia elétrica é mercadoria para o ICMS; imune de IPI (CF art. 155 §3º)
+    vedadoSimples: true,  // LC 123/2006 Art. 17 VII: geração, transmissão, distribuição ou comercialização de energia elétrica
   },
   {
     value: 'seguranca_privada',

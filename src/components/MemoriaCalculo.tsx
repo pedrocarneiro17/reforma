@@ -155,10 +155,12 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
         {(() => {
           // Receita interna: a exportada não carrega CBS/IBS no DAS (tpRBSN 3/4)
           const exp = r.exportacaoSimples
-          const recInterna = fat - (exp?.valorMensal ?? 0)
+          const semIBSCBS = r.receitaSemIBSCBSSimples
+          const recInterna = r.receitaConsumoSimplesMensal
           const cbs = r.cbsSimplesEfetivo, ibs = r.ibsSimplesEfetivo
           return <>
             {exp && <Linha label={`├ Exportação (tpRBSN ${exp.tipoReceita})`} formula={`${moeda(exp.valorMensal)} — ${exp.tipoReceitaDescricao.replace('Receita bruta - ', '')}`} valor={exp.reducaoDASMensal} negativo refLegal="Sem CBS/IBS no DAS (hoje PIS/COFINS/ICMS/ISS — LC 123 art. 18 §14) · NT 2026.005" />}
+            {semIBSCBS && <Linha label={`├ Receita sem IBS/CBS (tpRBSN ${semIBSCBS.tipoReceita})`} formula={`${moeda(semIBSCBS.valorMensal)} — ${semIBSCBS.tipoReceitaDescricao.replace('Receita bruta - ', '')}`} valor={semIBSCBS.reducaoDASMensal} negativo refLegal="Livros, jornais e periódicos: ICMS imune e PIS/COFINS alíquota zero · NT 2026.005" />}
             {exp && exp.suspensoMensal > 0 && <Linha label="│ CBS/IBS suspensos (exportação indireta)" formula="devidos só se a exportação não se efetivar" valor={exp.suspensoMensal} />}
             {cbs != null && cbs > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(recInterna)} × ${pct(cbs)}`} valor={recInterna * cbs} />}
             {ibs != null && ibs > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(recInterna)} × ${pct(ibs)}`} valor={recInterna * ibs} />}
