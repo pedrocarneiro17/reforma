@@ -214,7 +214,8 @@ export interface ExportacaoSimples {
   tipoReceita: import('./data/tiposReceitaSimples').CodigoTipoReceitaSN
   tipoReceitaDescricao: string
   valorMensal: number          // receita de exportação considerada (limitada ao faturamento)
-  reducaoDASMensal: number     // parcela de CBS/IBS (hoje PIS/COFINS/ICMS/ISS) que sai do DAS
+  reducaoDASMensal: number     // parcela de CBS/IBS (hoje PIS/COFINS/ICMS/ISS) + IPI que sai do DAS
+  reducaoIPIMensal: number     // do total acima, a parte do IPI (Anexo II — indústria)
   suspensoMensal: number       // exportação indireta: CBS/IBS calculados e suspensos até a exportação
 }
 

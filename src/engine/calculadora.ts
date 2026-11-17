@@ -305,6 +305,17 @@ export function getCBSSimples(anexo: import('../types').AnexoSimples, faturament
   return das * PARTILHA_CBS_SIMPLES[anexo][faixaIdx]
 }
 
+/**
+ * IPI componente do DAS (só Anexo II — indústria) = DAS_efetivo × partilha_IPI(anexo, faixa).
+ * O IPI não migra para o IBS/CBS na transição (a tabela de 2033 da LC 214 o mantém), então a
+ * partilha de 2033 vale também para hoje. Exportação é imune de IPI (CF art. 153 §3º III).
+ */
+export function getIPISimples(anexo: import('../types').AnexoSimples, faturamentoAnual: number): number {
+  const das = getAliquotaDAS(anexo, faturamentoAnual)
+  const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
+  return das * (PARTILHA_SIMPLES_LC214[anexo][2033][faixaIdx].IPI ?? 0) / 100
+}
+
 /** IBS (ICMS/ISS) componente do DAS = DAS_efetivo × partilha_IBS(anexo, faixa) */
 export function getIBSSimples(anexo: import('../types').AnexoSimples, faturamentoAnual: number): number {
   const das = getAliquotaDAS(anexo, faturamentoAnual)
@@ -1011,6 +1022,16 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
   })()
 
+  // IPI embutido no DAS (só Anexo II), como fração da receita — sai da receita exportada
+  const ipiSimplesEfetivo: number = (() => {
+    if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return 0
+    const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
+    return isMisto
+      ? (pctAnexo1! / 100) * getIPISimples(anexoEfetivoComFatorR, faturamentoAnual)
+        + (1 - pctAnexo1! / 100) * getIPISimples(anexoSimples2!, faturamentoAnual)
+      : getIPISimples(anexoEfetivoComFatorR, faturamentoAnual)
+  })()
+
   // CBS e IBS dentro do DAS em cada ano da transição, como frações da receita — partilha oficial
   // dos Anexos I–V da LC 214/2025 × alíquota efetiva do DAS (na 6ª faixa de 2027–2028 a nominal
   // é 0,1 p.p. menor — art. 347). Atividade mista: média ponderada pelos dois anexos.
@@ -1048,7 +1069,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       tipoReceita: tipo.codigo,
       tipoReceitaDescricao: tipo.descricao,
       valorMensal: valor,
-      reducaoDASMensal: efeito.reducaoDAS,
+      // além do consumo (PIS/COFINS/ICMS/ISS hoje; CBS/IBS depois), exportação não paga o IPI do DAS
+      reducaoDASMensal: efeito.reducaoDAS + valor * ipiSimplesEfetivo,
+      reducaoIPIMensal: valor * ipiSimplesEfetivo,
       suspensoMensal: efeito.suspenso,
     }
   })()
