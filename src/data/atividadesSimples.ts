@@ -80,8 +80,9 @@ export function atividadeSimplesDoSetor(setor: Setor, anexoEfetivo?: AnexoSimple
   const especifico = CODIGO_POR_SETOR[setor.value]
   if (especifico) return getAtividadeSimples(especifico)
 
-  // Mesma inferência do motor quando nenhum anexo foi informado (comércio → I, indústria → II, demais → III)
-  const anexo: AnexoSimples = anexoEfetivo ?? setor.anexoFixo
+  // Mesma ordem do motor quando nenhum anexo foi informado: fixo → padrão do setor →
+  // inferido pelo tipo (comércio → I, indústria → II, demais → III)
+  const anexo: AnexoSimples = anexoEfetivo ?? setor.anexoFixo ?? setor.anexoSimplesPadrao
     ?? (setor.tipo === 'comercio' ? 'I' : setor.tipo === 'industria' ? 'II' : 'III')
   if (setor.value === 'construcao_civil') return getAtividadeSimples(anexo === 'III' ? '12' : '13')
   if (setor.fatorR && (anexo === 'III' || anexo === 'V')) return getAtividadeSimples('09')

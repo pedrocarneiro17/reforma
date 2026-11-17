@@ -303,7 +303,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarCreditoPresumido = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime) && parseMoeda(dados.insumosMensais) > 0
   const mostrarFatorR = dados.regime === 'simples_nacional' && (setorSelecionado?.fatorR === true)
   // Anexo IV (§5-C, ex.: advocacia): no Simples a CPP 20% é paga por fora do DAS → precisa da folha.
-  const mostrarFolhaAnexoIV = dados.regime === 'simples_nacional' && setorSelecionado?.anexoFixo === 'IV'
+  // Vale para anexo fixo, escolhido ou padrão do setor (ex.: construção → IV).
+  const mostrarFolhaAnexoIV = dados.regime === 'simples_nacional' &&
+    (setorSelecionado?.anexoFixo ?? (anexoSimples || undefined) ?? setorSelecionado?.anexoSimplesPadrao) === 'IV'
   // Atividade do catálogo oficial (cAtivSN) coerente com o anexo fixado/selecionado
   const atividadeSN = mostrarAnexoSimples && setorSelecionado
     ? atividadeSimplesDoSetor(setorSelecionado, setorSelecionado.anexoFixo ?? (anexoSimples || undefined))
@@ -1180,7 +1182,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
           <div>
             <h3 className="text-sm font-semibold text-ink">Anexo IV — Folha para a CPP (opcional)</h3>
             <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
-              LC 123/2006 Art. 18 §5-C: atividades como advocacia são tributadas pelo <strong>Anexo IV</strong>, em que a
+              LC 123/2006 Art. 18 §5-C: atividades como advocacia, construção, limpeza e vigilância são tributadas pelo <strong>Anexo IV</strong>, em que a
               <strong> CPP patronal (20%) fica FORA do DAS</strong> — recolhida sobre a folha (empregados + pró-labore), sem terceiros.
               Informe a folha para somar essa contribuição à carga de hoje.
             </p>

@@ -131,6 +131,7 @@ export const SETORES: Setor[] = [
     reducao: 0.60,    // Art. 164 §2º LC 214/2025: contribuinte opcional quando acima de R$3,6M/ano; abaixo = não-contribuinte (IBS/CBS = 0)
     tipo: 'misto',
     produtorRural: true,  // Arts. 164-168 LC 214/2025: tratamento especial de não-contribuinte
+    vedadoSimples: true,  // pessoa física não é ME/EPP (LC 123/2006 Art. 3º) — não pode optar pelo Simples
   },
   {
     value: 'produtor_rural_pj',
@@ -139,6 +140,7 @@ export const SETORES: Setor[] = [
     reducao: 0.60,    // Art. 164 §3º LC 214/2025: PJ de produtor rural integrado — mesma redução 60%
     tipo: 'misto',
     produtorRural: true,
+    anexoSimplesPadrao: 'I',  // venda da produção agropecuária sem industrialização → Anexo I (com industrialização: Anexo II)
   },
   {
     value: 'saneamento_basico',
@@ -161,6 +163,7 @@ export const SETORES: Setor[] = [
     grupo: 'Redução 60%',
     reducao: 0.60,  // Art. 203 X/XI — produções jornalísticas e comunicação institucional: 60%
     tipo: 'servico',
+    fatorR: true,   // LC 123/2006 Art. 18 §5-I X (jornalismo e publicidade): Anexo V, ou III com Fator R ≥ 28%
   },
   {
     value: 'radiodifusao_aberta',
@@ -197,6 +200,7 @@ export const SETORES: Setor[] = [
     reducao: 0.00,  // LC 214/2025 — sem redução; IS não incide (Art. 413 II); cashback CadÚnico (Art. 118)
     tipo: 'servico',
     cashbackConsumidor: true,  // Art. 118 I: energia elétrica domiciliar tem devolução 100% CBS + 20% IBS a famílias de baixa renda
+    vedadoSimples: true,       // LC 123/2006 Art. 17 VII: geração, transmissão, distribuição ou comercialização de energia elétrica
   },
 
   // ─── REDUÇÃO 50% — Construção e Incorporação Imobiliária ─────────────────
@@ -210,7 +214,9 @@ export const SETORES: Setor[] = [
     presuncaoLPCSLL: 0.12,
     regimeImobiliario: true,  // Arts. 369-376 Dec. 12.955: CBS sobre base reduzida (custo + redutor social)
     // Construção civil / empreitada é PERMITIDA no Simples (Anexo IV) — não vedada.
-    anexoFixo: 'IV',   // §5-C I (construção de imóveis e obras de engenharia): Anexo IV — CPP fora do DAS; cAtivSN 13
+    // §5-C I (construção de imóveis e obras de engenharia): Anexo IV — CPP fora do DAS; cAtivSN 13.
+    // Padrão (não fixo): serviços dos subitens 7.02/7.05 apurados no Anexo III (ex.: reformas) usam cAtivSN 12.
+    anexoSimplesPadrao: 'IV',
   },
   {
     value: 'incorporacao_imoveis',
@@ -356,6 +362,7 @@ export const SETORES: Setor[] = [
     grupo: 'Alíquota Cheia (26,5%)',
     reducao: 0.00,  // Art. 127 reduz 30% apenas para profissionais pessoa física com conselho (ex: técnicos agrícolas individualmente); cooperativas como entidade não têm redução própria na LC 214/2025
     tipo: 'misto',
+    anexoSimplesPadrao: 'II',  // agroindústria: venda de produto industrializado pelo contribuinte → Anexo II
   },
 
   // ─── REGIMES MUITO ESPECÍFICOS ────────────────────────────────────────

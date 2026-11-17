@@ -17,6 +17,7 @@ export interface Setor {
   tipo: TipoSetor
   fatorR?: boolean              // true = sujeito ao Fator R no Simples Nacional (Anexo III ou V)
   anexoFixo?: AnexoSimples      // anexo fixado por lei no Simples (ex.: advocacia → Anexo IV §5-C), sobrepõe inferência/seleção
+  anexoSimplesPadrao?: AnexoSimples // anexo usual da atividade quando o usuário não escolhe — ao contrário do anexoFixo, a seleção manual vence
   duasVersoesMedicina?: boolean // medicina: alterna redução IBS/CBS entre 30% (serviço profissional) e 60% (serviço de saúde)
   baseReduzidaMargem?: boolean  // true = CBS incide só na margem (bens usados de PF — Cap. X Dec. 12.955/2026)
   presuncaoLPIRPJ?: number      // override da presunção IRPJ no LP (padrão: 8% comércio/indústria, 32% serviço)

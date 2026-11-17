@@ -903,9 +903,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 / Art. 3º §4º)
   const setorVedadoSimples = setor.vedadoSimples === true
 
-  // Anexo efetivo: anexo fixado por lei no setor (ex.: advocacia → IV) vence; senão o informado; senão inferido.
+  // Anexo efetivo: anexo fixado por lei no setor (ex.: advocacia → IV) vence; senão o informado;
+  // senão o anexo padrão do setor (ex.: construção → IV); senão inferido pelo tipo.
   const anexoEfetivo: import('../types').AnexoSimples | undefined = (regime === 'simples_nacional' || regime === 'mei')
-    ? (setor.anexoFixo ?? anexoSimples ?? inferirAnexo(setor.tipo))
+    ? (setor.anexoFixo ?? anexoSimples ?? setor.anexoSimplesPadrao ?? inferirAnexo(setor.tipo))
     : undefined
 
   // Fator R — para atividades sujeitas (setor.fatorR), a folha determina o anexo por lei:
