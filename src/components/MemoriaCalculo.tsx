@@ -152,11 +152,22 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
       <Bloco key={r.regime} numero={n} titulo={`Simples Nacional${marca}`} base={`DAS unificado${r.anexoSimples ? ` · Anexo ${r.anexoSimples}` : ''} · LC 123/2006`}>
         {r.atividadeSimples && <Linha label="Atividade nas notas fiscais (cAtivSN)" formula={`${r.atividadeSimples.descricao} · Anexo ${r.atividadeSimples.rotulo}`} valor={r.atividadeSimples.codigo} refLegal="Catálogo oficial NT 2026.005 · a partir de 2027" />}
         <Linha label="DAS mensal" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} refLegal="Alíquota efetiva da faixa de faturamento (RBT12)" />
-        {r.cbsSimplesEfetivo != null && r.cbsSimplesEfetivo > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(fat)} × ${pct(r.cbsSimplesEfetivo)}`} valor={fat * r.cbsSimplesEfetivo} />}
-        {r.ibsSimplesEfetivo != null && r.ibsSimplesEfetivo > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(fat)} × ${pct(r.ibsSimplesEfetivo)}`} valor={fat * r.ibsSimplesEfetivo} />}
-        {r.cbsSimplesEfetivo != null && r.ibsSimplesEfetivo != null && (
-          <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo))} da receita`} valor={fat * Math.max(0, r.aliquotaAtual - r.cbsSimplesEfetivo - r.ibsSimplesEfetivo)} />
-        )}
+        {(() => {
+          // Receita interna: a exportada não carrega CBS/IBS no DAS (tpRBSN 3/4)
+          const exp = r.exportacaoSimples
+          const recInterna = fat - (exp?.valorMensal ?? 0)
+          const cbs = r.cbsSimplesEfetivo, ibs = r.ibsSimplesEfetivo
+          return <>
+            {exp && <Linha label={`├ Exportação (tpRBSN ${exp.tipoReceita})`} formula={`${moeda(exp.valorMensal)} — ${exp.tipoReceitaDescricao.replace('Receita bruta - ', '')}`} valor={exp.reducaoDASMensal} negativo refLegal="Sem CBS/IBS no DAS (hoje PIS/COFINS/ICMS/ISS — LC 123 art. 18 §14) · NT 2026.005" />}
+            {exp && exp.suspensoMensal > 0 && <Linha label="│ CBS/IBS suspensos (exportação indireta)" formula="devidos só se a exportação não se efetivar" valor={exp.suspensoMensal} />}
+            {cbs != null && cbs > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(recInterna)} × ${pct(cbs)}`} valor={recInterna * cbs} />}
+            {ibs != null && ibs > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(recInterna)} × ${pct(ibs)}`} valor={recInterna * ibs} />}
+            {cbs != null && ibs != null && (() => {
+              const demais = Math.max(0, r.impostoAtualMensal - recInterna * (cbs + ibs))
+              return <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(fat > 0 ? demais / fat : 0)} da receita`} valor={demais} />
+            })()}
+          </>
+        })()}
         {r.inaplicavel && <Linha label={r.vedadoSimplesAtividade ? '⚠ Atividade vedada ao Simples' : '⚠ Acima do limite do Simples'} formula={r.vedadoSimplesAtividade ? 'não pode optar pelo regime — valores ilustrativos' : 'RBT12 > R$ 4,8M/ano — inelegível'} valor="—" refLegal={r.vedadoSimplesAtividade ? 'LC 123/2006 Art. 17 / Art. 3º §4º' : 'LC 123/2006'} />}
         <Linha label="Carga total mensal (hoje)" valor={r.impostoAtualMensal} destaque />
       </Bloco>

@@ -206,6 +206,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [pctVendasAliqZeroTransp, setPctVendasAliqZeroTransp] = useState(0)  // Art. 110 — vendas com alíq. zero transp.
   const [despesasCrediteisStr, setDespesasCrediteisStr] = useState('')       // não-cumulatividade ampla
   const [exportacoesMensaisStr, setExportacoesMensaisStr] = useState('')     // Art. 82 — exportador habilitável
+  // Simples: tipo de receita da exportação (tpRBSN 3 direta / 4 indireta via comercial exportadora)
+  const [tipoExportacao, setTipoExportacao] = useState<'direta' | 'indireta'>('direta')
   const [regimeAutomotivoHabilitado, setRegimeAutomotivoHabilitado] = useState(false)  // Arts. 309-316
   const [faseRegimeAutomotivo, setFaseRegimeAutomotivo] = useState<1 | 2 | 3>(1)        // fase de fruição
   const [tipoBemZFM, setTipoBemZFM] = useState<'consumo_final' | 'capital' | 'intermediario' | 'informatica'>('consumo_final')  // Art. 450 §1º
@@ -368,6 +370,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       aliquotaAtualOverride: agregado12m?.aliquotaRealApurada ?? overridePGDAS ?? null,
       dadosMensais: modoEntrada === 'detalhado' ? (agregado12m?.meses ?? null) : null,
       exportacoesMensais: modoEntrada === 'detalhado' ? (agregado12m?.medias.exportacoes ?? 0) : parseMoeda(exportacoesMensaisStr),
+      tipoExportacao,
       empresasGrupo,
       nomePrincipal,
       analiseHolding,
@@ -708,6 +711,31 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 <p className="text-ink-muted text-xs mt-1.5 leading-relaxed">
                   Preencha se exportar — acima de 50% habilita suspensão de IBS/CBS (Art. 82)
                 </p>
+                {dados.regime === 'simples_nacional' && parseMoeda(exportacoesMensaisStr) > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {([
+                        { value: 'direta',   label: 'Exportação direta',   desc: 'tpRBSN 3 — sem CBS/IBS' },
+                        { value: 'indireta', label: 'Via comercial exportadora', desc: 'tpRBSN 4 — CBS/IBS suspensos' },
+                      ] as const).map(op => (
+                        <label key={op.value} className={`flex items-start gap-2 cursor-pointer rounded-lg border px-2.5 py-2 transition-colors
+                          ${tipoExportacao === op.value ? 'border-[#6B5E4E] bg-white' : 'border-[#E4DDD2] bg-white hover:border-[#9A9286]'}`}>
+                          <input type="radio" name="tipoExportacao" value={op.value}
+                            checked={tipoExportacao === op.value}
+                            onChange={() => setTipoExportacao(op.value)}
+                            className="mt-0.5 flex-shrink-0" />
+                          <span>
+                            <span className="block text-xs font-semibold text-ink">{op.label}</span>
+                            <span className="block text-[10px] text-ink-muted">{op.desc}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-ink-muted leading-relaxed">
+                      No Simples, a receita exportada não paga a parcela de tributos sobre consumo do DAS (hoje PIS/COFINS/ICMS/ISS — LC 123 art. 18 §14; a partir de 2027, CBS/IBS). IRPJ, CSLL e CPP continuam.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

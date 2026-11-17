@@ -60,6 +60,8 @@ export interface DadosEntrada {
   aliquotaAtualOverride?: number | null
   dadosMensais?: DadosMes[] | null
   exportacoesMensais?: number
+  /** Simples: exportação direta (tpRBSN 3) ou via comercial exportadora/ZPE/depósito (tpRBSN 4) */
+  tipoExportacao?: import('./data/tiposReceitaSimples').TipoExportacaoSimples
   empresasGrupo?: EmpresaGrupo[]
   nomePrincipal?: string
   analiseHolding?: AnaliseHolding | null
@@ -205,6 +207,16 @@ export interface ProjecaoMes {
 }
 
 // ─── Resultado completo do cálculo ───────────────────────────────────────────
+/** Exportações no Simples — tipo de receita bruta (tpRBSN 3 ou 4, NT 2026.005) */
+export interface ExportacaoSimples {
+  tipoExportacao: import('./data/tiposReceitaSimples').TipoExportacaoSimples
+  tipoReceita: import('./data/tiposReceitaSimples').CodigoTipoReceitaSN
+  tipoReceitaDescricao: string
+  valorMensal: number          // receita de exportação considerada (limitada ao faturamento)
+  reducaoDASMensal: number     // parcela de CBS/IBS (hoje PIS/COFINS/ICMS/ISS) que sai do DAS
+  suspensoMensal: number       // exportação indireta: CBS/IBS calculados e suspensos até a exportação
+}
+
 export interface ResultadoCalculo {
   regime: TipoRegime
   setor: Setor
@@ -212,6 +224,8 @@ export interface ResultadoCalculo {
   faturamentoAnual: number
   insumosMensais: number
   exportacoesMensais: number
+  /** Simples: efeito do tipo de receita (tpRBSN) das exportações sobre o DAS — null sem exportação */
+  exportacaoSimples: ExportacaoSimples | null
   perfilClientes: PerfilClientes
   fracClientesPJ: number             // fração das vendas a PJ (b2b=1, b2c=0, misto=pctClientesPJ/100)
   setorVedadoSimples: boolean        // atividade impedida de optar pelo Simples Nacional
@@ -221,6 +235,7 @@ export interface ResultadoCalculo {
   // com o conjunto completo de tributos (folha, ICMS/ISS, despesas, pró-labore)
   folhaPagamentoLRMensal?: number
   folhaMensal?: number                  // folha do Fator R (Simples) — fallback de folha p/ LP/LR no comparador
+  tipoExportacao?: import('./data/tiposReceitaSimples').TipoExportacaoSimples  // direta/indireta — cenário Simples do comparador
   aliquotaICMSEfetiva?: number
   aliquotaISSEfetiva?: number
   despesasOperacionaisMensais?: number

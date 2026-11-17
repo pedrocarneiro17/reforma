@@ -105,7 +105,8 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.perfilClientes,
      dadosBase.folhaPagamentoLRMensal, dadosBase.aliquotaICMSEfetiva, dadosBase.aliquotaISSEfetiva,
-     dadosBase.despesasOperacionaisMensais, dadosBase.sociosAdministradores],
+     dadosBase.despesasOperacionaisMensais, dadosBase.sociosAdministradores,
+     dadosBase.exportacoesMensais, dadosBase.tipoExportacao],
   )
 
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
