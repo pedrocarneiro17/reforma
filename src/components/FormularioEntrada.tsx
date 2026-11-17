@@ -1067,13 +1067,13 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
         </div>
       )}
 
-      {/* ── Vendas ao Governo — redutor progressivo ──────────────────────── */}
+      {/* ── Vendas ao Governo — destinação ao ente contratante (sem redução de carga) ── */}
       {fatEfetivo > 0 && (
         <div className="card p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-semibold text-ink">Vendas ao Governo (opcional)</h3>
-              <p className="text-xs text-ink-muted mt-0.5">Arts. 441-443 Dec. 12.955/2026: CBS reduzida 10-40% sobre a parcela de receita pública (2029–2032)</p>
+              <p className="text-xs text-ink-muted mt-0.5">Arts. 441-443 Dec. 12.955/2026: o tributo passa a ser destinado ao ente contratante — muda quem arrecada, não a sua carga. Usado para os alertas de contratos públicos.</p>
             </div>
           </div>
           {pctVendasGoverno > 0 || true ? (
@@ -1089,7 +1089,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 />
                 <span className="num text-sm font-bold text-ink w-10 text-right">{pctVendasGoverno}%</span>
               </div>
-              {pctVendasGoverno === 0 && <p className="text-xs text-ink-muted">0% = sem impacto. Ajuste se vende para União, Estados ou Municípios.</p>}
+              {pctVendasGoverno === 0 && <p className="text-xs text-ink-muted">Ajuste se vende para União, Estados ou Municípios.</p>}
             </div>
           ) : null}
         </div>

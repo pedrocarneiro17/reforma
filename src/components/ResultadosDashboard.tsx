@@ -838,6 +838,12 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             <p className="text-xs text-ink-secondary leading-relaxed">
               Sua empresa fornece para o governo. A LC 214/2025 garante o <strong>direito ao reequilíbrio econômico-financeiro</strong> de contratos administrativos impactados pela reforma tributária. Se a carga tributária efetiva aumentar, você pode requerer a revisão do preço contratual. Documente a carga atual antes da transição.
             </p>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Nas vendas ao governo, a CBS/IBS passa a ser <strong>destinada ao ente contratante</strong> (Estados e Municípios: 10% da CBS em 2029 → 40% em 2032 → integral em 2033 — art. 441 Dec. 12.955/2026). É uma divisão da arrecadação entre entes: <strong>não reduz a sua carga</strong>, por isso a projeção não aplica desconto.{' '}
+              {ehLPouLR
+                ? 'O redutor de alíquota do art. 472 da LC 214/2025 ainda será fixado por resolução do Senado e deve ser repassado ao preço da licitação — não é ganho de margem.'
+                : 'O redutor de alíquota do art. 472 da LC 214/2025 não se aplica a vendas de empresas do Simples Nacional/MEI (parágrafo único, III).'}
+            </p>
           </div>
         </div>
       )}

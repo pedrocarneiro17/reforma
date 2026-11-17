@@ -1129,7 +1129,6 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Base de cálculo efetiva — aplica redutores quando aplicável
   // Imóveis (Arts. 369-376): base = faturamento × (1 − pctCusto) − redutorSocial
   // Agências de turismo (Art. 418): base = faturamento × (1 − pctRepasse)
-  // Vendas ao governo (Art. 441): redutor progressivo 2029-2032
   let baseCalculoEfetiva: number = faturamentoMensal
   if (setor.regimeImobiliario && (pctCustoImovel > 0 || redutorSocialMensal > 0)) {
     baseCalculoEfetiva = Math.max(0,
@@ -1324,9 +1323,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Arts. 501 (ICMS) e 508 (ISS) LC 214/2025: redução de 10%/ano de 2029 a 2032 (base: 31/12/2028).
   // 2027: CBS substitui PIS/COFINS. 2033: ICMS e ISS extintos; IVA Dual (CBS+IBS) pleno.
   // Simples Nacional/MEI: DAS total constante durante toda a transição (partilha interna rebalanceia).
-  // Redutor governo (Art. 349 III LC 214 — estimativa, valores fixados anualmente pelo Senado):
-  const REDUTOR_GOVERNO: Record<number, number> = { 2029: 0.10, 2030: 0.20, 2031: 0.30, 2032: 0.40 }
-  const fracGoverno = Math.min(1, Math.max(0, pctVendasGoverno / 100))
+  //
+  // Vendas ao governo NÃO reduzem a carga na projeção:
+  // • Os 10/20/30/40% de 2029–2032 (art. 441 §2 Dec. 12.955/2026; art. 372 LC 214) são a proporção
+  //   da CBS DESTINADA ao Estado/Município contratante — transferência entre entes, carga inalterada.
+  //   (Mesma leitura da calculadora oficial RFB: tabelas TRANSFERENCIA_CBS_ENTE_GOV e
+  //   TRANSICAO_ALIQUOTA_COMPRA_GOV_SIMPLES_NACIONAL deslocam CBS→IBS sem alterar o total.)
+  // • O redutor de alíquota (art. 472 LC 214 / art. 442 Dec.) ainda não foi fixado pelo Senado
+  //   (art. 443), deve ser repassado ao preço da licitação (art. 442 §2) e NÃO se aplica a
+  //   Simples Nacional/MEI (art. 472 p.ú. III). Por isso não é modelado como economia do fornecedor.
 
   // Componente ICMS/ISS da carga atual: base para aplicar a redução per Arts. 501/508
   // LP/LR: usa ICMS/ISS já apurados (alíquotas informadas ou médias); demais regimes usam a estimativa
@@ -1350,8 +1355,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const anosProjecao = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
   const projecaoAnos: ProjecaoAno[] = anosProjecao.map(ano => {
     const reducaoAnual = REDUCAO_ICMS_ISS[ano] ?? 0
-    const redutorGov = fracGoverno * (REDUTOR_GOVERNO[ano] ?? 0)
-    const impostoIVAAjustado = impostoIVALiquidoMensal * (1 - redutorGov)
+    const impostoIVAAjustado = impostoIVALiquidoMensal
 
     if (temDecomposicaoLPLR) {
       // Modelo por componentes (alinhado à carga total do comparador):
