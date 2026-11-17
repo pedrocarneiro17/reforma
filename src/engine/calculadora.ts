@@ -9,6 +9,7 @@
 
 import { atividadeSimplesDoSetor } from '../data/atividadesSimples'
 import { tipoReceitaDaExportacao, efeitoTipoReceitaSimples } from '../data/tiposReceitaSimples'
+import { PARTILHA_SIMPLES_LC214, partilhaConsumoSimples } from '../data/partilhaSimples'
 import type {
   TipoSetor,
   TipoRegime,
@@ -262,31 +263,16 @@ export const SIMPLES_TABELAS: Record<import('../types').AnexoSimples, FaixaSimpl
 }
 
 /**
- * Percentual de Repartição CBS (COFINS + PIS/Pasep) dentro do DAS por anexo e faixa.
- * Fonte: LC 123/2006 Anexos I–V, tabela de partilha vigente desde 01/01/2018 (LC 155/2016).
- * CBS = DAS_efetivo × partilha_CBS  (Art. 47 §2 Dec. 12.955/2026)
+ * Partilha de PIS/COFINS (hoje) → CBS e de ICMS/ISS (hoje) → IBS dentro do DAS, por anexo e faixa,
+ * em % do DAS. Fonte única: Anexos I–V da LC 214/2025 (data/partilhaSimples.ts). A tabela de 2033
+ * da LC 214 é idêntica, linha a linha, à partilha de PIS/COFINS e ICMS/ISS da LC 123/2006 vigente.
+ * Faixa 6: ICMS/ISS fora do DAS (0). Para a partilha de cada ano da transição, ver partilhaConsumoSimples.
  */
-export const PARTILHA_CBS_SIMPLES: Record<import('../types').AnexoSimples, number[]> = {
-  I:   [0.1550, 0.1550, 0.1550, 0.1550, 0.1550, 0.3440], // faixas 1–5: 15,50% | faixa 6: 34,40%
-  II:  [0.1400, 0.1400, 0.1400, 0.1400, 0.1400, 0.2550], // faixas 1–5: 14,00% | faixa 6: 25,50%
-  III: [0.1560, 0.1710, 0.1660, 0.1660, 0.1560, 0.1950], // varia por faixa
-  IV:  [0.2150, 0.2500, 0.2400, 0.2300, 0.2200, 0.2500], // varia por faixa
-  V:   [0.1715, 0.1715, 0.1815, 0.1915, 0.1715, 0.2000], // varia por faixa
-}
-
-/**
- * Percentual de Repartição IBS (ICMS/ISS) dentro do DAS por anexo e faixa.
- * LC 123/2006 Anexos I–V — partilha ICMS (comércio/indústria) e ISS (serviços).
- * Em Faixa 6 o ICMS/ISS é recolhido fora do DAS (sublimite estadual/municipal excedido) → 0%.
- * A partir de 2029 essa parcela transita gradualmente para IBS (Arts. 501/508 LC 214/2025).
- */
-export const PARTILHA_IBS_SIMPLES: Record<import('../types').AnexoSimples, number[]> = {
-  I:   [0.3400, 0.3400, 0.3400, 0.3350, 0.3350, 0.0000], // ICMS; F6: sublimite → fora do DAS
-  II:  [0.3200, 0.3200, 0.3200, 0.3200, 0.3200, 0.0000], // ICMS (IPI tratado como federal)
-  III: [0.3350, 0.3200, 0.3250, 0.3250, 0.3350, 0.0215], // ISS
-  IV:  [0.4050, 0.3800, 0.3857, 0.4023, 0.3992, 0.0000], // ISS; F6: fora do DAS
-  V:   [0.1414, 0.1414, 0.1700, 0.1800, 0.1950, 0.1485], // ISS
-}
+const PARTILHA_PLENA = (tributo: 'CBS' | 'IBS') => Object.fromEntries(
+  (['I', 'II', 'III', 'IV', 'V'] as const).map(an => [an, PARTILHA_SIMPLES_LC214[an][2033].map(l => (l[tributo] ?? 0) / 100)]),
+) as Record<import('../types').AnexoSimples, number[]>
+export const PARTILHA_CBS_SIMPLES = PARTILHA_PLENA('CBS')  // = PIS + COFINS hoje
+export const PARTILHA_IBS_SIMPLES = PARTILHA_PLENA('IBS')  // = ICMS ou ISS hoje
 
 /** Teto da 5ª faixa do Simples (RBT12) — acima disso, 6ª faixa */
 export const LIMITE_FAIXA5_SIMPLES_ANUAL = 3_600_000
@@ -1025,6 +1011,24 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       : getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
   })()
 
+  // CBS e IBS dentro do DAS em cada ano da transição, como frações da receita — partilha oficial
+  // dos Anexos I–V da LC 214/2025 × alíquota efetiva do DAS (na 6ª faixa de 2027–2028 a nominal
+  // é 0,1 p.p. menor — art. 347). Atividade mista: média ponderada pelos dois anexos.
+  const consumoSimplesNoAno = (ano: number): { cbs: number; ibs: number } => {
+    if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return { cbs: 0, ibs: 0 }
+    const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
+    const partes: [import('../types').AnexoSimples, number][] = isMisto
+      ? [[anexoEfetivoComFatorR, pctAnexo1! / 100], [anexoSimples2!, 1 - pctAnexo1! / 100]]
+      : [[anexoEfetivoComFatorR, 1]]
+    return partes.reduce((acc, [anexo, peso]) => {
+      const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
+      const reducao = (ano === 2027 || ano === 2028) && faixaIdx === 5 ? REDUCAO_CBS_2027_2028 : 0
+      const das = Math.max(0, getAliquotaDAS(anexo, faturamentoAnual) - reducao)
+      const p = partilhaConsumoSimples(anexo, faixaIdx, ano)
+      return { cbs: acc.cbs + peso * das * p.cbs, ibs: acc.ibs + peso * das * p.ibs }
+    }, { cbs: 0, ibs: 0 })
+  }
+
   // Exportações no Simples — tipo de receita bruta (tpRBSN, NT 2026.005):
   // • direta (tpRBSN 3): fator 0 → sem CBS/IBS sobre a receita exportada
   // • indireta, via comercial exportadora/ZPE/depósito (tpRBSN 4): CBS/IBS calculados mas
@@ -1464,10 +1468,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
           ? faturamentoMensal * REDUCAO_CBS_2027_2028
           : 0
       const dasAno = Math.max(0, impostoAtualMensal - reducaoCBSFaixa6)
-      // Só a receita interna carrega CBS/IBS dentro do DAS (exportação: tpRBSN 3/4)
-      const parcelaNovaBruta = receitaConsumoSimplesMensal * (
-        (ano >= 2027 ? (cbsSimplesEfetivo ?? 0) : 0) + (ibsSimplesEfetivo ?? 0) * reducaoAnual
-      ) - reducaoCBSFaixa6
+      // CBS + IBS dentro do DAS no ano, pela partilha oficial da LC 214 (Anexos I–V). Só a receita
+      // interna carrega esses tributos (exportação: tpRBSN 3/4).
+      const consumoAno = consumoSimplesNoAno(ano)
+      const parcelaNovaBruta = receitaConsumoSimplesMensal * (consumoAno.cbs + consumoAno.ibs)
       const parcelaNova  = Math.min(dasAno, Math.max(0, parcelaNovaBruta))
       const parcelaAtual = dasAno - parcelaNova
       return {
