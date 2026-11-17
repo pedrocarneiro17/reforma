@@ -210,6 +210,7 @@ export const SETORES: Setor[] = [
     presuncaoLPCSLL: 0.12,
     regimeImobiliario: true,  // Arts. 369-376 Dec. 12.955: CBS sobre base reduzida (custo + redutor social)
     // Construção civil / empreitada é PERMITIDA no Simples (Anexo IV) — não vedada.
+    anexoFixo: 'IV',   // §5-C I (construção de imóveis e obras de engenharia): Anexo IV — CPP fora do DAS; cAtivSN 13
   },
   {
     value: 'incorporacao_imoveis',
@@ -583,6 +584,7 @@ export const SETORES: Setor[] = [
     grupo: 'Alíquota Cheia (26,5%)',
     reducao: 0.00,
     tipo: 'servico',
+    anexoFixo: 'IV',   // §5-C VI (vigilância): Anexo IV — CPP fora do DAS; cAtivSN 14
   },
   {
     value: 'limpeza_conservacao',
@@ -590,6 +592,7 @@ export const SETORES: Setor[] = [
     grupo: 'Alíquota Cheia (26,5%)',
     reducao: 0.00,
     tipo: 'servico',
+    anexoFixo: 'IV',   // §5-C VI (limpeza ou conservação): Anexo IV — CPP fora do DAS; cAtivSN 14
   },
   {
     value: 'rh_recrutamento',

@@ -234,6 +234,8 @@ export interface ResultadoCalculo {
   irpjAdicionalMensal: number
   inssAutonomoMensal: number
   anexoSimples: AnexoSimples | undefined
+  /** Atividade do catálogo oficial do Simples (cAtivSN das notas fiscais a partir de 2027) */
+  atividadeSimples: import('./data/atividadesSimples').AtividadeSimples | null
   anexoSimples2: AnexoSimples | undefined
   pctAnexo1: number | undefined
   cbsSimplesEfetivo: number | null

@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { SETORES } from '../data/setores'
+import { atividadeSimplesDoSetor } from '../data/atividadesSimples'
 import { fmt, LIMITE_MEI_MENSAL, LIMITE_MEI_ANUAL, ICMS_ALIQUOTA_INTERNA, UF_NOMES } from '../engine/calculadora'
 import DadosMensais from './DadosMensais'
 import GrupoEmpresas from './GrupoEmpresas'
@@ -303,6 +304,10 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarFatorR = dados.regime === 'simples_nacional' && (setorSelecionado?.fatorR === true)
   // Anexo IV (§5-C, ex.: advocacia): no Simples a CPP 20% é paga por fora do DAS → precisa da folha.
   const mostrarFolhaAnexoIV = dados.regime === 'simples_nacional' && setorSelecionado?.anexoFixo === 'IV'
+  // Atividade do catálogo oficial (cAtivSN) coerente com o anexo fixado/selecionado
+  const atividadeSN = mostrarAnexoSimples && setorSelecionado
+    ? atividadeSimplesDoSetor(setorSelecionado, setorSelecionado.anexoFixo ?? (anexoSimples || undefined))
+    : null
   // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Serviços não têm ICMS.
   const circulaMercadoria = ['comercio', 'industria', 'misto'].includes(setorSelecionado?.tipo ?? '')
   const mostrarCapital = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime)
@@ -897,6 +902,22 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             </div>
             {!anexoSimples && (
               <p className="text-xs text-warning font-medium">Selecione o anexo para um cálculo preciso. Sem seleção, o sistema infere pelo tipo de setor.</p>
+            )}
+            {atividadeSN && (
+              <div className="rounded-lg border border-[#E4DDD2] bg-white px-3 py-2.5">
+                <span className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wide">
+                  Código da atividade nas notas fiscais (cAtivSN) — a partir de 2027
+                </span>
+                <span className="block text-sm text-ink mt-0.5">
+                  <strong className="num">{atividadeSN.codigo}</strong> — {atividadeSN.descricao}
+                  <span className="text-ink-muted"> · Anexo {atividadeSN.rotulo}</span>
+                </span>
+                {setorSelecionado?.anexoFixo && anexoSimples && anexoSimples !== setorSelecionado.anexoFixo && (
+                  <span className="block text-xs text-warning mt-1">
+                    Esta atividade é apurada por lei no Anexo {setorSelecionado.anexoFixo} — o anexo selecionado é ignorado no cálculo.
+                  </span>
+                )}
+              </div>
             )}
 
             {/* ── Atividade mista — dois anexos ─────────────────────── */}

@@ -7,6 +7,7 @@
  * Consulte um contador para análise fiscal completa.
  */
 
+import { atividadeSimplesDoSetor } from '../data/atividadesSimples'
 import type {
   TipoSetor,
   TipoRegime,
@@ -1525,6 +1526,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     irpjAdicionalMensal: calcularIRPJAdicional(regime, setor.tipo, faturamentoMensal, setor),
     inssAutonomoMensal: regime === 'profissional_liberal' ? calcularINSSAutonomo(faturamentoMensal) : 0,
     anexoSimples: anexoEfetivoComFatorR,
+    // Código oficial da atividade nas notas fiscais (cAtivSN, NT 2026.005) — só no Simples
+    atividadeSimples: regime === 'simples_nacional' ? atividadeSimplesDoSetor(setor, anexoEfetivoComFatorR) : null,
     anexoSimples2: anexoSimples2 ?? undefined,
     pctAnexo1: pctAnexo1 ?? undefined,
     cbsSimplesEfetivo,

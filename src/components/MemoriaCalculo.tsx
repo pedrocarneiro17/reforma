@@ -150,6 +150,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     )
     if (r.regime === 'simples_nacional') return (
       <Bloco key={r.regime} numero={n} titulo={`Simples Nacional${marca}`} base={`DAS unificado${r.anexoSimples ? ` · Anexo ${r.anexoSimples}` : ''} · LC 123/2006`}>
+        {r.atividadeSimples && <Linha label="Atividade nas notas fiscais (cAtivSN)" formula={`${r.atividadeSimples.descricao} · Anexo ${r.atividadeSimples.rotulo}`} valor={r.atividadeSimples.codigo} refLegal="Catálogo oficial NT 2026.005 · a partir de 2027" />}
         <Linha label="DAS mensal" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} refLegal="Alíquota efetiva da faixa de faturamento (RBT12)" />
         {r.cbsSimplesEfetivo != null && r.cbsSimplesEfetivo > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(fat)} × ${pct(r.cbsSimplesEfetivo)}`} valor={fat * r.cbsSimplesEfetivo} />}
         {r.ibsSimplesEfetivo != null && r.ibsSimplesEfetivo > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(fat)} × ${pct(r.ibsSimplesEfetivo)}`} valor={fat * r.ibsSimplesEfetivo} />}
