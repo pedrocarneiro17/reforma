@@ -266,7 +266,8 @@ export interface ResultadoCalculo {
     aliquotaEfetiva: number
     custoAdicionalVsSimples: number
   } | null
-  baseCalculoEfetiva: number       // base de cálculo real após redutores (imóveis/agências/etc.)
+  baseCalculoEfetiva: number       // base de cálculo real após redutores (imóveis/agências/etc.) e exportações
+  exportacoesImunesMensal: number  // exportações excluídas da base do IBS/CBS (imunes — Art. 79 LC 214/2025)
   pctFornecedoresSimples: number
   creditoPerdidoFornecedorSimples: number
   analiseProlabore: AnaliseProlabore | null

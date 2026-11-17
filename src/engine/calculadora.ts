@@ -989,15 +989,20 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     : aliquotaICMSEfetiva != null
       ? aliquotaICMSEfetiva
       : (setor.tipo === 'comercio' || setor.tipo === 'industria') ? 0.12 : 0
-  const icmsDebitoAtualMensal  = ehLPouLR ? faturamentoMensal * icmsAliquotaAtual : 0
+  // Exportações "hoje" (LP/LR): não pagam ICMS (LC 87/1996 art. 3º II), ISS (LC 116/2003 art. 2º I),
+  // PIS/COFINS (CF art. 149 §2º I) nem IPI — só IRPJ/CSLL incidem. Mantém a comparação com o
+  // pós-reforma (exportação imune de IBS/CBS — Art. 79 LC 214) sem economia artificial.
+  const exportacoesHojeMensal = ehLPouLR ? Math.min(Math.max(0, exportacoesMensais), faturamentoMensal) : 0
+  const receitaInternaHojeMensal = faturamentoMensal - exportacoesHojeMensal
+  const icmsDebitoAtualMensal  = ehLPouLR ? receitaInternaHojeMensal * icmsAliquotaAtual : 0
   const icmsCreditoAtualMensal = ehLPouLR ? insumosMensais * icmsAliquotaAtual : 0
   const icmsAtualMensal = Math.max(0, icmsDebitoAtualMensal - icmsCreditoAtualMensal)
   // ISS é cumulativo (incide sobre a receita de serviços, sem crédito sobre compras)
   const issAtualMensal = ehLPouLR
     ? (aliquotaISSEfetiva != null
-        ? faturamentoMensal * aliquotaISSEfetiva
+        ? receitaInternaHojeMensal * aliquotaISSEfetiva
         : (setor.tipo === 'servico' || setor.tipo === 'misto')
-          ? faturamentoMensal * 0.03
+          ? receitaInternaHojeMensal * 0.03
           : 0)
     : 0
 
@@ -1086,9 +1091,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     const irpjLP          = lucroPresumido * 0.15
     const irpjAdicionalLP = Math.max(0, lucroPresumido - IRPJ_ADICIONAL_LIMIAR) * 0.10
     const csllLP          = faturamentoMensal * pCSLL * 0.09
-    const pisCofinsLP     = faturamentoMensal * 0.0365  // cumulativo: PIS 0,65% + COFINS 3%
-    // IPI médio 5% para indústria apenas quando o usuário não informou alíquotas próprias
-    const ipiLP = setor.tipo === 'industria' && aliquotaICMSEfetiva == null ? faturamentoMensal * 0.05 : 0
+    const pisCofinsLP     = receitaInternaHojeMensal * 0.0365  // cumulativo: PIS 0,65% + COFINS 3% (exportação isenta)
+    // IPI médio 5% para indústria apenas quando o usuário não informou alíquotas próprias (exportação imune)
+    const ipiLP = setor.tipo === 'industria' && aliquotaICMSEfetiva == null ? receitaInternaHojeMensal * 0.05 : 0
     impostoAtualMensal = irpjLP + irpjAdicionalLP + csllLP + pisCofinsLP + icmsAtualMensal + issAtualMensal + ipiLP + contribPrevidenciariaMensal
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
     apuracaoLucroPresumido = {
@@ -1121,7 +1126,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       // despesas, ICMS, ISS e PIS/COFINS não-cumulativo. Todos são dedutíveis do lucro real.
       const pisCofinsAliq   = 0.0925  // PIS 1,65% + COFINS 7,6% não-cumulativos
       const pisCofinsCredito = insumosMensais * pisCofinsAliq
-      const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
+      const pisCofinsDebito  = receitaInternaHojeMensal * pisCofinsAliq  // exportação isenta, crédito mantido
       const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
       const lucroReal = Math.max(0,
         faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - proLaboreEncargosMensal - cppProLaboreMensal
@@ -1204,6 +1209,13 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   if (gorjetaMensal > 0) {
     baseCalculoEfetiva = Math.max(0, baseCalculoEfetiva - gorjetaMensal)
   }
+
+  // Exportações — imunes de IBS/CBS (Art. 79 LC 214/2025), com manutenção dos créditos das
+  // aquisições (o saldo credor vai para ressarcimento). Vale para o regime regular (LP/LR, PF,
+  // produtor) e para os cenários "por fora" do Simples/MEI. No DAS do Simples o efeito equivalente
+  // é tratado em exportacaoSimples (tpRBSN 3/4).
+  const exportacoesImunesMensal = Math.min(Math.max(0, exportacoesMensais), baseCalculoEfetiva)
+  baseCalculoEfetiva = baseCalculoEfetiva - exportacoesImunesMensal
 
   // Produtor rural não-contribuinte: faturamento < R$3,6M/ano (Art. 164 §1º LC 214/2025)
   const LIMITE_PRODUTOR_RURAL_ANUAL = 3_600_000
@@ -1400,8 +1412,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     regime === 'lucro_presumido' ||
     (regime === 'lucro_real' && (folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0))
   const pisCofinsHojeComp = regime === 'lucro_presumido'
-    ? faturamentoMensal * 0.0365
-    : Math.max(0, (faturamentoMensal - insumosMensais) * 0.0925)
+    ? receitaInternaHojeMensal * 0.0365
+    : Math.max(0, (receitaInternaHojeMensal - insumosMensais) * 0.0925)
   const icmsIssHojeComp = icmsAtualMensal + issAtualMensal + (apuracaoLucroPresumido?.ipi ?? 0)
   const irpjCsllHojeComp = Math.max(0, impostoAtualMensal - pisCofinsHojeComp - icmsIssHojeComp - contribPrevidenciariaMensal)
 
@@ -1506,7 +1518,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const analiseSimplesHibrido: AnaliseSimplesHibrido | null =
     (regime === 'simples_nacional' || regime === 'mei') &&
     (perfilClientes === 'b2b' || perfilClientes === 'misto')
-      ? calcularSimplesHibrido(faturamentoMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ)
+      // Só a receita interna gera débito e crédito ao cliente — exportação é imune (Art. 79)
+      ? calcularSimplesHibrido(faturamentoMensal - exportacoesImunesMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ)
       : null
 
   // ── 6. Análise do Grupo Societário (Simples/MEI) ────────────────────────────
@@ -1587,6 +1600,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       }
     })(),
     baseCalculoEfetiva,
+    exportacoesImunesMensal,
     pctFornecedoresSimples,
     creditoPerdidoFornecedorSimples,
     analiseProlabore: (regime === 'lucro_presumido' || regime === 'lucro_real') && sociosAdministradores.length > 0
@@ -1688,7 +1702,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       if (!temDadosLR) return null
       const pisCofinsAliq    = 0.0925
       const pisCofinsCredito = insumosMensais * pisCofinsAliq
-      const pisCofinsDebito  = faturamentoMensal * pisCofinsAliq
+      const pisCofinsDebito  = receitaInternaHojeMensal * pisCofinsAliq
       const pisCofinsLiquido = Math.max(0, pisCofinsDebito - pisCofinsCredito)
       const lucroRealBase  = Math.max(0,
         faturamentoMensal - insumosMensais - encargosFolhaEmpregadosMensal - proLaboreEncargosMensal - cppProLaboreMensal

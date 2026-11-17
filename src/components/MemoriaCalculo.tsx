@@ -58,7 +58,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     regime, setor, faturamentoMensal, insumosMensais, exportacoesMensais,
     aliquotaAtual, impostoAtualMensal,
     apuracaoLucroPresumido: aLP, apuracaoLucroReal: aLR,
-    aliquotaIVABruta, baseCalculoEfetiva, impostoIVABrutoMensal, creditoInsumosMensal,
+    aliquotaIVABruta, baseCalculoEfetiva, exportacoesImunesMensal, impostoIVABrutoMensal, creditoInsumosMensal,
     impostoIVALiquidoMensal, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
     inssPatronalFolhaMensal, terceirosFolhaMensal, cppProLaboreMensal,
     cargaTotalReformaMensal, variacaoAbsolutaMensal,
@@ -200,13 +200,14 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
 
   // ── Bloco: apuração do IVA Dual (reconcilia com o líquido exibido) ─────────
   const baseReduzida = baseCalculoEfetiva < faturamentoMensal - 0.5
-  const redutorSetor = Math.max(0, faturamentoMensal - gorjetaMensal - baseCalculoEfetiva)
+  const redutorSetor = Math.max(0, faturamentoMensal - gorjetaMensal - exportacoesImunesMensal - baseCalculoEfetiva)
   const aliqCreditoEfetiva = insumosMensais > 0 ? creditoInsumosMensal / insumosMensais : aliquotaIVABruta
   const blocoIVA = (n: number) => (
     <Bloco key="iva" numero={n} titulo="Apuração do IVA Dual (CBS + IBS)" base="Não-cumulatividade — Arts. 47-56 LC 214/2025">
       {baseReduzida && <Linha label="Faturamento (base inicial)" valor={faturamentoMensal} />}
       {gorjetaMensal > 0 && <Linha label="(−) Gorjeta excluída da base" valor={gorjetaMensal} negativo refLegal="Art. 274 §único I LC 214/2025" />}
       {redutorSetor > 0.5 && <Linha label="(−) Redutor de base do setor" valor={redutorSetor} negativo refLegal="Redutor de ajuste/social ou repasse (imóveis, agências)" />}
+      {exportacoesImunesMensal > 0 && <Linha label="(−) Exportações (imunes)" valor={exportacoesImunesMensal} negativo refLegal="Art. 79 LC 214/2025 — créditos das aquisições mantidos" />}
       {baseReduzida && <Linha label="Base de cálculo efetiva" valor={baseCalculoEfetiva} destaque />}
       <Linha label="IBS/CBS sobre a base" formula={`${moeda(baseCalculoEfetiva)} × ${pct(aliquotaIVABruta)}`} valor={baseCalculoEfetiva * aliquotaIVABruta} />
       {ivaZeradoVendasRural > 0 && <Linha label="(−) Vendas a produtor rural (alíq. zero)" valor={ivaZeradoVendasRural} negativo refLegal="Art. 110 LC 214/2025" />}
