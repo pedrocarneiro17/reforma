@@ -66,7 +66,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     cbsSimplesEfetivo, ibsSimplesEfetivo, anexoSimples, nomePrincipal, perfilClientes,
     creditoProdutorRural, creditoTranspAutonomo, creditoCapitalImediato, creditoDespesasAdicionais,
     creditoRegimeAutomotivo, creditoZFMIbs, creditoZFMCbs,
-    ivaZeradoVendasRural, ivaZeradoVendasTransp, produtorRuralNaoContribuinte,
+    ivaZeradoVendasRural, ivaZeradoVendasTransp, produtorRuralNaoContribuinte, naoContribuinteSetor,
     gorjetaMensal, pctFornecedoresSimples, inssAutonomoMensal,
     alertaMEI, analiseProlabore, analiseFatorR, analiseGrupoSimples, analiseHolding,
     cenarioHibridoVerdadeiro,
@@ -230,8 +230,8 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
       {creditoRegimeAutomotivo > 0 && <Linha label="(−) Crédito presumido — regime automotivo" valor={creditoRegimeAutomotivo} negativo refLegal="Arts. 309-316 LC 214/2025" />}
       {creditoZFMIbs > 0 && <Linha label="(−) Crédito presumido ZFM (IBS)" valor={creditoZFMIbs} negativo refLegal="Art. 450 LC 214/2025" />}
       {creditoZFMCbs > 0 && <Linha label="(−) Crédito presumido ZFM (CBS)" valor={creditoZFMCbs} negativo refLegal="Art. 450 §2º II LC 214/2025" />}
-      {produtorRuralNaoContribuinte
-        ? <Linha label="= IBS/CBS líquido (não-contribuinte)" formula="produtor rural não-contribuinte não recolhe" valor={impostoIVALiquidoMensal} destaque />
+      {produtorRuralNaoContribuinte || naoContribuinteSetor
+        ? <Linha label="= IBS/CBS líquido (não-contribuinte)" formula={naoContribuinteSetor ? 'transportador autônomo PF não é contribuinte (art. 26, VII)' : 'produtor rural não-contribuinte não recolhe'} valor={impostoIVALiquidoMensal} destaque />
         : <Linha label="= IBS/CBS líquido a recolher" valor={impostoIVALiquidoMensal} destaque />}
     </Bloco>
   )

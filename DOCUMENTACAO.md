@@ -175,7 +175,7 @@ Variação_mensal (R$) = Carga_pós_reforma − Imposto_atual
 Variação_mensal (%)  = Variação_R$ / Imposto_atual × 100
 ```
 
-A **carga pós-reforma** é: IVA líquido + IRPJ/CSLL + contribuição previdenciária (Lucro Presumido e Real); o **próprio DAS** (Simples Nacional e MEI, que não pagam o IVA por fora a menos que optem pelo regime híbrido); ou o IVA líquido nos demais casos.
+A **carga pós-reforma** é: IVA líquido + IRPJ/CSLL + contribuição previdenciária (Lucro Presumido e Real); o **próprio DAS** (Simples Nacional e MEI, que não pagam o IVA por fora a menos que optem pelo regime híbrido); ou **os tributos que permanecem + o IVA líquido** (profissional liberal PF e produtor rural: IRPF, INSS e IRPJ/CSLL continuam, e o IVA entra no lugar do ISS/ICMS). Esse valor coincide com o último ponto (2033) da projeção.
 
 Se o IVA ficar **mais caro**, o sistema calcula o reajuste de preço necessário para manter a mesma receita líquida:
 
@@ -279,8 +279,9 @@ A lista completa está em `src/data/setores.ts`. Cada setor traz:
 3. **O IS (Imposto Seletivo)** sobre produtos nocivos (cigarro, bebidas alcoólicas etc.) não é calculado: as alíquotas serão fixadas por lei ordinária. O simulador apenas sinaliza os setores sujeitos a ele.
 4. **Exportações:** são imunes de IBS/CBS (art. 79 da LC 214) com manutenção dos créditos. No Simples, a receita exportada não paga a parcela de tributos sobre consumo do DAS (seção 6.4). Quando a alíquota vem do PGDAS-D, o simulador assume que as receitas já foram separadas.
 5. O simulador considera **folha de pagamento** (Fator R, CPP do Anexo IV, contribuição previdenciária no Presumido e no Real) e alguns regimes específicos (imóveis, Zona Franca, regime automotivo). Não cobre benefícios fiscais regionais, nem todos os regimes especiais de setores regulados.
-6. **Teto do ISS no Simples:** modelado só a partir de 2027; para o regime atual a partilha é a da tabela sem teto.
-7. **Limite do Simples para exportadores:** o simulador usa um único limite de R$ 4,8 milhões, sem a regra de limite separado para a receita de exportação.
+6. **Transportador autônomo de carga (PF):** tratado como **não contribuinte** de IBS/CBS (LC 214, art. 26, VII, e art. 169; o cClassTrib oficial 410015 confirma): IVA zero, e os clientes contribuintes apropriam crédito presumido. A opção pelo regime regular (art. 26 §1º, V) não é modelada.
+7. **Teto do ISS no Simples:** modelado só a partir de 2027; para o regime atual a partilha é a da tabela sem teto.
+8. **Limite do Simples para exportadores:** o simulador usa um único limite de R$ 4,8 milhões, sem a regra de limite separado para a receita de exportação.
 6. **Consulte sempre um contador** para decisões fiscais — este simulador é educacional.
 
 ---

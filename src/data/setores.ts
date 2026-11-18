@@ -553,7 +553,8 @@ export const SETORES: Setor[] = [
     value: 'transportador_autonomo_pf',
     label: 'Transportador Autônomo de Cargas (Pessoa Física)',
     grupo: 'Regime Especial — Não-Contribuinte PF',
-    reducao: 0.40,    // Art. 169 LC 214/2025: transportador autônomo PF é não-contribuinte; clientes têm direito a crédito presumido. Redução 40% para transporte rodoviário (Art. 286).
+    reducao: 0.00,    // Sem redução de alíquota: os 40% do art. 286 são do transporte COLETIVO DE PASSAGEIROS, não de carga (tabela oficial RFB: 200049). Se optar pelo regime regular (art. 26 §1º V), paga a alíquota cheia.
+    naoContribuinte: true,  // LC 214 art. 26 VII + art. 169: não é contribuinte de IBS/CBS (RFB: cClassTrib 410015); os clientes contribuintes apropriam crédito presumido
     tipo: 'servico',
     presuncaoLPIRPJ: 0.08,
     presuncaoLPCSLL: 0.12,

@@ -39,12 +39,12 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     projecaoAnos, analiseSimplesHibrido, alertaMEI, analiseGrupoSimples,
     analiseHolding, nomePrincipal, analiseICMS,
     anexoSimples, cbsSimplesEfetivo, ibsSimplesEfetivo, cenarioHibridoVerdadeiro, baseCalculoEfetiva,
-    receitaConsumoSimplesMensal,
+    receitaConsumoSimplesMensal, cargaPermanenteMensal,
     irpjAdicionalMensal, inssAutonomoMensal,
     pctFornecedoresSimples, creditoPerdidoFornecedorSimples,
     analiseProlabore,
     gorjetaMensal, creditoProdutorRural, creditoTranspAutonomo,
-    alertaImpostoSeletivo, produtorRuralNaoContribuinte, ivaVendaImobilizado,
+    alertaImpostoSeletivo, produtorRuralNaoContribuinte, naoContribuinteSetor, ivaVendaImobilizado,
     creditoCapitalImediato, creditoCapitalPISCOFINS, ganhoFluxoCaixaCapital,
     ivaZeradoVendasRural, ivaZeradoVendasTransp,
     creditoDespesasAdicionais,
@@ -66,6 +66,9 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
   const isPF  = regime === 'profissional_liberal'
   // Simples/MEI permanecendo no regime único: DAS total inalterado pela reforma (Anexos I–V LC 214/2025)
   const ehSimplesOuMEI = regime === 'simples_nacional' || isMEI
+  // PF autônomo e produtor rural: ISS/ICMS viram IBS/CBS; IRPF, INSS, IRPJ/CSLL permanecem
+  const ehPFouRural = isPF || regime === 'produtor_rural'
+  const mostraCargaTotal = ehLPouLR || ehSimplesOuMEI || ehPFouRural
   // Simples: a parcela de CBS/IBS do DAS só incide sobre a receita interna (exportação e receitas
   // tpRBSN 2, como livros, ficam fora). cbsSN/ibsSN = parcelas como % da RECEITA TOTAL, para que
   // CBS + IBS + demais tributos somem a alíquota efetiva do DAS. cbsSimplesEfetivo/ibsSimplesEfetivo
@@ -87,6 +90,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       return { tom: 'success', texto: 'Setor isento — alíquota zero no IVA Dual. Não há IBS/CBS sobre suas vendas.' }
     if (produtorRuralNaoContribuinte)
       return { tom: 'success', texto: 'Produtor rural não-contribuinte — sem IBS/CBS abaixo de R$ 3,6M/ano.' }
+    if (naoContribuinteSetor)
+      return { tom: 'info', texto: 'Transportador autônomo de carga pessoa física não é contribuinte de IBS/CBS (art. 26, VII, e art. 169 da LC 214/2025): você não recolhe o imposto, e seus clientes contribuintes apropriam crédito presumido. IRPF e INSS continuam.' }
     if (isMEI)
       return { tom: 'info', texto: 'No MEI, o DAS fixo mensal continua o mesmo com a reforma — CBS e IBS não mudam o valor da sua guia.' }
     if (ehSimplesOuMEI)
@@ -235,7 +240,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           {/* Carga Nova */}
           <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
             <span className="stat-label flex items-center gap-1.5">
-              {ehLPouLR || ehSimplesOuMEI ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
+              {mostraCargaTotal ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
               {!isento && (
                 <span
                   className="badge badge-neutral text-[10px] font-medium cursor-help"
@@ -246,10 +251,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               )}
             </span>
             <span className={`stat-value num ${cargaAumentou ? 'text-danger' : 'text-success'}`}>
-              {fmt.moeda(ehLPouLR || ehSimplesOuMEI ? cargaTotalReformaMensal : impostoIVALiquidoMensal)}
+              {fmt.moeda(mostraCargaTotal ? cargaTotalReformaMensal : impostoIVALiquidoMensal)}
             </span>
             <span className="text-xs text-ink-muted num">
-              {ehLPouLR || ehSimplesOuMEI
+              {mostraCargaTotal
                 ? <>{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)} total · {fmt.moeda(cargaTotalReformaMensal * 12)}/ano</>
                 : <>{fmt.pct(aliquotaIVAEfetiva)} líquido · {fmt.moeda(impostoIVALiquidoAnual)}/ano</>}
             </span>
@@ -260,6 +265,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 ? <>DAS inalterado · CBS <strong className="text-ink num">{fmt.pct(cbsSN)}</strong>
                     {' '}+ IBS <strong className="text-ink num">{fmt.pct(ibsSN)}</strong> dentro da guia
                     {cenarioHibridoVerdadeiro && <> · por fora: <strong className="text-ink num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</strong></>}
+                  </>
+                : ehPFouRural
+                ? <>IBS/CBS <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
+                    {' '}+ tributos que permanecem ({isPF ? 'IRPF, INSS…' : 'IRPJ, CSLL…'}) <strong className="text-ink num">{fmt.moeda(cargaPermanenteMensal)}</strong>
                   </>
                 : ehLPouLR
                 ? <>IVA <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
@@ -332,23 +341,31 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                   : 0
                 const consumoHoje = ehLPouLR
                   ? Math.max(0, impostoAtualMensal - irpjCsllHoje - contribPrevidenciariaMensal)
+                  : ehPFouRural
+                  ? Math.max(0, impostoAtualMensal - cargaPermanenteMensal)  // ISS/ICMS de hoje
                   : impostoAtualMensal
                 return (
                   <>
                     <TabelaRow label="Faturamento Mensal" atual={faturamentoMensal} nova={faturamentoMensal} neutro />
                     <TabelaRow label="Insumos / Compras" atual={insumosMensais} nova={insumosMensais} neutro />
                     <TabelaRow
-                      label={regime === 'simples_nacional' ? 'IBS + CBS (bruto)' : ehLPouLR ? 'Tributos s/ consumo → IBS+CBS (bruto)' : 'Imposto Bruto'}
+                      label={regime === 'simples_nacional' ? 'IBS + CBS (bruto)' : (ehLPouLR || ehPFouRural) ? 'Tributos s/ consumo → IBS+CBS (bruto)' : 'Imposto Bruto'}
                       atual={consumoHoje}
                       nova={impostoIVABrutoMensal}
                     />
                     <TabelaRow label="Créditos de IVA nos Insumos" atual={0} nova={-creditoInsumosMensal} credito />
                     <TabelaRow
-                      label={regime === 'simples_nacional' ? 'IBS + CBS (líquido)' : ehLPouLR ? 'Tributos s/ consumo → IBS+CBS (líquido)' : 'Imposto Líquido (devido)'}
+                      label={regime === 'simples_nacional' ? 'IBS + CBS (líquido)' : (ehLPouLR || ehPFouRural) ? 'Tributos s/ consumo → IBS+CBS (líquido)' : 'Imposto Líquido (devido)'}
                       atual={consumoHoje}
                       nova={impostoIVALiquidoMensal}
-                      destaque={!ehLPouLR && regime !== 'simples_nacional'}
+                      destaque={!ehLPouLR && !ehPFouRural && regime !== 'simples_nacional'}
                     />
+                    {ehPFouRural && cargaPermanenteMensal > 0 && (
+                      <TabelaRow label="Demais tributos que permanecem (IRPF, INSS, IRPJ/CSLL…)" atual={cargaPermanenteMensal} nova={cargaPermanenteMensal} neutro />
+                    )}
+                    {ehPFouRural && (
+                      <TabelaRow label="Carga Total (conjunto de tributos)" atual={impostoAtualMensal} nova={cargaTotalReformaMensal} destaque />
+                    )}
                     {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
                       <TabelaRow label="IRPJ + CSLL (Lucro Presumido)" atual={0} nova={irpjCsllLPMensal} />
                     )}
@@ -372,7 +389,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 atual={aliquotaAtual}
                 nova={regime === 'simples_nacional' && irpjCsllLPMensal > 0
                   ? (impostoIVALiquidoMensal + irpjCsllLPMensal) / faturamentoMensal
-                  : ehLPouLR
+                  : (ehLPouLR || ehPFouRural)
                   ? (faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)
                   : aliquotaIVAEfetiva}
                 isPct
@@ -705,6 +722,23 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         </div>
       )}
 
+      {/* ── Transportador autônomo de carga PF — não contribuinte (Art. 26 VII e 169 LC 214/2025) ── */}
+      {naoContribuinteSetor && (
+        <div className="insight-info flex items-start gap-3">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-info flex-shrink-0 mt-0.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-ink">Não-Contribuinte — IBS/CBS = R$ 0 (Art. 26, VII, e Art. 169 LC 214/2025)</p>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              O transportador autônomo de carga pessoa física não é contribuinte do IBS e da CBS. Os clientes no regime regular
+              apropriam <strong>crédito presumido</strong> sobre o frete contratado, com percentuais divulgados anualmente.
+              Você pode <strong>optar pelo regime regular</strong> (art. 26 §1º, V): nesse caso paga IBS/CBS à alíquota cheia, com crédito das suas compras.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Imposto Seletivo — alerta (Anexo XVII LC 214/2025) ──────────── */}
       {alertaImpostoSeletivo && (
         <div className="insight-warning flex items-start gap-3">
@@ -1028,7 +1062,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 <div className="text-ink-muted text-xs mt-0.5">com não-cumulatividade e créditos de insumos</div>
               </div>
             </div>
-            {(perfilClientes === 'b2b' || perfilClientes === 'misto') && (
+            {(perfilClientes === 'b2b' || perfilClientes === 'misto') && !naoContribuinteSetor && (
               <div className="insight-info text-xs leading-relaxed">
                 <strong>Atenção — B2B como PF:</strong> autônomos sem CNPJ não geram crédito de IVA
                 para clientes empresariais. Se seus principais clientes forem empresas, considere se

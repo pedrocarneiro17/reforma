@@ -17,6 +17,7 @@ export interface Setor {
   tipo: TipoSetor
   fatorR?: boolean              // true = sujeito ao Fator R no Simples Nacional (Anexo III ou V)
   anexoFixo?: AnexoSimples      // anexo fixado por lei no Simples (ex.: advocacia → Anexo IV §5-C), sobrepõe inferência/seleção
+  naoContribuinte?: boolean         // true = não é contribuinte de IBS/CBS por lei (LC 214 art. 26) — ex.: transportador autônomo de carga PF (art. 169)
   anexoSimplesPadrao?: AnexoSimples // anexo usual da atividade quando o usuário não escolhe — ao contrário do anexoFixo, a seleção manual vence
   tipoReceitaSimples?: import('./data/tiposReceitaSimples').CodigoTipoReceitaSN // tpRBSN da receita interna típica (padrão 1); ex.: livros → 2 (sem IBS/CBS)
   duasVersoesMedicina?: boolean // medicina: alterna redução IBS/CBS entre 30% (serviço profissional) e 60% (serviço de saúde)
@@ -315,6 +316,8 @@ export interface ResultadoCalculo {
   alertaImpostoSeletivo: boolean    // true quando setor é sujeito ao IS (alíquota ainda a ser definida por lei ordinária)
   // Produtor rural regime especial (Arts. 164-168 LC 214/2025)
   produtorRuralNaoContribuinte: boolean  // true = não contribuinte (faturamento < R$3,6M ou regime produtor_rural)
+  naoContribuinteSetor: boolean          // true = o setor não é contribuinte de IBS/CBS por lei (ex.: transportador autônomo PF)
+  cargaPermanenteMensal: number          // profissional liberal / produtor rural: tributos que continuam após a reforma (não são ICMS/ISS); 0 nos demais regimes
   // Bens de capital usados (Arts. 406-407 LC 214/2025)
   ivaVendaImobilizado: number       // IBS/CBS estimado na venda de bens do ativo imobilizado (alíquota cheia — sem redução no período de transição)
   // Art. 108 — crédito integral e imediato de bens de capital

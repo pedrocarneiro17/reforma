@@ -1265,6 +1265,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const produtorRuralNaoContribuinte =
     (regime === 'produtor_rural' || setor.produtorRural === true) &&
     faturamentoAnual < LIMITE_PRODUTOR_RURAL_ANUAL
+  // Não contribuinte por natureza (LC 214 art. 26): transportador autônomo de carga PF (inciso VII,
+  // art. 169) — a tabela oficial da RFB traz o cClassTrib 410015 "Fornecimento por transportador
+  // autônomo não contribuinte". Pode optar pelo regime regular (art. 26 §1º V), não modelado.
+  const naoContribuinteSetor = setor.naoContribuinte === true
 
   // Taxa CBS típica de fornecedores Simples (Anexo I Faixa 3 — estimativa conservadora)
   // Real = DAS_efetivo × partilha_CBS; varia por anexo/faixa do fornecedor (desconhecido)
@@ -1358,7 +1362,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     - creditoZFMCbs
   )
   // Produtor rural não-contribuinte (Art. 164 §1º LC 214/2025): não recolhe IBS/CBS abaixo de R$3,6M/ano
-  if (produtorRuralNaoContribuinte) impostoIVALiquidoMensal = 0
+  if (produtorRuralNaoContribuinte || naoContribuinteSetor) impostoIVALiquidoMensal = 0
 
   const impostoIVALiquidoAnual = impostoIVALiquidoMensal * 12
   const cbsIVADualMensal = impostoIVALiquidoMensal * CBS_SHARE_IVA
@@ -1421,11 +1425,26 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // (impostoIVALiquidoMensal) só vale se a empresa optar por recolher IBS/CBS por fora — esse
   // cenário é tratado à parte (cenarioHibridoVerdadeiro / analiseSimplesHibrido).
   const ehSimplesOuMEI = regime === 'simples_nacional' || regime === 'mei'
+
+  // Componente ICMS/ISS da carga atual: base para aplicar a redução per Arts. 501/508
+  // LP/LR: usa ICMS/ISS já apurados (alíquotas informadas ou médias); demais regimes usam a estimativa
+  const icmsIssMensalEstimado = ehLPouLR
+    ? icmsAtualMensal + issAtualMensal
+    // Profissional liberal: o ISS de hoje já exclui o serviço exportado — a estimativa também
+    : estimarICMSISS(regime, setor.tipo,
+        regime === 'profissional_liberal' ? faturamentoMensal - exportacoesImunesMensal : faturamentoMensal,
+        insumosMensais, uf)
+  const baseFixaMensal = impostoAtualMensal - icmsIssMensalEstimado  // IRPJ/CSLL + PIS/COFINS (este swap→CBS neutro)
+
+  // Profissional liberal (PF) e produtor rural: o que NÃO é ICMS/ISS continua depois da reforma
+  // (IRPF, INSS, IRPJ/CSLL) e o IVA Dual entra no lugar do ISS/ICMS. A carga pós-reforma é, portanto,
+  // base fixa + IVA — o mesmo valor que a projeção atinge em 2033. Antes o destaque mostrava só o IVA,
+  // o que fazia, p.ex., um consultor PF "economizar 22%" quando a carga na verdade quase dobra.
   const cargaTotalReformaMensal = ehLPouLR
     ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
     : ehSimplesOuMEI
       ? impostoAtualMensal
-      : impostoIVALiquidoMensal
+      : baseFixaMensal + impostoIVALiquidoMensal
 
   // ── 3. Projeção de Transição por Ano ────────────────────────────────────────
   // Arts. 501 (ICMS) e 508 (ISS) LC 214/2025: redução de 10%/ano de 2029 a 2032 (base: 31/12/2028).
@@ -1441,15 +1460,6 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   //   (art. 443), deve ser repassado ao preço da licitação (art. 442 §2) e NÃO se aplica a
   //   Simples Nacional/MEI (art. 472 p.ú. III). Por isso não é modelado como economia do fornecedor.
 
-  // Componente ICMS/ISS da carga atual: base para aplicar a redução per Arts. 501/508
-  // LP/LR: usa ICMS/ISS já apurados (alíquotas informadas ou médias); demais regimes usam a estimativa
-  const icmsIssMensalEstimado = ehLPouLR
-    ? icmsAtualMensal + issAtualMensal
-    // Profissional liberal: o ISS de hoje já exclui o serviço exportado — a estimativa também
-    : estimarICMSISS(regime, setor.tipo,
-        regime === 'profissional_liberal' ? faturamentoMensal - exportacoesImunesMensal : faturamentoMensal,
-        insumosMensais, uf)
-  const baseFixaMensal = impostoAtualMensal - icmsIssMensalEstimado  // IRPJ/CSLL + PIS/COFINS (este swap→CBS neutro)
 
   // Decomposição da carga atual (LP sempre; LR quando há dados efetivos) — permite projetar
   // a transição pelo CONJUNTO de tributos, convergindo de impostoAtualMensal (2026) para
@@ -1684,6 +1694,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     creditoTranspAutonomo,
     alertaImpostoSeletivo,
     produtorRuralNaoContribuinte,
+    naoContribuinteSetor,
+    // Profissional liberal / produtor rural: tributos que NÃO são ICMS/ISS e permanecem (IRPF, INSS, IRPJ/CSLL…)
+    cargaPermanenteMensal: regime === 'profissional_liberal' || regime === 'produtor_rural' ? baseFixaMensal : 0,
     ivaVendaImobilizado,
     creditoCapitalImediato,
     creditoCapitalPISCOFINS,

@@ -224,6 +224,38 @@ describe('Exportações no regime regular (art. 79 LC 214)', () => {
   })
 })
 
+describe('Profissional liberal, produtor rural e não contribuintes', () => {
+  const pl = setor => calc('profissional_liberal', setor, 20000, { insumosMensais: 0 })
+  const ponto2033 = r => R(r.projecaoAnos.find(p => p.ano === 2033).impostoMensal)
+
+  it('o destaque "carga pós-reforma" coincide com o ponto de 2033 da projeção (IRPF/INSS continuam)', () => {
+    const r = pl('consultoria_empresarial')
+    // hoje: IRPF + ISS 3% + INSS = 6.835; depois: IRPF + INSS + IVA (5.300) = 11.535 — antes mostrava só o IVA (5.300)
+    assert.equal(R(r.impostoAtualMensal), 6835)
+    assert.equal(R(r.cargaTotalReformaMensal), 11535)
+    assert.equal(R(r.cargaTotalReformaMensal), ponto2033(r))
+    assert.equal(R(r.variacaoAbsolutaMensal), 4700)
+    const rural = calc('produtor_rural', 'produtor_rural_pj', 100000, { insumosMensais: 0 })
+    assert.equal(R(rural.cargaTotalReformaMensal), ponto2033(rural))
+    assert.ok(rural.cargaTotalReformaMensal > 0, 'produtor rural não-contribuinte ainda paga os tributos que não são ICMS/ISS')
+  })
+
+  it('transportador autônomo de carga PF não é contribuinte (LC 214 art. 26 VII; RFB cClassTrib 410015)', () => {
+    const setor = S('transportador_autonomo_pf')
+    assert.equal(setor.naoContribuinte, true)
+    assert.equal(setor.reducao, 0)  // os 40% do art. 286 são do transporte coletivo de passageiros
+    const r = pl('transportador_autonomo_pf')
+    assert.equal(r.naoContribuinteSetor, true)
+    assert.equal(R(r.impostoIVALiquidoMensal), 0)
+    assert.equal(R(r.cargaTotalReformaMensal), 6235)  // 6.835 de hoje − ISS de 3% (R$ 600); IRPF e INSS ficam
+    assert.equal(R(r.cargaTotalReformaMensal), ponto2033(r))
+  })
+
+  it('só o transportador é marcado como não contribuinte por natureza', () => {
+    assert.deepEqual(setoresMod.SETORES.filter(s => s.naoContribuinte).map(s => s.value), ['transportador_autonomo_pf'])
+  })
+})
+
 describe('Setores e enquadramento no Simples', () => {
   const todos = () => setoresMod.SETORES
 
