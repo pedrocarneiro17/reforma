@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { SETORES } from '../data/setores'
-import { atividadeSimplesDoSetor } from '../data/atividadesSimples'
+import { atividadeSimplesDoSetor, rotuloAnexoAtividade } from '../data/atividadesSimples'
 import { fmt, LIMITE_MEI_MENSAL, LIMITE_MEI_ANUAL, ICMS_ALIQUOTA_INTERNA, UF_NOMES } from '../engine/calculadora'
 import DadosMensais from './DadosMensais'
 import GrupoEmpresas from './GrupoEmpresas'
@@ -312,6 +312,11 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const atividadeSN = mostrarAnexoSimples && setorSelecionado
     ? atividadeSimplesDoSetor(setorSelecionado, setorSelecionado.anexoFixo ?? (anexoSimples || undefined))
     : null
+  // Anexo pelo qual o DAS é apurado (mesma ordem do motor: fixo → escolhido → padrão do setor → tipo)
+  const anexoApuracaoForm: import('../types').AnexoSimples | undefined = setorSelecionado
+    ? (setorSelecionado.anexoFixo ?? (anexoSimples || undefined) ?? setorSelecionado.anexoSimplesPadrao
+        ?? (setorSelecionado.tipo === 'comercio' ? 'I' : setorSelecionado.tipo === 'industria' ? 'II' : 'III'))
+    : undefined
   // ICMS só incide sobre circulação de mercadoria (comércio, indústria e misto). Serviços não têm ICMS.
   const circulaMercadoria = ['comercio', 'industria', 'misto'].includes(setorSelecionado?.tipo ?? '')
   const mostrarCapital = ['lucro_presumido', 'lucro_real', 'produtor_rural'].includes(dados.regime)
@@ -940,7 +945,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 </span>
                 <span className="block text-sm text-ink mt-0.5">
                   <strong className="num">{atividadeSN.codigo}</strong> — {atividadeSN.descricao}
-                  <span className="text-ink-muted"> · Anexo {atividadeSN.rotulo}</span>
+                  <span className="text-ink-muted"> · {rotuloAnexoAtividade(atividadeSN, anexoApuracaoForm)}</span>
                 </span>
                 {setorSelecionado?.anexoFixo && anexoSimples && anexoSimples !== setorSelecionado.anexoFixo && (
                   <span className="block text-xs text-warning mt-1">

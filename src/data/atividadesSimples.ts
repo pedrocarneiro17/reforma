@@ -100,3 +100,15 @@ export function atividadeSimplesDoSetor(setor: Setor, anexoEfetivo?: AnexoSimple
 export function anexosDaAtividade(a: AtividadeSimples): AnexoSimples[] {
   return [a.anexoSemFatorR, a.anexoComFatorR].filter((x): x is AnexoSimples => x != null)
 }
+
+/**
+ * Texto do anexo da atividade para exibição. Quando o anexo de apuração do DAS difere do rótulo da
+ * tabela oficial (indústria: cAtivSN 01 traz "Anexo I", mas o DAS sai do Anexo II — LC 123), avisa,
+ * para não parecer contradição.
+ */
+export function rotuloAnexoAtividade(a: AtividadeSimples, anexoApuracao?: AnexoSimples): string {
+  const base = `Anexo ${a.rotulo}`
+  return anexoApuracao && !anexosDaAtividade(a).includes(anexoApuracao)
+    ? `${base} na tabela oficial · DAS apurado pelo Anexo ${anexoApuracao}`
+    : base
+}

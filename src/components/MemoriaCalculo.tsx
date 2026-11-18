@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { fmt, labelTerceiros, calcularTodosOsRegimes } from '../engine/calculadora'
+import { rotuloAnexoAtividade } from '../data/atividadesSimples'
 import type { ResultadoCalculo, ResultadoComparativo } from '../types'
 
 /**
@@ -150,7 +151,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     )
     if (r.regime === 'simples_nacional') return (
       <Bloco key={r.regime} numero={n} titulo={`Simples Nacional${marca}`} base={`DAS unificado${r.anexoSimples ? ` · Anexo ${r.anexoSimples}` : ''} · LC 123/2006`}>
-        {r.atividadeSimples && <Linha label="Atividade nas notas fiscais (cAtivSN)" formula={`${r.atividadeSimples.descricao} · Anexo ${r.atividadeSimples.rotulo}`} valor={r.atividadeSimples.codigo} refLegal="Catálogo oficial NT 2026.005 · a partir de 2027" />}
+        {r.atividadeSimples && <Linha label="Atividade nas notas fiscais (cAtivSN)" formula={`${r.atividadeSimples.descricao} · ${rotuloAnexoAtividade(r.atividadeSimples, r.anexoSimples)}`} valor={r.atividadeSimples.codigo} refLegal="Catálogo oficial NT 2026.005 · a partir de 2027" />}
         <Linha label="DAS mensal" formula={`${moeda(fat)} × ${pct(r.aliquotaAtual)}`} valor={r.impostoAtualMensal} refLegal="Alíquota efetiva da faixa de faturamento (RBT12)" />
         {(() => {
           // Receita interna: a exportada não carrega CBS/IBS no DAS (tpRBSN 3/4)

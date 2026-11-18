@@ -39,6 +39,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     projecaoAnos, analiseSimplesHibrido, alertaMEI, analiseGrupoSimples,
     analiseHolding, nomePrincipal, analiseICMS,
     anexoSimples, cbsSimplesEfetivo, ibsSimplesEfetivo, cenarioHibridoVerdadeiro, baseCalculoEfetiva,
+    receitaConsumoSimplesMensal,
     irpjAdicionalMensal, inssAutonomoMensal,
     pctFornecedoresSimples, creditoPerdidoFornecedorSimples,
     analiseProlabore,
@@ -65,6 +66,13 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
   const isPF  = regime === 'profissional_liberal'
   // Simples/MEI permanecendo no regime único: DAS total inalterado pela reforma (Anexos I–V LC 214/2025)
   const ehSimplesOuMEI = regime === 'simples_nacional' || isMEI
+  // Simples: a parcela de CBS/IBS do DAS só incide sobre a receita interna (exportação e receitas
+  // tpRBSN 2, como livros, ficam fora). cbsSN/ibsSN = parcelas como % da RECEITA TOTAL, para que
+  // CBS + IBS + demais tributos somem a alíquota efetiva do DAS. cbsSimplesEfetivo/ibsSimplesEfetivo
+  // seguem sendo a alíquota por nota interna (o que o cliente B2B credita).
+  const fracConsumoSN = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
+  const cbsSN = (cbsSimplesEfetivo ?? 0) * fracConsumoSN
+  const ibsSN = (ibsSimplesEfetivo ?? 0) * fracConsumoSN
 
   const cargaAumentou = variacaoAbsolutaMensal > 0
   const cargaReducao = variacaoAbsolutaMensal < 0
@@ -169,8 +177,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
             <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · {fmt.moeda(impostoAtualAnual)}/ano</span>
             <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed space-y-0.5">
-              <div>CBS: <strong className="num">{fmt.pct(cbsSimplesEfetivo)}</strong> · IBS: <strong className="num">{fmt.pct(ibsSimplesEfetivo)}</strong></div>
-              <div>IRPJ+CSLL+CPP: <strong className="num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo))}</strong></div>
+              <div>CBS: <strong className="num">{fmt.pct(cbsSN)}</strong> · IBS: <strong className="num">{fmt.pct(ibsSN)}</strong></div>
+              <div>IRPJ+CSLL+CPP{fracConsumoSN < 1 ? '+IPI' : ''}: <strong className="num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN))}</strong></div>
             </div>
           </div>
 
@@ -249,8 +257,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               {isMEI
                 ? <>DAS fixo inalterado — o valor da guia não depende do IVA Dual</>
                 : ehSimplesOuMEI
-                ? <>DAS inalterado · CBS <strong className="text-ink num">{fmt.pct(cbsSimplesEfetivo ?? 0)}</strong>
-                    {' '}+ IBS <strong className="text-ink num">{fmt.pct(ibsSimplesEfetivo ?? 0)}</strong> dentro da guia
+                ? <>DAS inalterado · CBS <strong className="text-ink num">{fmt.pct(cbsSN)}</strong>
+                    {' '}+ IBS <strong className="text-ink num">{fmt.pct(ibsSN)}</strong> dentro da guia
                     {cenarioHibridoVerdadeiro && <> · por fora: <strong className="text-ink num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</strong></>}
                   </>
                 : ehLPouLR
@@ -427,18 +435,18 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                   </tr>
                   <tr>
                     <td className="py-1.5 text-ink-secondary pl-3">→ CBS (PIS/COFINS)</td>
-                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * cbsSimplesEfetivo)}</td>
-                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(cbsSimplesEfetivo)}</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * cbsSN)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(cbsSN)}</td>
                   </tr>
                   <tr>
                     <td className="py-1.5 text-ink-secondary pl-3">→ IBS (ICMS/ISS)</td>
-                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * ibsSimplesEfetivo)}</td>
-                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(ibsSimplesEfetivo)}</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(faturamentoMensal * ibsSN)}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(ibsSN)}</td>
                   </tr>
                   <tr>
-                    <td className="py-1.5 text-ink-secondary pl-3">→ IRPJ + CSLL + CPP</td>
-                    <td className="py-1.5 text-right num">{fmt.moeda(Math.max(0, impostoAtualMensal - faturamentoMensal * (cbsSimplesEfetivo + ibsSimplesEfetivo)))}</td>
-                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSimplesEfetivo - ibsSimplesEfetivo))}</td>
+                    <td className="py-1.5 text-ink-secondary pl-3">→ IRPJ + CSLL + CPP{fracConsumoSN < 1 ? ' (+ IPI)' : ''}</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(Math.max(0, impostoAtualMensal - faturamentoMensal * (cbsSN + ibsSN)))}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN))}</td>
                   </tr>
                   <tr className="border-t-2 border-border font-semibold">
                     <td className="pt-2 text-ink-primary">Carga Total</td>
@@ -2250,7 +2258,7 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
     faturamentoMensal, insumosMensais, exportacoesMensais,
     aliquotaIVABruta, impostoIVABrutoMensal, creditoInsumosMensal,
     impostoIVALiquidoMensal, perfilClientes, setor, regime,
-    cbsSimplesEfetivo, anexoSimples, pctFornecedoresSimples,
+    cbsSimplesEfetivo, anexoSimples, pctFornecedoresSimples, receitaConsumoSimplesMensal,
   } = resultados
 
   // Crédito bruto sobre insumos (sem ajuste de fornecedores Simples)
@@ -2265,8 +2273,9 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
   const saldoCredor    = Math.max(0, creditoReal - impostoIVABrutoMensal)
 
   // CBS gerada para clientes B2B
+  // (Simples: só a receita interna gera crédito — exportação e livros não carregam CBS no DAS)
   const cbsParaClientes = regime === 'simples_nacional' && cbsSimplesEfetivo != null
-    ? faturamentoMensal * cbsSimplesEfetivo
+    ? receitaConsumoSimplesMensal * cbsSimplesEfetivo
     : impostoIVABrutoMensal  // regime pleno: crédito cheio
 
   // Taxa de aproveitamento de crédito

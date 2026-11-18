@@ -238,6 +238,13 @@ describe('Setores e enquadramento no Simples', () => {
     assert.equal(catalogo.getAtividadeSimples('90').naoTributavel, true)
   })
 
+  it('rótulo do anexo explica quando o DAS é apurado por outro anexo (indústria: cAtivSN 01 diz "I", DAS pelo II)', () => {
+    const a = catalogo.getAtividadeSimples('01')
+    assert.equal(catalogo.rotuloAnexoAtividade(a, 'I'), 'Anexo I')
+    assert.match(catalogo.rotuloAnexoAtividade(a, 'II'), /DAS apurado pelo Anexo II/)
+    assert.equal(catalogo.rotuloAnexoAtividade(catalogo.getAtividadeSimples('09'), 'V'), 'Anexo III ou V')
+  })
+
   it('vedações: energia (distribuição e geração), produtor rural PF; instalação solar é permitida', () => {
     for (const v of ['energia_residencial', 'geracao_energia', 'produtor_rural_pf']) assert.equal(S(v).vedadoSimples, true, v)
     assert.notEqual(S('energia_renovavel').vedadoSimples, true)
