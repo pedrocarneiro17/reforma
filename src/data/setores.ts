@@ -171,6 +171,8 @@ export const SETORES: Setor[] = [
     grupo: 'Isenção Total — Alíquota 0%',
     reducao: 1.00,  // Art. 10 VI Dec. 12.955: IMUNE — radiodifusão nas modalidades de recepção livre e gratuita
     tipo: 'servico',
+    // Simples: tpRBSN 2 (RFB: cClassTrib 410010 — receita interna sem cálculo de IBS/CBS, NT 2026.005)
+    tipoReceitaSimples: 2,
   },
   {
     value: 'livros_periodicos',
@@ -465,6 +467,10 @@ export const SETORES: Setor[] = [
     reducao: 1.00,  // Combustíveis: regime monofásico (Art. 259 Dec. 12.955/2026) — CBS/IBS recolhida pelo produtor/distribuidor; o posto não cobra CBS/IBS na saída
     tipo: 'comercio',
     monofasico: true,
+    // Simples: tpRBSN 2 (RFB: cClassTrib 620006 "tributação monofásica sobre combustíveis cobrada
+    // anteriormente") — a revenda não carrega CBS/IBS no DAS; hoje equivale a segregar PIS/COFINS
+    // monofásico e ICMS-ST no PGDAS-D.
+    tipoReceitaSimples: 2,
   },
   {
     value: 'industria_transformacao',

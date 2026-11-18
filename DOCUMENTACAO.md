@@ -137,7 +137,7 @@ Recolhimento unificado via DAS. Alíquota varia pelo **Anexo** (tipo de atividad
 - **Anexo por atividade.** Pode ser fixado por lei (advocacia, limpeza e vigilância → IV), padrão do setor e editável (construção → IV; reformas podem ir ao III) ou depender do **Fator R** (folha ÷ faturamento ≥ 28% → Anexo III, senão V).
 - **Anexo IV.** A CPP patronal (20%) é paga fora do DAS, sobre folha e pró-labore.
 - **Catálogo de atividades (`cAtivSN`).** 15 códigos (01 a 14 e 90) da NT 2026.005 em `src/data/atividadesSimples.ts`. Cada setor mostra o código que irá na nota fiscal a partir de 2027.
-- **Tipos de receita (`tpRBSN`)** em `src/data/tiposReceitaSimples.ts`. Exportação direta (tipo 3) não paga a parcela de tributos sobre consumo do DAS; exportação indireta (tipo 4) é calculada e suspensa; livros, jornais e periódicos (tipo 2) não pagam CBS/IBS. Na indústria (Anexo II), a exportação também não paga o IPI. IRPJ, CSLL e CPP continuam. Nada disso se aplica quando a alíquota vem do PGDAS-D, que já separa as receitas.
+- **Tipos de receita (`tpRBSN`)** em `src/data/tiposReceitaSimples.ts`. Exportação direta (tipo 3) não paga a parcela de tributos sobre consumo do DAS; exportação indireta (tipo 4) é calculada e suspensa; livros, jornais e periódicos, radiodifusão aberta e combustíveis já tributados na etapa monofásica (tipo 2) não pagam CBS/IBS. Na indústria (Anexo II), a exportação também não paga o IPI. IRPJ, CSLL e CPP continuam. Nada disso se aplica quando a alíquota vem do PGDAS-D, que já separa as receitas.
 - **Vedações.** Atividades impedidas de optar pelo Simples (LC 123, art. 17 — por exemplo geração, distribuição e comercialização de energia elétrica, serviços financeiros) e o produtor rural pessoa física aparecem como inaplicáveis.
 
 ---

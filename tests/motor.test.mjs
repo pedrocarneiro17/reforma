@@ -183,13 +183,34 @@ describe('Simulador de crescimento', () => {
   })
 })
 
-describe('Livros, jornais e periódicos (tpRBSN 2)', () => {
-  it('não pagam a parcela de tributos sobre consumo do DAS', () => {
+describe('Receitas sem CBS/IBS no Simples (tpRBSN 2)', () => {
+  it('livros, jornais e periódicos não pagam a parcela de tributos sobre consumo do DAS', () => {
     const r = calc('simples_nacional', 'livros_periodicos', 50000, { perfilClientes: 'b2c' })
     perto(R(r.impostoAtualMensal), 1833)
     perto(R(r.receitaSemIBSCBSSimples.reducaoDASMensal), 1762)
     assert.equal(r.receitaConsumoSimplesMensal, 0)
     assert.equal(R(novaPorAno(r, 2033)), 0)
+  })
+
+  it('radiodifusão aberta (410010) e combustíveis com monofasia anterior (620006) seguem a mesma regra', () => {
+    for (const v of ['radiodifusao_aberta', 'postos_combustivel']) {
+      const com = calc('simples_nacional', v, 80000, { perfilClientes: 'b2c' })
+      const sem = eng.calcularTodosOsCenarios({
+        regime: 'simples_nacional', setor: { ...S(v), tipoReceitaSimples: undefined }, faturamentoMensal: 80000,
+        insumosMensais: 16000, perfilClientes: 'b2c', uf: 'SP',
+      })
+      const parcela = 80000 * (sem.cbsSimplesEfetivo + sem.ibsSimplesEfetivo)
+      assert.ok(parcela > 0, v)
+      perto(R(com.impostoAtualMensal), R(sem.impostoAtualMensal - parcela), `${v}: DAS`)
+      assert.equal(com.receitaConsumoSimplesMensal, 0, v)
+    }
+  })
+
+  it('só os setores da tabela oficial (tipo 2) carregam o tipo: livros, radiodifusão e combustíveis', () => {
+    assert.deepEqual(
+      setoresMod.SETORES.filter(s => s.tipoReceitaSimples === 2).map(s => s.value).sort(),
+      ['livros_periodicos', 'postos_combustivel', 'radiodifusao_aberta'],
+    )
   })
 })
 
