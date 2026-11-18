@@ -172,6 +172,17 @@ describe('Exportações no Simples (tpRBSN 3 e 4)', () => {
   })
 })
 
+describe('Simulador de crescimento', () => {
+  it('escala as exportações junto com o faturamento (mantém a participação na receita)', () => {
+    const dados = calc('simples_nacional', 'industria_transformacao', 100000, { insumosMensais: 30000, exportacoesMensais: 40000 })
+    const [dobro, menos40] = eng.calcularCurvaCrescimento(dados, [100, -40])
+    const direto = (fat, ins, exp) =>
+      calc('simples_nacional', 'industria_transformacao', fat, { insumosMensais: ins, exportacoesMensais: exp })
+    perto(R(dobro.impostoAtualMensal), R(direto(200000, 60000, 80000).impostoAtualMensal), '+100%')
+    perto(R(menos40.impostoAtualMensal), R(direto(60000, 18000, 24000).impostoAtualMensal), '−40%')
+  })
+})
+
 describe('Livros, jornais e periódicos (tpRBSN 2)', () => {
   it('não pagam a parcela de tributos sobre consumo do DAS', () => {
     const r = calc('simples_nacional', 'livros_periodicos', 50000, { perfilClientes: 'b2c' })

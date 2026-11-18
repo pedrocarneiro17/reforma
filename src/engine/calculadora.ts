@@ -1951,6 +1951,8 @@ export function calcularCurvaCrescimento(dados: DadosEntrada, percentuais: numbe
       ...dados,
       faturamentoMensal: fatAjustado,
       insumosMensais: insAjustado,
+      // exportações crescem junto com o faturamento (mantém a participação na receita)
+      exportacoesMensais: (dados.exportacoesMensais ?? 0) * fator,
       folhaMensal: dados.folhaMensal ?? 0,  // folha NÃO escala — mantém valor absoluto
       aliquotaAtualOverride: null,
       dadosMensais: null,
