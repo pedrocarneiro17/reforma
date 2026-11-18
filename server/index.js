@@ -37,14 +37,21 @@ async function criarAdminSeNecessario() {
   const { rows } = await pool.query("SELECT id FROM usuarios WHERE role = 'admin' LIMIT 1")
   if (rows.length) return
 
-  const senha = process.env.ADMIN_PASSWORD || 'admin123'
+  // Em produção não existe senha padrão: sem ADMIN_PASSWORD o admin não é criado (a senha 'admin123'
+  // é pública no código). A senha nunca vai para o log — o log do servidor é lido por quem tem acesso à plataforma.
+  const senhaEnv = process.env.ADMIN_PASSWORD
+  if (!senhaEnv && process.env.NODE_ENV === 'production') {
+    console.error('⚠️  ADMIN_PASSWORD não definida — admin NÃO criado. Defina a variável e reinicie.')
+    return
+  }
+  const senha = senhaEnv || 'admin123'
   const hash = await bcrypt.hash(senha, 10)
   const user = process.env.ADMIN_USERNAME || 'admin'
   await pool.query(
     "INSERT INTO usuarios (username, password, role) VALUES ($1, $2, 'admin')",
     [user, hash]
   )
-  console.log(`✓ Admin criado: ${user} / ${senha}`)
+  console.log(`✓ Admin criado: ${user}${senhaEnv ? '' : ' (senha padrão de desenvolvimento)'}`)
 }
 
 const PORT = process.env.API_PORT || process.env.PORT || 3001

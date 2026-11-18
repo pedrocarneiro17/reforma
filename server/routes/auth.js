@@ -6,8 +6,12 @@ import pool from '../db.js'
 const router = Router()
 
 router.post('/login', async (req, res) => {
-  const { username, password } = req.body
+  const { username, password } = req.body ?? {}
   if (!username || !password) return res.status(400).json({ erro: 'Usuário e senha obrigatórios' })
+  // Só strings: outros tipos (número, objeto) fariam o bcrypt lançar erro e cair no fallback abaixo
+  if (typeof username !== 'string' || typeof password !== 'string') {
+    return res.status(400).json({ erro: 'Usuário e senha inválidos' })
+  }
 
   let user
   try {
@@ -17,6 +21,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ erro: 'Usuário ou senha incorretos' })
     }
   } catch (_dbErr) {
+    // Em produção, banco fora do ar = serviço indisponível. O fallback abaixo é só de
+    // DESENVOLVIMENTO: sem esta trava, qualquer falha neste bloco (banco, bcrypt...) aceitava as
+    // credenciais do .env — ou admin/admin123 se ausentes — e emitia um token de admin (id 0).
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ erro: 'Serviço temporariamente indisponível. Tente novamente.' })
+    }
     // Fallback dev: autentica com credenciais do .env quando o banco está indisponível
     const adminUser = process.env.ADMIN_USERNAME || 'admin'
     const adminPass = process.env.ADMIN_PASSWORD || 'admin123'

@@ -33,6 +33,11 @@ router.post('/autorizar', async (req, res) => {
     )
     res.json({ autorizado: true, usadas: updated[0].simulacoes_usadas, limite: updated[0].simulacoes_limite })
   } catch (_dbErr) {
+    // Em produção NÃO falha aberto: com o banco fora do ar, autorizar sempre anularia o limite de
+    // simulações de qualquer usuário com token ainda válido (8h).
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(503).json({ autorizado: false, erro: 'Serviço temporariamente indisponível. Tente novamente.' })
+    }
     // Fallback dev: sem banco, autoriza sempre
     res.json({ autorizado: true, usadas: 0, limite: null })
   }
