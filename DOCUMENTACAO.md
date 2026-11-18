@@ -280,7 +280,7 @@ A lista completa está em `src/data/setores.ts`. Cada setor traz:
 4. **Exportações:** são imunes de IBS/CBS (art. 79 da LC 214) com manutenção dos créditos. No Simples, a receita exportada não paga a parcela de tributos sobre consumo do DAS (seção 6.4). Quando a alíquota vem do PGDAS-D, o simulador assume que as receitas já foram separadas.
 5. O simulador considera **folha de pagamento** (Fator R, CPP do Anexo IV, contribuição previdenciária no Presumido e no Real) e alguns regimes específicos (imóveis, Zona Franca, regime automotivo). Não cobre benefícios fiscais regionais, nem todos os regimes especiais de setores regulados.
 6. **Transportador autônomo de carga (PF):** tratado como **não contribuinte** de IBS/CBS (LC 214, art. 26, VII, e art. 169; o cClassTrib oficial 410015 confirma): IVA zero, e os clientes contribuintes apropriam crédito presumido. A opção pelo regime regular (art. 26 §1º, V) não é modelada.
-7. **Teto do ISS no Simples:** modelado no regime atual e na transição. Os percentuais do regime atual vêm da redação da LC 155/2016 (publicada no Planalto, texto não oficial); não foi comparada com um texto consolidado de 2026 que considere alterações posteriores. Vale conferir com um contador antes de usar os números em parecer.
+7. **Teto do ISS no Simples:** modelado no regime atual e na transição. Os percentuais do teto do regime atual são consequência aritmética da regra do art. 18 §1º-B, I, e da tabela de partilha (verificado em teste). A tabela de partilha e as alíquotas nominais vêm da redação da LC 155/2016 (texto do Planalto, que não é o publicado no Diário Oficial) e coincidem com a tabela de 2033 da LC 214. Não foram comparadas com um texto consolidado de 2026 que considere alterações posteriores: veja a seção 14 para conferir.
 8. **Limite do Simples para exportadores:** o simulador usa um único limite de R$ 4,8 milhões, sem a regra de limite separado para a receita de exportação.
 6. **Consulte sempre um contador** para decisões fiscais — este simulador é educacional.
 
@@ -315,3 +315,12 @@ npm test
 ```
 
 Os testes (`tests/motor.test.mjs`, runner nativo do Node; o Vite, já instalado, carrega os módulos TypeScript do motor, sem dependência extra) cobrem o motor de cálculo: regressões dos casos conferidos à mão contra a lei (DAS com exportação, teto do ISS, 6ª faixa, livros, exportações no Lucro Presumido e Real) e invariantes dos dados (cada linha da partilha soma 100%; todo setor elegível ao Simples tem um `cAtivSN` coerente com o anexo do cálculo). Quando a lei mudar: regenerar a partilha (`python -I scripts/gerar_partilha_simples.py`) e rodar os testes.
+
+---
+
+## 14. Como conferir os números sem um contador
+
+1. **Compare com um PGDAS-D real (a conferência mais forte).** Pegue o extrato do PGDAS-D de uma empresa do Simples e compare: o DAS do extrato deve bater com o do simulador (o app importa o PDF do extrato). Na 5ª faixa dos Anexos III e IV, com alíquota efetiva acima de 14,925% (III) ou 12,5% (IV), o ISS do extrato deve ser **5% da receita**, e o restante vai para os tributos federais.
+2. **Leia o texto da lei.** A LC 123/2006 está consolidada em `planalto.gov.br/ccivil_03/leis/lcp/lcp123.htm` (art. 18 §1º-B; os Anexos I a V ficam no fim da página) e a LC 155/2016, que reescreveu os anexos, em `planalto.gov.br/ccivil_03/leis/lcp/Lcp155.htm`. O Portal do Simples Nacional da Receita (`www8.receita.fazenda.gov.br/simplesnacional`) traz a legislação e a Resolução CGSN 140/2018, que é o regulamento do regime.
+3. **A aritmética já está nos testes.** O teto do ISS e seus percentuais saem da regra da lei e da tabela de partilha, e `npm test` confere isso, além de cada linha das tabelas dos cinco anexos contra a LC 155 e a LC 214.
+4. **A LC 214 está no projeto.** O texto dela e do Decreto 12.955 fica em `.claude/skills/reforma-tributaria/`, e a tabela de partilha de 2033 da LC 214 é idêntica à de hoje (LC 123).

@@ -171,6 +171,22 @@ describe('Teto do ISS no regime atual (LC 123 art. 18 §1º-B, I)', () => {
     perto2(v.ibsSimplesEfetivo, (0.23 - 62100 / 3_000_000) * 0.235, 1e-9, 'V')
   })
 
+  it('limiar e percentuais do teto são consequência da regra da lei + tabela (sem depender de nota de rodapé)', () => {
+    // Regra (art. 18 §1º-B, I): o ISS não passa de 5% da receita e a diferença vai, "de forma proporcional",
+    // aos tributos federais da mesma faixa. Logo, na 5ª faixa:
+    //   limiar = 5% ÷ participação do ISS na faixa; multiplicador de cada federal = sua participação ÷ soma dos federais.
+    // III: ISS 33,5% → limiar 14,92537%; federais 66,5% → PIS/COFINS 15,6 ÷ 66,5 = 23,46%
+    // IV:  ISS 40%   → limiar 12,5%;     federais 60%   → PIS/COFINS 22 ÷ 60    = 36,67%
+    for (const anexo of ['III', 'IV']) {
+      const iss = eng.PARTILHA_IBS_SIMPLES[anexo][4] * 100
+      const pisCofins = eng.PARTILHA_CBS_SIMPLES[anexo][4] * 100
+      const teto = partilha.TETO_ISS_ATUAL[anexo]
+      perto2(teto.limiar, 5 / (iss / 100), 1e-4, `limiar ${anexo}`)
+      perto2(teto.pisCofins, (pisCofins / (100 - iss)) * 100, 0.01, `PIS/COFINS ${anexo}`)
+      assert.equal(teto.issMax, 5)
+    }
+  })
+
   it('é contínuo no limiar (sem salto na troca de regra)', () => {
     // limiar do Anexo III: RBT12 ≈ R$ 2.068.280 (alíquota efetiva 14,92537%)
     const a = eng.getIBSSimples('III', 2_068_000), b = eng.getIBSSimples('III', 2_068_600)
