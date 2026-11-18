@@ -97,9 +97,20 @@ describe('Partilha oficial do DAS (LC 214, Anexos I–V)', () => {
     assert.equal(linhas, 210)
   })
 
-  it('tabela de 2033 coincide com PIS/COFINS e ICMS/ISS de hoje (LC 123)', () => {
-    assert.deepEqual(eng.PARTILHA_CBS_SIMPLES.III, [0.156, 0.171, 0.166, 0.166, 0.156, 0.195])
-    assert.deepEqual(eng.PARTILHA_IBS_SIMPLES.V, [0.14, 0.17, 0.19, 0.21, 0.235, 0])
+  it('tabela de 2033 coincide com PIS/COFINS e ICMS/ISS de hoje (LC 123, redação da LC 155/2016)', () => {
+    // Anexos I–V da LC 155/2016 (vigência 1º/1/2018), conferidos no Planalto: COFINS + PIS/Pasep e ICMS/ISS por faixa
+    const LC155 = {
+      I:   { cons: [15.5, 15.5, 15.5, 15.5, 15.5, 34.4],      iss: [34, 34, 33.5, 33.5, 33.5, 0] },
+      II:  { cons: [14, 14, 14, 14, 14, 25.5],                iss: [32, 32, 32, 32, 32, 0] },
+      III: { cons: [15.6, 17.1, 16.6, 16.6, 15.6, 19.5],      iss: [33.5, 32, 32.5, 32.5, 33.5, 0] },
+      IV:  { cons: [21.5, 25, 24, 23, 22, 25],                iss: [44.5, 40, 40, 40, 40, 0] },
+      V:   { cons: [17.15, 17.15, 18.15, 19.15, 17.15, 20],   iss: [14, 17, 19, 21, 23.5, 0] },
+    }
+    for (const [anexo, t] of Object.entries(LC155)) {
+      assert.deepEqual(eng.PARTILHA_CBS_SIMPLES[anexo], t.cons.map(x => x / 100), `PIS/COFINS ${anexo}`)
+      assert.deepEqual(eng.PARTILHA_IBS_SIMPLES[anexo], t.iss.map(x => x / 100), `ICMS/ISS ${anexo}`)
+    }
+    assert.deepEqual(partilha.PARTILHA_SIMPLES_LC214.II[2033].map(l => l.IPI ?? 0), [7.5, 7.5, 7.5, 7.5, 7.5, 35])
   })
 
   it('transição: IBS cresce 10%/ano do ICMS/ISS e CBS+IBS dentro do DAS acompanha', () => {
@@ -125,6 +136,52 @@ describe('Partilha oficial do DAS (LC 214, Anexos I–V)', () => {
   it('abaixo do limiar o teto não se aplica', () => {
     const r = calc('simples_nacional', 'tecnologia_ti', 160000, { insumosMensais: 0, folhaMensal: 60000 })
     perto(R(novaPorAno(r, 2027)), 3608)
+  })
+})
+
+describe('Teto do ISS no regime atual (LC 123 art. 18 §1º-B, I)', () => {
+  const perto2 = (a, b, tol, msg) => assert.ok(Math.abs(a - b) < tol, `${msg ?? ''} esperado ${b}, veio ${a}`)
+
+  it('Anexo III, 5ª faixa acima de 14,925%: ISS fixo em 5%, o excedente vai a COFINS/PIS (23,46%)', () => {
+    // RBT12 R$ 3 mi: alíquota efetiva = 21% − 125.640/3.000.000 = 16,812%
+    const r = calc('simples_nacional', 'tecnologia_ti', 250000, { insumosMensais: 0, folhaMensal: 100000 })
+    assert.equal(r.anexoSimples, 'III')
+    const eff = 0.21 - 125640 / 3_000_000
+    perto2(r.ibsSimplesEfetivo, 0.05, 1e-9, 'ISS')
+    perto2(r.cbsSimplesEfetivo, (eff - 0.05) * 0.2346, 1e-9, 'PIS/COFINS')
+    perto(R(r.impostoAtualMensal), R(250000 * eff), 'o DAS total não muda — só a repartição')
+  })
+
+  it('Anexo IV, 5ª faixa acima de 12,5%: ISS fixo em 5%, o excedente vai a COFINS/PIS (36,67%)', () => {
+    const r = calc('simples_nacional', 'advocacia', 250000, { insumosMensais: 0, folhaMensal: 100000 })
+    assert.equal(r.anexoSimples, 'IV')
+    const eff = 0.22 - 183780 / 3_000_000
+    perto2(r.ibsSimplesEfetivo, 0.05, 1e-9, 'ISS')
+    perto2(r.cbsSimplesEfetivo, (eff - 0.05) * 0.3667, 1e-9, 'PIS/COFINS')
+  })
+
+  it('sem teto: abaixo do limiar e nos Anexos I, II e V', () => {
+    // Anexo III com alíquota efetiva de 14,456% (< 14,925%): partilha normal da tabela
+    const abaixo = calc('simples_nacional', 'tecnologia_ti', 160000, { insumosMensais: 0, folhaMensal: 60000 })
+    const effA = 0.21 - 125640 / 1_920_000
+    perto2(abaixo.ibsSimplesEfetivo, effA * 0.335, 1e-9, 'III abaixo do limiar')
+    // Anexo V não tem a nota: o ISS de 23,5% nunca passa de 5% (0,2093 × 23,5% = 4,92%)
+    const v = calc('simples_nacional', 'consultoria_empresarial', 250000, { insumosMensais: 0, folhaMensal: 10000 })
+    assert.equal(v.anexoSimples, 'V')
+    perto2(v.ibsSimplesEfetivo, (0.23 - 62100 / 3_000_000) * 0.235, 1e-9, 'V')
+  })
+
+  it('é contínuo no limiar (sem salto na troca de regra)', () => {
+    // limiar do Anexo III: RBT12 ≈ R$ 2.068.280 (alíquota efetiva 14,92537%)
+    const a = eng.getIBSSimples('III', 2_068_000), b = eng.getIBSSimples('III', 2_068_600)
+    const c = eng.getCBSSimples('III', 2_068_000), d = eng.getCBSSimples('III', 2_068_600)
+    perto2(a, b, 5e-5, 'ISS')
+    perto2(c, d, 5e-5, 'PIS/COFINS')
+  })
+
+  it('a exportação usa a partilha com o teto', () => {
+    const r = calc('simples_nacional', 'tecnologia_ti', 250000, { insumosMensais: 0, folhaMensal: 100000, exportacoesMensais: 50000 })
+    perto(R(r.exportacaoSimples.reducaoDASMensal), R(50000 * (r.cbsSimplesEfetivo + r.ibsSimplesEfetivo)))
   })
 })
 

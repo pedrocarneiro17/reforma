@@ -298,11 +298,14 @@ export function getAliquotaDAS(anexo: import('../types').AnexoSimples, faturamen
   return Math.max(0, (faturamentoAnual * nominal - deducao) / faturamentoAnual)
 }
 
-/** CBS componente do DAS = DAS_efetivo × partilha_CBS(anexo, faixa) */
+/**
+ * CBS (hoje PIS/COFINS) componente do DAS = DAS_efetivo × partilha. Na 5ª faixa dos Anexos III e IV,
+ * acima do limiar, vale o teto do ISS de 5% (LC 123 art. 18 §1º-B, I): o excedente vai aos federais.
+ */
 export function getCBSSimples(anexo: import('../types').AnexoSimples, faturamentoAnual: number): number {
   const das = getAliquotaDAS(anexo, faturamentoAnual)
   const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
-  return das * PARTILHA_CBS_SIMPLES[anexo][faixaIdx]
+  return das * partilhaConsumoSimples(anexo, faixaIdx, 2026, das).pisCofins
 }
 
 /**
@@ -316,11 +319,11 @@ export function getIPISimples(anexo: import('../types').AnexoSimples, faturament
   return das * (PARTILHA_SIMPLES_LC214[anexo][2033][faixaIdx].IPI ?? 0) / 100
 }
 
-/** IBS (ICMS/ISS) componente do DAS = DAS_efetivo × partilha_IBS(anexo, faixa) */
+/** IBS (hoje ICMS/ISS) componente do DAS = DAS_efetivo × partilha, com o teto do ISS de 5% (ver getCBSSimples) */
 export function getIBSSimples(anexo: import('../types').AnexoSimples, faturamentoAnual: number): number {
   const das = getAliquotaDAS(anexo, faturamentoAnual)
   const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
-  return das * PARTILHA_IBS_SIMPLES[anexo][faixaIdx]
+  return das * partilhaConsumoSimples(anexo, faixaIdx, 2026, das).icmsIss
 }
 
 /** Fallback: infere anexo padrão pelo tipo de setor quando usuário não informou */

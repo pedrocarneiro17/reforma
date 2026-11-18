@@ -171,6 +171,20 @@ export interface LimiteIssSN {
 export const LIMITE_ISS_5A_FAIXA: Partial<Record<AnexoSimples, Record<number, LimiteIssSN>>> = {
 {LIMITES}}
 
+/**
+ * Teto do ISS no regime ATUAL (até 2026): LC 123/2006 art. 18 §1º-B, I, e notas da 5ª faixa dos Anexos III
+ * e IV na redação da LC 155/2016 (vigência 1º/1/2018). Acima do limiar de alíquota efetiva, o ISS fica em
+ * `issMax` (% da receita) e o excedente (alíquota efetiva − issMax) vai para os tributos federais;
+ * `pisCofins` é a soma dos multiplicadores de COFINS e PIS/Pasep (III: 19,28 + 4,18; IV: 30,13 + 6,54).
+ * Conferência: coincide com CBS + IBS dos multiplicadores de 2027–2028 da LC 214 (III: 23,20 + 0,26;
+ * IV: 36,27 + 0,40). Não vem do texto da LC 214 (que só traz as notas a partir de 2027): é mantido aqui,
+ * no gerador, e não deve ser editado à mão no arquivo gerado. Anexos I, II e V não têm essa nota.
+ */
+export const TETO_ISS_ATUAL: Partial<Record<AnexoSimples, { limiar: number; issMax: number; pisCofins: number }>> = {
+  III: { limiar: 14.92537, issMax: 5, pisCofins: 23.46 },
+  IV: { limiar: 12.5, issMax: 5, pisCofins: 36.67 },
+}
+
 /** Parcelas de tributos sobre consumo dentro do DAS (frações do DAS, 0–1) num ano */
 export interface PartilhaConsumoSN {
   pisCofins: number  // até 2026 (LC 123)
@@ -192,6 +206,17 @@ export function partilhaConsumoSimples(
   const tabela = PARTILHA_SIMPLES_LC214[anexo]
   const f = Math.min(5, Math.max(0, faixaIdx))
   if (ano < 2027) {
+    // Regime atual: teto do ISS na 5ª faixa dos Anexos III e IV (LC 123 art. 18 §1º-B, I)
+    const teto = f === 4 && aliquotaEfetiva ? TETO_ISS_ATUAL[anexo] : undefined
+    if (teto && aliquotaEfetiva! * 100 > teto.limiar) {
+      const excesso = aliquotaEfetiva! - teto.issMax / 100
+      return {
+        pisCofins: (excesso * teto.pisCofins) / 100 / aliquotaEfetiva!,
+        cbs: 0,
+        icmsIss: teto.issMax / 100 / aliquotaEfetiva!,
+        ibs: 0,
+      }
+    }
     const pleno = tabela[2033][f]
     return { pisCofins: (pleno.CBS ?? 0) / 100, cbs: 0, icmsIss: (pleno.IBS ?? 0) / 100, ibs: 0 }
   }

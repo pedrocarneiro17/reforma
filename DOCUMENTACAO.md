@@ -133,7 +133,7 @@ Recolhimento unificado via DAS. Alíquota varia pelo **Anexo** (tipo de atividad
 - **DAS total constante.** Os Anexos I–V da LC 214/2025 mantêm as alíquotas nominais e as parcelas a deduzir de 2027 a 2033. Só a partilha interna muda: PIS/COFINS → CBS e ICMS/ISS → IBS.
 - **Partilha oficial por ano e faixa.** As tabelas dos Anexos I–V (LC 214/2025, redação da LC 227/2026) estão em `src/data/partilhaSimples.ts`, **gerado** por `python -I scripts/gerar_partilha_simples.py` a partir do texto da lei. Não editar à mão.
 - **6ª faixa em 2027–2028.** Alíquota nominal 0,1 p.p. menor (art. 347 da LC 214).
-- **Teto do ISS na 5ª faixa (Anexos III e IV).** Acima de 14,925% (III) ou 12,5% (IV) de alíquota efetiva, o ISS fica limitado (5% em 2027–2028; 4,5%, 4%, 3,5% e 3% de 2029 a 2032) e o excedente vai para os demais tributos e para o IBS. Vale só a partir de 2027.
+- **Teto do ISS na 5ª faixa (Anexos III e IV).** Acima de 14,925% (III) ou 12,5% (IV) de alíquota efetiva, o ISS fica limitado e o excedente vai para os demais tributos. No **regime atual** (até 2026) o teto é de 5% e o excedente vai só para os federais (LC 123, art. 18 §1º-B, I; Anexos na redação da LC 155/2016). Na **transição** o teto é de 5% em 2027–2028 e de 4,5%, 4%, 3,5% e 3% de 2029 a 2032, com parte do excedente indo para o IBS (LC 214). Em 2033 não há nota. Os Anexos I, II e V não têm essa regra.
 - **Anexo por atividade.** Pode ser fixado por lei (advocacia, limpeza e vigilância → IV), padrão do setor e editável (construção → IV; reformas podem ir ao III) ou depender do **Fator R** (folha ÷ faturamento ≥ 28% → Anexo III, senão V).
 - **Anexo IV.** A CPP patronal (20%) é paga fora do DAS, sobre folha e pró-labore.
 - **Catálogo de atividades (`cAtivSN`).** 15 códigos (01 a 14 e 90) da NT 2026.005 em `src/data/atividadesSimples.ts`. Cada setor mostra o código que irá na nota fiscal a partir de 2027.
@@ -280,7 +280,7 @@ A lista completa está em `src/data/setores.ts`. Cada setor traz:
 4. **Exportações:** são imunes de IBS/CBS (art. 79 da LC 214) com manutenção dos créditos. No Simples, a receita exportada não paga a parcela de tributos sobre consumo do DAS (seção 6.4). Quando a alíquota vem do PGDAS-D, o simulador assume que as receitas já foram separadas.
 5. O simulador considera **folha de pagamento** (Fator R, CPP do Anexo IV, contribuição previdenciária no Presumido e no Real) e alguns regimes específicos (imóveis, Zona Franca, regime automotivo). Não cobre benefícios fiscais regionais, nem todos os regimes especiais de setores regulados.
 6. **Transportador autônomo de carga (PF):** tratado como **não contribuinte** de IBS/CBS (LC 214, art. 26, VII, e art. 169; o cClassTrib oficial 410015 confirma): IVA zero, e os clientes contribuintes apropriam crédito presumido. A opção pelo regime regular (art. 26 §1º, V) não é modelada.
-7. **Teto do ISS no Simples:** modelado só a partir de 2027; para o regime atual a partilha é a da tabela sem teto.
+7. **Teto do ISS no Simples:** modelado no regime atual e na transição. Os percentuais do regime atual vêm da redação da LC 155/2016 (publicada no Planalto, texto não oficial); não foi comparada com um texto consolidado de 2026 que considere alterações posteriores. Vale conferir com um contador antes de usar os números em parecer.
 8. **Limite do Simples para exportadores:** o simulador usa um único limite de R$ 4,8 milhões, sem a regra de limite separado para a receita de exportação.
 6. **Consulte sempre um contador** para decisões fiscais — este simulador é educacional.
 
