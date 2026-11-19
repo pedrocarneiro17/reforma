@@ -345,6 +345,22 @@ describe('Profissional liberal, produtor rural e não contribuintes', () => {
     assert.equal(R(r.cargaTotalReformaMensal), ponto2033(r))
   })
 
+  it('nanoempreendedor (PF abaixo de 50% do limite do MEI = R$ 40,5 mil/ano) não é contribuinte (art. 26, IV)', () => {
+    const nano = calc('profissional_liberal', 'consultoria_empresarial', 3000, { insumosMensais: 0 })  // R$ 36 mil/ano
+    assert.equal(nano.nanoempreendedor, true)
+    assert.equal(R(nano.impostoIVALiquidoMensal), 0)
+    // no limite (R$ 3.375/mês = R$ 40,5 mil/ano) deixa de ser "inferior": é contribuinte (art. 21, I, c)
+    const limite = calc('profissional_liberal', 'consultoria_empresarial', 3375, { insumosMensais: 0 })
+    assert.equal(limite.nanoempreendedor, false)
+    assert.equal(R(limite.impostoIVALiquidoMensal), R(3375 * 0.265))
+    // só vale para pessoa física: empresa no Lucro Presumido com o mesmo faturamento paga IVA
+    const lp = calc('lucro_presumido', 'consultoria_empresarial', 3000, { insumosMensais: 0 })
+    assert.equal(lp.nanoempreendedor, false)
+    assert.ok(lp.impostoIVALiquidoMensal > 0)
+    // acima do porte, sem outro corte: R$ 20 mil/mês (R$ 240 mil/ano) segue contribuinte
+    assert.equal(pl('consultoria_empresarial').nanoempreendedor, false)
+  })
+
   it('só o transportador é marcado como não contribuinte por natureza', () => {
     assert.deepEqual(setoresMod.SETORES.filter(s => s.naoContribuinte).map(s => s.value), ['transportador_autonomo_pf'])
   })

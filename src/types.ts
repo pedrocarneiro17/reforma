@@ -317,6 +317,7 @@ export interface ResultadoCalculo {
   // Produtor rural regime especial (Arts. 164-168 LC 214/2025)
   produtorRuralNaoContribuinte: boolean  // true = não contribuinte (faturamento < R$3,6M ou regime produtor_rural)
   naoContribuinteSetor: boolean          // true = o setor não é contribuinte de IBS/CBS por lei (ex.: transportador autônomo PF)
+  nanoempreendedor: boolean              // true = PF com receita anual < 50% do limite do MEI: não é contribuinte (LC 214 art. 26, IV)
   cargaPermanenteMensal: number          // profissional liberal / produtor rural: tributos que continuam após a reforma (não são ICMS/ISS); 0 nos demais regimes
   // Bens de capital usados (Arts. 406-407 LC 214/2025)
   ivaVendaImobilizado: number       // IBS/CBS estimado na venda de bens do ativo imobilizado (alíquota cheia — sem redução no período de transição)

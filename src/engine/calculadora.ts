@@ -1272,6 +1272,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // art. 169) — a tabela oficial da RFB traz o cClassTrib 410015 "Fornecimento por transportador
   // autônomo não contribuinte". Pode optar pelo regime regular (art. 26 §1º V), não modelado.
   const naoContribuinteSetor = setor.naoContribuinte === true
+  // Nanoempreendedor (LC 214 art. 26, IV): pessoa física com receita anual abaixo de 50% do limite do MEI
+  // (R$ 81 mil → R$ 40,5 mil) que não aderiu ao MEI não é contribuinte de IBS/CBS. Já o profissional liberal
+  // acima desse porte É contribuinte (art. 21, I, c: fornece "de forma profissional"), sem corte de R$ 240 mil —
+  // esse valor é só das operações com imóveis (art. 251).
+  const nanoempreendedor = regime === 'profissional_liberal' && faturamentoAnual < LIMITE_MEI_ANUAL * 0.5
 
   // Taxa CBS típica de fornecedores Simples (Anexo I Faixa 3 — estimativa conservadora)
   // Real = DAS_efetivo × partilha_CBS; varia por anexo/faixa do fornecedor (desconhecido)
@@ -1365,7 +1370,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     - creditoZFMCbs
   )
   // Produtor rural não-contribuinte (Art. 164 §1º LC 214/2025): não recolhe IBS/CBS abaixo de R$3,6M/ano
-  if (produtorRuralNaoContribuinte || naoContribuinteSetor) impostoIVALiquidoMensal = 0
+  if (produtorRuralNaoContribuinte || naoContribuinteSetor || nanoempreendedor) impostoIVALiquidoMensal = 0
 
   const impostoIVALiquidoAnual = impostoIVALiquidoMensal * 12
   const cbsIVADualMensal = impostoIVALiquidoMensal * CBS_SHARE_IVA
@@ -1698,6 +1703,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     alertaImpostoSeletivo,
     produtorRuralNaoContribuinte,
     naoContribuinteSetor,
+    nanoempreendedor,
     // Profissional liberal / produtor rural: tributos que NÃO são ICMS/ISS e permanecem (IRPF, INSS, IRPJ/CSLL…)
     cargaPermanenteMensal: regime === 'profissional_liberal' || regime === 'produtor_rural' ? baseFixaMensal : 0,
     ivaVendaImobilizado,

@@ -44,7 +44,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     pctFornecedoresSimples, creditoPerdidoFornecedorSimples,
     analiseProlabore,
     gorjetaMensal, creditoProdutorRural, creditoTranspAutonomo,
-    alertaImpostoSeletivo, produtorRuralNaoContribuinte, naoContribuinteSetor, ivaVendaImobilizado,
+    alertaImpostoSeletivo, produtorRuralNaoContribuinte, naoContribuinteSetor, nanoempreendedor, ivaVendaImobilizado,
     creditoCapitalImediato, creditoCapitalPISCOFINS, ganhoFluxoCaixaCapital,
     ivaZeradoVendasRural, ivaZeradoVendasTransp,
     creditoDespesasAdicionais,
@@ -90,6 +90,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       return { tom: 'success', texto: 'Setor isento — alíquota zero no IVA Dual. Não há IBS/CBS sobre suas vendas.' }
     if (produtorRuralNaoContribuinte)
       return { tom: 'success', texto: 'Produtor rural não-contribuinte — sem IBS/CBS abaixo de R$ 3,6M/ano.' }
+    if (nanoempreendedor && !naoContribuinteSetor)
+      return { tom: 'info', texto: 'Pessoa física com receita anual abaixo de R$ 40.500 (50% do limite do MEI) é nanoempreendedora e não é contribuinte de IBS/CBS (art. 26, IV, da LC 214/2025). Ao passar desse valor, vira contribuinte. IRPF e INSS continuam.' }
     if (naoContribuinteSetor)
       return { tom: 'info', texto: 'Transportador autônomo de carga pessoa física não é contribuinte de IBS/CBS (art. 26, VII, e art. 169 da LC 214/2025): você não recolhe o imposto, e seus clientes contribuintes apropriam crédito presumido. IRPF e INSS continuam.' }
     if (isMEI)
@@ -723,18 +725,31 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       )}
 
       {/* ── Transportador autônomo de carga PF — não contribuinte (Art. 26 VII e 169 LC 214/2025) ── */}
-      {naoContribuinteSetor && (
+      {(naoContribuinteSetor || nanoempreendedor) && (
         <div className="insight-info flex items-start gap-3">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-info flex-shrink-0 mt-0.5">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-ink">Não-Contribuinte — IBS/CBS = R$ 0 (Art. 26, VII, e Art. 169 LC 214/2025)</p>
-            <p className="text-xs text-ink-secondary leading-relaxed">
-              O transportador autônomo de carga pessoa física não é contribuinte do IBS e da CBS. Os clientes no regime regular
-              apropriam <strong>crédito presumido</strong> sobre o frete contratado, com percentuais divulgados anualmente.
-              Você pode <strong>optar pelo regime regular</strong> (art. 26 §1º, V): nesse caso paga IBS/CBS à alíquota cheia, com crédito das suas compras.
-            </p>
+            {naoContribuinteSetor ? (
+              <>
+                <p className="text-sm font-semibold text-ink">Não-Contribuinte — IBS/CBS = R$ 0 (Art. 26, VII, e Art. 169 LC 214/2025)</p>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  O transportador autônomo de carga pessoa física não é contribuinte do IBS e da CBS. Os clientes no regime regular
+                  apropriam <strong>crédito presumido</strong> sobre o frete contratado, com percentuais divulgados anualmente.
+                  Você pode <strong>optar pelo regime regular</strong> (art. 26 §1º, V): nesse caso paga IBS/CBS à alíquota cheia, com crédito das suas compras.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-semibold text-ink">Nanoempreendedor — IBS/CBS = R$ 0 (Art. 26, IV, LC 214/2025)</p>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Pessoa física com receita anual abaixo de <strong>50% do limite do MEI</strong> (R$ 40.500) que não aderiu ao MEI
+                  não é contribuinte do IBS e da CBS. Acima desse valor, o profissional que presta serviço de forma profissional
+                  é contribuinte (art. 21, I, c) — sem outro corte de faturamento. O limite do MEI usado é o do simulador (R$ 81 mil/ano).
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
