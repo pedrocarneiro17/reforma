@@ -69,14 +69,57 @@ describe('Simples Nacional — DAS e projeção', () => {
   })
 
   it('6ª faixa em 2027–2028: nominal 0,1 p.p. menor (art. 347 LC 214)', () => {
+    // RBT12 de R$ 4,2 mi (acima do sublimite): DAS de R$ 35.000 + ICMS por fora; a redução de 0,1% do faturamento
+    // (R$ 350) só mexe no DAS em 2027–2028. Depois, o ICMS cai 10%/ano e o IBS regular entra no lugar.
     const r = calc('simples_nacional', 'comercio_varejo', 350000)
-    assert.deepEqual(proj(r), [35000, 34650, 34650, 35000, 35000, 35000, 35000, 35000])
+    const das = [35000, 34650, 34650, 35000, 35000, 35000, 35000, 35000]
+    const red = [0, 0, 0, 0.1, 0.2, 0.3, 0.4, 1]
+    const esperado = das.map((d, i) => d + r.icmsIssPorForaSimplesMensal * (1 - red[i]) + r.ibsRegularSublimiteMensal * red[i])
+    assert.deepEqual(proj(r), esperado.map(R))
+    assert.equal(R(r.projecaoAnos[0].impostoMensal - r.projecaoAnos[1].impostoMensal), 350)
   })
 
   it('MEI não muda com a reforma', () => {
     const r = calc('mei', 'comercio_varejo', 5000)
     assert.equal(R(r.cargaTotalReformaMensal), R(r.impostoAtualMensal))
     assert.equal(R(r.variacaoAbsolutaMensal), 0)
+  })
+})
+
+describe('Sublimite de R$ 3,6 mi: ICMS/ISS por fora do DAS (LC 123 arts. 13-A e 20 §1º)', () => {
+  const sub = (fat, extra = {}) => calc('simples_nacional', 'tecnologia_ti', fat, { insumosMensais: fat * 0.2, folhaMensal: fat * 0.3, ...extra })
+
+  it('vale para RBT12 do mercado interno acima de R$ 3,6 mi (no limite exato ainda não)', () => {
+    assert.equal(sub(300000).sublimiteExcedido, false)     // R$ 3,6 mi exatos
+    assert.equal(sub(300001).sublimiteExcedido, true)
+    assert.equal(sub(100000).icmsIssPorForaSimplesMensal, 0)
+    // exportação não tem ICMS/ISS: o sublimite olha só o mercado interno (R$ 400 mil − 150 mil) × 12 = R$ 3 mi
+    assert.equal(sub(400000, { exportacoesMensais: 150000 }).sublimiteExcedido, false)
+    // MEI não tem sublimite
+    assert.equal(calc('mei', 'comercio_varejo', 5000).sublimiteExcedido, false)
+  })
+
+  it('o ISS (3%) entra por fora do DAS e o IBS regular o substitui em 2033', () => {
+    const r = sub(350000)
+    assert.equal(r.sublimiteExcedido, true)
+    perto(R(r.icmsIssPorForaSimplesMensal), 10500)                       // serviço: ISS médio de 3% × R$ 350 mil
+    const das = r.impostoAtualMensal - r.icmsIssPorForaSimplesMensal    // DAS (6ª faixa, só tributos federais)
+    // IBS regular = IVA líquido × (1 − 9,25/26,5): a CBS segue dentro do DAS
+    perto(R(r.ibsRegularSublimiteMensal), R(r.impostoIVALiquidoMensal * (1 - 9.25 / 26.5)))
+    perto(R(r.cargaTotalReformaMensal), R(das + r.ibsRegularSublimiteMensal))
+  })
+
+  it('a carga pós-reforma coincide com o ponto de 2033 da projeção', () => {
+    for (const r of [sub(350000), calc('simples_nacional', 'comercio_varejo', 350000, { insumosMensais: 200000, uf: 'SP' })]) {
+      assert.equal(R(r.cargaTotalReformaMensal), R(r.projecaoAnos.find(p => p.ano === 2033).impostoMensal))
+    }
+  })
+
+  it('abaixo do sublimite nada muda: carga pós-reforma = DAS', () => {
+    const r = sub(200000)
+    assert.equal(r.sublimiteExcedido, false)
+    assert.equal(R(r.cargaTotalReformaMensal), R(r.impostoAtualMensal))
+    assert.equal(R(r.ibsRegularSublimiteMensal), 0)
   })
 })
 
@@ -195,9 +238,10 @@ describe('Teto do ISS no regime atual (LC 123 art. 18 §1º-B, I)', () => {
     perto2(c, d, 5e-5, 'PIS/COFINS')
   })
 
-  it('a exportação usa a partilha com o teto', () => {
-    const r = calc('simples_nacional', 'tecnologia_ti', 250000, { insumosMensais: 0, folhaMensal: 100000, exportacoesMensais: 50000 })
-    perto(R(r.exportacaoSimples.reducaoDASMensal), R(50000 * (r.cbsSimplesEfetivo + r.ibsSimplesEfetivo)))
+  it('a exportação usa a partilha com o teto (mesma faixa nos dois mercados: RBT12 de R$ 3 mi cada)', () => {
+    const r = calc('simples_nacional', 'tecnologia_ti', 500000, { insumosMensais: 0, folhaMensal: 200000, exportacoesMensais: 250000 })
+    assert.equal(r.anexoSimples, 'III')
+    perto(R(r.exportacaoSimples.reducaoDASMensal), R(250000 * (r.cbsSimplesEfetivo + r.ibsSimplesEfetivo)))
   })
 })
 
@@ -206,13 +250,26 @@ describe('Exportações no Simples (tpRBSN 3 e 4)', () => {
   // CBS+IBS dentro do DAS = 4,29% da receita; IPI = 7,5% do DAS = 0,6994% da receita
   const base = () => calc('simples_nacional', 'industria_transformacao', 100000, { insumosMensais: 30000 })
 
-  it('receita exportada sai da parcela de consumo e do IPI do DAS', () => {
+  it('a exportação tem a própria faixa (RBT12 da exportação, art. 3º §15) e sai da parcela de consumo e do IPI', () => {
     perto(R(base().impostoAtualMensal), 9325)
     const r = calc('simples_nacional', 'industria_transformacao', 100000, { insumosMensais: 30000, exportacoesMensais: 40000 })
-    perto(R(r.impostoAtualMensal), 9325 - R(40000 * 0.049894), 'DAS com 40k exportados')
+    const effMI = 0.10 - 13860 / 720_000   // RBT12 do mercado interno: R$ 60 mil × 12 = R$ 720 mil → 3ª faixa
+    const effExp = 0.10 - 13860 / 480_000  // RBT12 da exportação: R$ 40 mil × 12 = R$ 480 mil → 3ª faixa
+    // da exportação ficam só IRPJ (5,5%) + CSLL (3,5%) + CPP (37,5%) = 46,5% do DAS; saem PIS/COFINS (14%), ICMS (32%) e IPI (7,5%)
+    perto(R(r.impostoAtualMensal), R(60000 * effMI + 40000 * effExp * 0.465), 'DAS com 40k exportados')
+    assert.ok(r.impostoAtualMensal < 7329, 'menor que o DAS com tudo na faixa do faturamento total (R$ 7.329)')
     assert.equal(r.exportacaoSimples.tipoReceita, 3)
-    perto(R(r.exportacaoSimples.reducaoIPIMensal), 280)
+    perto(R(r.exportacaoSimples.reducaoIPIMensal), R(40000 * effExp * 0.075))
+    assert.equal(r.exportacaoSimples.rbt12MercadoInterno, 720000)
+    assert.equal(r.exportacaoSimples.rbt12Exportacao, 480000)
     assert.equal(R(r.exportacaoSimples.suspensoMensal), 0)
+  })
+
+  it('o DAS com os dois mercados é a soma de duas empresas independentes (só interna + só exportadora)', () => {
+    const mi  = calc('simples_nacional', 'industria_transformacao', 60000, { insumosMensais: 18000 })
+    const ext = calc('simples_nacional', 'industria_transformacao', 40000, { insumosMensais: 12000, exportacoesMensais: 40000 })
+    const juntas = calc('simples_nacional', 'industria_transformacao', 100000, { insumosMensais: 30000, exportacoesMensais: 40000 })
+    perto(R(juntas.impostoAtualMensal), R(mi.impostoAtualMensal + ext.impostoAtualMensal))
   })
 
   it('exportação indireta (tpRBSN 4): mesmo DAS, CBS/IBS ficam suspensos', () => {
@@ -220,7 +277,8 @@ describe('Exportações no Simples (tpRBSN 3 e 4)', () => {
     const ind = calc('simples_nacional', 'industria_transformacao', 100000, { insumosMensais: 30000, exportacoesMensais: 40000, tipoExportacao: 'indireta' })
     assert.equal(ind.exportacaoSimples.tipoReceita, 4)
     assert.equal(R(ind.impostoAtualMensal), R(dir.impostoAtualMensal))
-    perto(R(ind.exportacaoSimples.suspensoMensal), R(40000 * 0.0429))
+    // suspenso = receita × alíquota da faixa da exportação × (PIS/COFINS 14% + ICMS 32% do DAS)
+    perto(R(ind.exportacaoSimples.suspensoMensal), R(40000 * (0.10 - 13860 / 480_000) * 0.46))
   })
 
   it('tudo exportado: sobram só IRPJ, CSLL e CPP', () => {
@@ -228,6 +286,17 @@ describe('Exportações no Simples (tpRBSN 3 e 4)', () => {
     assert.equal(r.exportacaoSimples.valorMensal, 100000) // limitado ao faturamento
     perto(R(r.impostoAtualMensal), 9325 - R(100000 * 0.049894))
     assert.equal(R(novaPorAno(r, 2033)), 0)
+  })
+
+  it('o limite de R$ 4,8 mi vale para cada mercado, não para a soma (art. 3º §14)', () => {
+    const acima = (fat, exp) => eng.calcularTodosOsRegimes({
+      regime: 'simples_nacional', setor: S('industria_transformacao'), faturamentoMensal: fat, insumosMensais: 0,
+      perfilClientes: 'b2b', uf: 'SP', exportacoesMensais: exp,
+    }).find(r => r.regime === 'simples_nacional').acimaDaFaixaSimples
+    assert.equal(acima(500000, 0), true)         // R$ 6 mi só no mercado interno: acima
+    assert.equal(acima(700000, 400000), false)   // interno R$ 3,6 mi + exportação R$ 4,8 mi: cada um dentro do limite
+    assert.equal(acima(700000, 410000), true)    // exportação R$ 4,92 mi: acima
+    assert.equal(acima(1000000, 400000), true)   // interno R$ 7,2 mi: acima
   })
 
   it('com alíquota informada (PGDAS-D) não reaplica a exportação', () => {

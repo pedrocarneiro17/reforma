@@ -160,13 +160,15 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
           const recInterna = r.receitaConsumoSimplesMensal
           const cbs = r.cbsSimplesEfetivo, ibs = r.ibsSimplesEfetivo
           return <>
-            {exp && <Linha label={`├ Exportação (tpRBSN ${exp.tipoReceita})`} formula={`${moeda(exp.valorMensal)} — ${exp.tipoReceitaDescricao.replace('Receita bruta - ', '')}`} valor={exp.reducaoDASMensal} negativo refLegal={`Sem CBS/IBS no DAS (hoje PIS/COFINS/ICMS/ISS — LC 123 art. 18 §14)${exp.reducaoIPIMensal > 0 ? ` e sem IPI (${moeda(exp.reducaoIPIMensal)})` : ''} · NT 2026.005`} />}
+            {exp && <Linha label="├ Mercado interno (faixa pelo RBT12 do mercado interno)" formula={`${moeda(fat - exp.valorMensal)} × ${pct(exp.aliquotaEfetivaMercadoInterno)} · RBT12 ${moeda(exp.rbt12MercadoInterno)}`} valor={(fat - exp.valorMensal) * exp.aliquotaEfetivaMercadoInterno} refLegal="Receitas do mercado interno e da exportação são consideradas separadamente — LC 123 art. 3º §15" />}
+            {exp && <Linha label={`├ Exportação (tpRBSN ${exp.tipoReceita}) — faixa pelo RBT12 da exportação`} formula={`${moeda(exp.valorMensal)} × ${pct(exp.aliquotaEfetivaExportacao)} − PIS/COFINS/ICMS/ISS${exp.reducaoIPIMensal > 0 ? '/IPI' : ''} (${moeda(exp.reducaoDASMensal)}) · RBT12 ${moeda(exp.rbt12Exportacao)}`} valor={exp.dasMensal} refLegal="Fica só IRPJ, CSLL e CPP (LC 123 art. 18 §14); sem CBS/IBS no DAS · NT 2026.005" />}
             {semIBSCBS && <Linha label={`├ Receita sem IBS/CBS (tpRBSN ${semIBSCBS.tipoReceita})`} formula={`${moeda(semIBSCBS.valorMensal)} — ${semIBSCBS.tipoReceitaDescricao.replace('Receita bruta - ', '')}`} valor={semIBSCBS.reducaoDASMensal} negativo refLegal="Imune, alíquota zero ou monofásica já cobrada (livros, radiodifusão aberta, combustíveis) · tpRBSN 2, NT 2026.005" />}
             {exp && exp.suspensoMensal > 0 && <Linha label="│ CBS/IBS suspensos (exportação indireta)" formula="devidos só se a exportação não se efetivar" valor={exp.suspensoMensal} />}
             {cbs != null && cbs > 0 && <Linha label="├ CBS embutida no DAS" formula={`${moeda(recInterna)} × ${pct(cbs)}`} valor={recInterna * cbs} />}
             {ibs != null && ibs > 0 && <Linha label="├ IBS embutido no DAS" formula={`${moeda(recInterna)} × ${pct(ibs)}`} valor={recInterna * ibs} />}
+            {r.icmsIssPorForaSimplesMensal > 0 && <Linha label="├ ICMS/ISS por fora do DAS (estimado)" formula="receita do mercado interno acima do sublimite de R$ 3,6 mi" valor={r.icmsIssPorForaSimplesMensal} refLegal="LC 123 art. 20 §1º · ICMS por débito/crédito (UF informada ou média), ISS médio de 3%" />}
             {cbs != null && ibs != null && (() => {
-              const demais = Math.max(0, r.impostoAtualMensal - recInterna * (cbs + ibs))
+              const demais = Math.max(0, r.impostoAtualMensal - r.icmsIssPorForaSimplesMensal - recInterna * (cbs + ibs))
               return <Linha label="└ IRPJ + CSLL + CPP (demais tributos)" formula={`${pct(fat > 0 ? demais / fat : 0)} da receita`} valor={demais} />
             })()}
           </>

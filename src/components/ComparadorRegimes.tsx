@@ -295,9 +295,11 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                       <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-2.5">
                         <div className="text-ink-muted text-[10px] mb-1 font-medium">Pleno / mês</div>
                         <div className={`font-bold text-base num ${r.variacaoAbsolutaMensal > 0 ? 'text-danger' : 'text-success'}`}>
-                          {fmt.moeda(r.impostoIVALiquidoMensal)}
+                          {fmt.moeda(r.cargaTotalReformaMensal)}
                         </div>
-                        <div className="text-ink-muted text-[10px] num">{fmt.pct(r.aliquotaIVAEfetiva)} ef.</div>
+                        <div className="text-ink-muted text-[10px] num">
+                          {fmt.pct(r.cargaTotalReformaMensal / dadosBase.faturamentoMensal)} ef.
+                        </div>
                       </div>
                       <div className="bg-[#FBFAF7] border border-danger-border rounded-md p-2.5">
                         <div className="text-ink-muted text-[10px] mb-1 font-medium">Híbrido / mês</div>

@@ -218,6 +218,11 @@ export interface ExportacaoSimples {
   reducaoDASMensal: number     // parcela de CBS/IBS (hoje PIS/COFINS/ICMS/ISS) + IPI que sai do DAS
   reducaoIPIMensal: number     // do total acima, a parte do IPI (Anexo II — indústria)
   suspensoMensal: number       // exportação indireta: CBS/IBS calculados e suspensos até a exportação
+  aliquotaEfetivaMercadoInterno: number  // alíquota efetiva do DAS pelo RBT12 do mercado interno
+  aliquotaEfetivaExportacao: number  // alíquota efetiva do DAS pelo RBT12 da exportação (LC 123 art. 3º §15), antes da redução do art. 18 §14
+  dasMensal: number            // DAS da receita exportada (só IRPJ, CSLL e CPP)
+  rbt12MercadoInterno: number  // RBT12 do mercado interno (receita total − exportação, anualizada)
+  rbt12Exportacao: number      // RBT12 da exportação (anualizada)
 }
 
 /** Receita interna do Simples sem IBS/CBS no DAS (tpRBSN 2 — ex.: livros, jornais e periódicos) */
@@ -237,6 +242,12 @@ export interface ResultadoCalculo {
   exportacoesMensais: number
   /** Simples: efeito do tipo de receita (tpRBSN) das exportações sobre o DAS — null sem exportação */
   exportacaoSimples: ExportacaoSimples | null
+  /** Simples com RBT12 do mercado interno acima do sublimite de R$ 3,6 mi: ICMS/ISS são pagos por fora do DAS (LC 123 art. 20 §1º) */
+  sublimiteExcedido: boolean
+  /** ICMS + ISS estimados pagos por fora do DAS acima do sublimite (já somados em impostoAtualMensal) */
+  icmsIssPorForaSimplesMensal: number
+  /** Parte IBS do IVA regular que substitui o ICMS/ISS por fora (integral em 2033) */
+  ibsRegularSublimiteMensal: number
   /** Simples: receita interna sem IBS/CBS no DAS (tpRBSN 2, ex.: livros) — null quando não se aplica */
   receitaSemIBSCBSSimples: ReceitaSemIBSCBSSimples | null
   /** Simples: receita que carrega a parcela de CBS/IBS do DAS (faturamento − exportação − tpRBSN 2) */

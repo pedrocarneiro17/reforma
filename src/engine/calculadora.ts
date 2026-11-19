@@ -897,6 +897,17 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   } = dados
   const faturamentoAnual = faturamentoMensal * 12
 
+  // Simples Nacional — receita do mercado interno e da exportação são consideradas SEPARADAMENTE para
+  // determinar a alíquota (LC 123 art. 3º §15, aplicável quando há receita de exportação — §14): cada uma
+  // tem o seu RBT12 e a sua faixa. A exportação ainda tem o próprio limite de R$ 4,8 mi (§14). Sem
+  // exportação, o RBT12 do mercado interno é o faturamento total e nada muda. Com alíquota informada
+  // (PGDAS-D), as receitas já vêm segregadas e não reaplicamos.
+  const exportacaoSNMensal = regime === 'simples_nacional' && !(aliquotaAtualOverride != null && aliquotaAtualOverride > 0)
+    ? Math.min(Math.max(0, exportacoesMensais), faturamentoMensal)
+    : 0
+  const faturamentoAnualSN = (faturamentoMensal - exportacaoSNMensal) * 12   // RBT12 do mercado interno
+  const faturamentoAnualExportacaoSN = exportacaoSNMensal * 12                // RBT12 da exportação
+
   // Fração das vendas a PJ (empresas) — determina quanto do IVA é aproveitável como crédito
   // pelo cliente (só PJ credita). b2b = 100%, b2c = 0%, misto = pctClientesPJ informado.
   const fracClientesPJ = perfilClientes === 'b2b' ? 1
@@ -1008,32 +1019,20 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   // Parcela de CBS (PIS/COFINS hoje) e IBS (ICMS/ISS hoje) dentro do DAS, como fração da receita.
   // Calculada antes da carga atual porque o tratamento das exportações (tpRBSN) depende dela.
-  const cbsSimplesEfetivo: number | null = (() => {
+  // Alíquota efetiva do DAS e suas parcelas de PIS/COFINS (CBS), ICMS/ISS (IBS) e IPI para um RBT12 `R`,
+  // como frações da receita (atividade mista: média ponderada pelos dois anexos). null fora do Simples.
+  const taxasSN = (R: number): { aliq: number; cbs: number; ibs: number; ipi: number } | null => {
     if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return null
     const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
-    return isMisto
-      ? getCBSSimplesMisto(faturamentoAnual, anexoEfetivoComFatorR, pctAnexo1! / 100, anexoSimples2!)
-      : getCBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
-  })()
-
-  const ibsSimplesEfetivo: number | null = (() => {
-    if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return null
-    const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
-    return isMisto
-      ? (pctAnexo1! / 100) * getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
-        + (1 - pctAnexo1! / 100) * getIBSSimples(anexoSimples2!, faturamentoAnual)
-      : getIBSSimples(anexoEfetivoComFatorR, faturamentoAnual)
-  })()
-
-  // IPI embutido no DAS (só Anexo II), como fração da receita — sai da receita exportada
-  const ipiSimplesEfetivo: number = (() => {
-    if (regime !== 'simples_nacional' || anexoEfetivoComFatorR == null) return 0
-    const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
-    return isMisto
-      ? (pctAnexo1! / 100) * getIPISimples(anexoEfetivoComFatorR, faturamentoAnual)
-        + (1 - pctAnexo1! / 100) * getIPISimples(anexoSimples2!, faturamentoAnual)
-      : getIPISimples(anexoEfetivoComFatorR, faturamentoAnual)
-  })()
+    const p1 = isMisto ? pctAnexo1! / 100 : 1
+    const comb = (f: (a: import('../types').AnexoSimples, r: number) => number) =>
+      isMisto ? p1 * f(anexoEfetivoComFatorR, R) + (1 - p1) * f(anexoSimples2!, R) : f(anexoEfetivoComFatorR, R)
+    return { aliq: comb(getAliquotaDAS), cbs: comb(getCBSSimples), ibs: comb(getIBSSimples), ipi: comb(getIPISimples) }
+  }
+  // Parcelas do mercado interno (as da nota interna: o que o cliente B2B credita)
+  const taxasMI = taxasSN(faturamentoAnualSN)
+  const cbsSimplesEfetivo: number | null = taxasMI ? taxasMI.cbs : null
+  const ibsSimplesEfetivo: number | null = taxasMI ? taxasMI.ibs : null
 
   // CBS e IBS dentro do DAS em cada ano da transição, como frações da receita — partilha oficial
   // dos Anexos I–V da LC 214/2025 × alíquota efetiva do DAS (na 6ª faixa de 2027–2028 a nominal
@@ -1045,9 +1044,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       ? [[anexoEfetivoComFatorR, pctAnexo1! / 100], [anexoSimples2!, 1 - pctAnexo1! / 100]]
       : [[anexoEfetivoComFatorR, 1]]
     return partes.reduce((acc, [anexo, peso]) => {
-      const faixaIdx = getFaixaIdx(faturamentoAnual, SIMPLES_TABELAS[anexo])
+      const faixaIdx = getFaixaIdx(faturamentoAnualSN, SIMPLES_TABELAS[anexo])
       const reducao = (ano === 2027 || ano === 2028) && faixaIdx === 5 ? REDUCAO_CBS_2027_2028 : 0
-      const das = Math.max(0, getAliquotaDAS(anexo, faturamentoAnual) - reducao)
+      const das = Math.max(0, getAliquotaDAS(anexo, faturamentoAnualSN) - reducao)
       const p = partilhaConsumoSimples(anexo, faixaIdx, ano, das)  // das: p/ o teto do ISS na 5ª faixa
       return { cbs: acc.cbs + peso * das * p.cbs, ibs: acc.ibs + peso * das * p.ibs }
     }, { cbs: 0, ibs: 0 })
@@ -1057,25 +1056,33 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // • direta (tpRBSN 3): fator 0 → sem CBS/IBS sobre a receita exportada
   // • indireta, via comercial exportadora/ZPE/depósito (tpRBSN 4): CBS/IBS calculados mas
   //   pendentes/suspensos até a exportação se efetivar
-  // Hoje o efeito é o mesmo: LC 123/2006 art. 18 §14 desconsidera PIS/COFINS/ICMS/ISS na receita
-  // de exportação (inclusive via comercial exportadora). IRPJ, CSLL e CPP continuam devidos.
+  // Hoje o efeito é o mesmo: LC 123/2006 art. 18 §14 reduz o valor devido pelas alíquotas efetivas de
+  // PIS/COFINS/IPI/ICMS/ISS sobre a receita de exportação (inclusive via comercial exportadora). IRPJ, CSLL
+  // e CPP continuam devidos. A alíquota da exportação sai do RBT12 DA EXPORTAÇÃO (art. 3º §15), não do total.
   // Não se aplica quando a alíquota foi informada (PGDAS-D já segrega as receitas).
   const exportacaoSimples: import('../types').ExportacaoSimples | null = (() => {
-    if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
-    if (aliquotaAtualOverride != null && aliquotaAtualOverride > 0) return null
-    const valor = Math.min(Math.max(0, exportacoesMensais), faturamentoMensal)
-    if (valor <= 0) return null
+    if (exportacaoSNMensal <= 0) return null
+    const taxasExp = taxasSN(faturamentoAnualExportacaoSN)
+    if (!taxasExp) return null
+    const valor = exportacaoSNMensal
     const tipo = tipoReceitaDaExportacao(tipoExportacao)
-    const efeito = efeitoTipoReceitaSimples(tipo, valor, cbsSimplesEfetivo + ibsSimplesEfetivo)
+    const efeito = efeitoTipoReceitaSimples(tipo, valor, taxasExp.cbs + taxasExp.ibs)
+    // além do consumo (PIS/COFINS/ICMS/ISS hoje; CBS/IBS depois), exportação não paga o IPI do DAS
+    const reducaoIPI = valor * taxasExp.ipi
+    const reducao = efeito.reducaoDAS + reducaoIPI
     return {
       tipoExportacao,
       tipoReceita: tipo.codigo,
       tipoReceitaDescricao: tipo.descricao,
       valorMensal: valor,
-      // além do consumo (PIS/COFINS/ICMS/ISS hoje; CBS/IBS depois), exportação não paga o IPI do DAS
-      reducaoDASMensal: efeito.reducaoDAS + valor * ipiSimplesEfetivo,
-      reducaoIPIMensal: valor * ipiSimplesEfetivo,
+      reducaoDASMensal: reducao,
+      reducaoIPIMensal: reducaoIPI,
       suspensoMensal: efeito.suspenso,
+      aliquotaEfetivaMercadoInterno: taxasMI ? taxasMI.aliq : 0,
+      aliquotaEfetivaExportacao: taxasExp.aliq,
+      dasMensal: Math.max(0, valor * taxasExp.aliq - reducao),   // DAS da receita exportada: só IRPJ, CSLL e CPP
+      rbt12MercadoInterno: faturamentoAnualSN,
+      rbt12Exportacao: faturamentoAnualExportacaoSN,
     }
   })()
   // Receita sujeita à parcela de CBS/IBS do DAS (a exportada sai da conta)
@@ -1094,6 +1101,18 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   })()
   const receitaConsumoSimplesMensal = faturamentoMensal - (exportacaoSimples?.valorMensal ?? 0)
     - (receitaSemIBSCBSSimples?.valorMensal ?? 0)
+
+  // Sublimite de R$ 3,6 mi (LC 123 arts. 13-A, 19 e 20): acima dele a empresa fica impedida de recolher
+  // ICMS e ISS no Simples (art. 20 §1º) — a 6ª faixa das tabelas já não traz essas parcelas — e os paga por
+  // fora, pelas regras normais. Vale para o RBT12 do mercado interno (exportação não tem ICMS/ISS). Estimado
+  // como no regime regular: ICMS por débito/crédito (por UF, se informada) e ISS médio de 3%.
+  // Não modela o adiamento ao ano seguinte quando o excesso é de até 20% (art. 20 §1º-A).
+  const sublimiteExcedido = regime === 'simples_nacional' && faturamentoAnualSN > LIMITE_FAIXA5_SIMPLES_ANUAL
+  const receitaMercadoInternoSN = faturamentoMensal - exportacaoSNMensal
+  const icmsIssPorForaMensal = sublimiteExcedido
+    ? estimarICMSISS('lucro_real', setor.tipo, receitaMercadoInternoSN,
+        faturamentoMensal > 0 ? insumosMensais * (receitaMercadoInternoSN / faturamentoMensal) : 0, uf)
+    : 0
 
   // ── 1. Carga Atual ──────────────────────────────────────────────────────────
   let aliquotaAtual: number
@@ -1118,12 +1137,14 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : 0
   } else if (regime === 'simples_nacional') {
     const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
+    // Alíquota do mercado interno (RBT12 do mercado interno — art. 3º §15)
     const aliquotaDAS = isMisto
-      ? getAliquotaSimplesNacionalMisto(faturamentoAnual, anexoEfetivoComFatorR!, pctAnexo1! / 100, anexoSimples2!)
-      : getAliquotaSimplesNacional(setor.tipo, faturamentoAnual, anexoEfetivoComFatorR)
+      ? getAliquotaSimplesNacionalMisto(faturamentoAnualSN, anexoEfetivoComFatorR!, pctAnexo1! / 100, anexoSimples2!)
+      : getAliquotaSimplesNacional(setor.tipo, faturamentoAnualSN, anexoEfetivoComFatorR)
     // No Anexo IV soma-se a CPP paga por fora do DAS; a alíquota "atual" vira a efetiva total.
-    // Exportações: sai a parcela de tributos sobre consumo da receita exportada (tpRBSN 3/4).
-    impostoAtualMensal = faturamentoMensal * aliquotaDAS - (exportacaoSimples?.reducaoDASMensal ?? 0)
+    // DAS = receita interna × alíquota do mercado interno + DAS da exportação (só IRPJ/CSLL/CPP, pela
+    // alíquota do RBT12 da exportação, art. 18 §14) − parcela de consumo das receitas tpRBSN 2.
+    impostoAtualMensal = (faturamentoMensal - exportacaoSNMensal) * aliquotaDAS + (exportacaoSimples?.dasMensal ?? 0)
       - (receitaSemIBSCBSSimples?.reducaoDASMensal ?? 0) + cppSimplesAnexoIVMensal
     aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaDAS
   } else if (regime === 'lucro_presumido') {
@@ -1192,6 +1213,14 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     }
   }
 
+  // Simples acima do sublimite: soma o ICMS/ISS pago por fora do DAS. `impostoSNsemForaMensal` é o que fica
+  // dentro do DAS (e a CPP do Anexo IV), usado no cenário "por fora" e na projeção.
+  const impostoSNsemForaMensal = impostoAtualMensal
+  if (icmsIssPorForaMensal > 0) {
+    impostoAtualMensal += icmsIssPorForaMensal
+    aliquotaAtual = faturamentoMensal > 0 ? impostoAtualMensal / faturamentoMensal : aliquotaAtual
+  }
+
   // Alíquota estimada de tabela (sempre calculada para comparativo na UI)
   let aliquotaAtualEstimada: number
   if (regime === 'mei') {
@@ -1205,8 +1234,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   } else if (regime === 'simples_nacional') {
     const isMisto = anexoSimples2 != null && pctAnexo1 != null && pctAnexo1 > 0 && pctAnexo1 < 100
     aliquotaAtualEstimada = isMisto
-      ? getAliquotaSimplesNacionalMisto(faturamentoAnual, anexoEfetivoComFatorR!, pctAnexo1! / 100, anexoSimples2!)
-      : getAliquotaSimplesNacional(setor.tipo, faturamentoAnual, anexoEfetivoComFatorR)
+      ? getAliquotaSimplesNacionalMisto(faturamentoAnualSN, anexoEfetivoComFatorR!, pctAnexo1! / 100, anexoSimples2!)
+      : getAliquotaSimplesNacional(setor.tipo, faturamentoAnualSN, anexoEfetivoComFatorR)
   } else if (regime === 'lucro_presumido' || regime === 'produtor_rural') {
     aliquotaAtualEstimada = getAliquotaLucroPresumido(setor.tipo, setor)
   } else {
@@ -1448,10 +1477,13 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // (IRPF, INSS, IRPJ/CSLL) e o IVA Dual entra no lugar do ISS/ICMS. A carga pós-reforma é, portanto,
   // base fixa + IVA — o mesmo valor que a projeção atinge em 2033. Antes o destaque mostrava só o IVA,
   // o que fazia, p.ex., um consultor PF "economizar 22%" quando a carga na verdade quase dobra.
+  // Simples acima do sublimite: depois da transição o ICMS/ISS por fora vira IBS no regime regular (a CBS
+  // continua dentro do DAS, pela partilha da 6ª faixa). Parte IBS do IVA líquido = IVA × (1 − fatia da CBS).
+  const ibsRegularSublimiteMensal = sublimiteExcedido ? impostoIVALiquidoMensal * (1 - CBS_SHARE_IVA) : 0
   const cargaTotalReformaMensal = ehLPouLR
     ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
     : ehSimplesOuMEI
-      ? impostoAtualMensal
+      ? impostoSNsemForaMensal + ibsRegularSublimiteMensal
       : baseFixaMensal + impostoIVALiquidoMensal
 
   // ── 3. Projeção de Transição por Ano ────────────────────────────────────────
@@ -1524,24 +1556,29 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       // em vez de 19,00%). Com a mesma parcela a deduzir, o DAS efetivo cai 0,1% do faturamento.
       // Nas faixas 1–5 o IBS de teste (0,1%) compensa dentro da partilha e a nominal não muda.
       const reducaoCBSFaixa6 =
-        regime === 'simples_nacional' && (ano === 2027 || ano === 2028) && faturamentoAnual > LIMITE_FAIXA5_SIMPLES_ANUAL
+        regime === 'simples_nacional' && (ano === 2027 || ano === 2028) && faturamentoAnualSN > LIMITE_FAIXA5_SIMPLES_ANUAL
           ? faturamentoMensal * REDUCAO_CBS_2027_2028
           : 0
-      const dasAno = Math.max(0, impostoAtualMensal - reducaoCBSFaixa6)
+      const dasAno = Math.max(0, impostoSNsemForaMensal - reducaoCBSFaixa6)
       // CBS + IBS dentro do DAS no ano, pela partilha oficial da LC 214 (Anexos I–V). Só a receita
       // interna carrega esses tributos (exportação: tpRBSN 3/4).
       const consumoAno = consumoSimplesNoAno(ano)
       const parcelaNovaBruta = receitaConsumoSimplesMensal * (consumoAno.cbs + consumoAno.ibs)
-      const parcelaNova  = Math.min(dasAno, Math.max(0, parcelaNovaBruta))
-      const parcelaAtual = dasAno - parcelaNova
+      // Acima do sublimite: o ICMS/ISS por fora caem 10%/ano (2029–2032, arts. 501/508) e o IBS regular
+      // entra na mesma proporção, até ser integral em 2033.
+      const icmsIssForaAno = icmsIssPorForaMensal * (1 - reducaoAnual)
+      const ibsRegularAno = ibsRegularSublimiteMensal * reducaoAnual
+      const parcelaNova  = Math.min(dasAno, Math.max(0, parcelaNovaBruta)) + ibsRegularAno
+      const impostoMensalAno = dasAno + icmsIssForaAno + ibsRegularAno
+      const parcelaAtual = impostoMensalAno - parcelaNova
       return {
         ano,
-        impostoMensal: dasAno,
-        impostoAnual: dasAno * 12,
+        impostoMensal: impostoMensalAno,
+        impostoAnual: impostoMensalAno * 12,
         parcelaAtual,
         parcelaAtualAnual: parcelaAtual * 12,
         parcelaNovaAnual:  parcelaNova * 12,
-        aliquotaEfetiva: faturamentoMensal > 0 ? dasAno / faturamentoMensal : 0,
+        aliquotaEfetiva: faturamentoMensal > 0 ? impostoMensalAno / faturamentoMensal : 0,
       }
     }
 
@@ -1614,6 +1651,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     insumosMensais,
     exportacoesMensais,
     exportacaoSimples,
+    sublimiteExcedido,
+    icmsIssPorForaSimplesMensal: icmsIssPorForaMensal,
+    ibsRegularSublimiteMensal,
     receitaSemIBSCBSSimples,
     receitaConsumoSimplesMensal,
     perfilClientes,
@@ -1651,7 +1691,10 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       // DAS reduzido: remove CBS e IBS internos — fica só IRPJ+CSLL+CPP. Sobre a receita exportada
       // o DAS já não tem CBS/IBS, então só se remove a parcela da receita interna.
       const fracInterna = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
-      const aliquotaDasReduzido = Math.max(0, aliquotaAtual - (cbsSimplesEfetivo + ibsSimplesEfetivo) * fracInterna)
+      // (sem o ICMS/ISS por fora do sublimite: nesse cenário o IBS/CBS regular o substitui)
+      const aliquotaDasReduzido = Math.max(0,
+        (faturamentoMensal > 0 ? impostoSNsemForaMensal / faturamentoMensal : aliquotaAtual)
+        - (cbsSimplesEfetivo + ibsSimplesEfetivo) * fracInterna)
       const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
       const totalMensal = dasReduzidoMensal + impostoIVALiquidoMensal
       return {
@@ -1899,7 +1942,9 @@ export function calcularTodosOsRegimes(
     })
   })
 
-  const acimaDaFaixaSimples = faturamentoAnual > LIMITE_SIMPLES_ANUAL
+  // Limite de R$ 4,8 mi: o mercado interno e a exportação têm cada um o seu (LC 123 art. 3º §14)
+  const expAnualComparador = Math.min(Math.max(0, dados.exportacoesMensais ?? 0), dados.faturamentoMensal) * 12
+  const acimaDaFaixaSimples = (faturamentoAnual - expAnualComparador) > LIMITE_SIMPLES_ANUAL || expAnualComparador > LIMITE_SIMPLES_ANUAL
   const acimaDaFaixaMEI     = faturamentoAnual > LIMITE_MEI_ANUAL
 
   // Um regime é INAPLICÁVEL quando a empresa não pode optar por ele:
@@ -1990,7 +2035,9 @@ export function calcularCurvaCrescimento(dados: DadosEntrada, percentuais: numbe
       impostoIVAMensal: resultado.cargaTotalReformaMensal,
       aliquotaAtual: resultado.aliquotaAtual,
       aliquotaIVA: fatAjustado > 0 ? resultado.cargaTotalReformaMensal / fatAjustado : 0,
-      acimaDaFaixaSimples: fatAnual > LIMITE_SIMPLES_ANUAL,
+      // limite de R$ 4,8 mi separado para mercado interno e exportação (LC 123 art. 3º §14)
+      acimaDaFaixaSimples: (fatAnual - resultado.exportacoesMensais * 12) > LIMITE_SIMPLES_ANUAL
+        || resultado.exportacoesMensais * 12 > LIMITE_SIMPLES_ANUAL,
     }
   })
 }

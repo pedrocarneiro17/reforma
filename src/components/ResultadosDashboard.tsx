@@ -40,6 +40,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     analiseHolding, nomePrincipal, analiseICMS,
     anexoSimples, cbsSimplesEfetivo, ibsSimplesEfetivo, cenarioHibridoVerdadeiro, baseCalculoEfetiva,
     receitaConsumoSimplesMensal, cargaPermanenteMensal,
+    sublimiteExcedido, icmsIssPorForaSimplesMensal, ibsRegularSublimiteMensal,
     irpjAdicionalMensal, inssAutonomoMensal,
     pctFornecedoresSimples, creditoPerdidoFornecedorSimples,
     analiseProlabore,
@@ -76,6 +77,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
   const fracConsumoSN = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
   const cbsSN = (cbsSimplesEfetivo ?? 0) * fracConsumoSN
   const ibsSN = (ibsSimplesEfetivo ?? 0) * fracConsumoSN
+  // ICMS/ISS pagos por fora do DAS acima do sublimite de R$ 3,6 mi (como fração da receita)
+  const foraSN = faturamentoMensal > 0 ? icmsIssPorForaSimplesMensal / faturamentoMensal : 0
 
   const cargaAumentou = variacaoAbsolutaMensal > 0
   const cargaReducao = variacaoAbsolutaMensal < 0
@@ -169,6 +172,18 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
         </div>
       )}
 
+      {/* ── Alerta: Simples acima do sublimite de R$ 3,6 mi (ICMS/ISS por fora do DAS) ── */}
+      {regime === 'simples_nacional' && sublimiteExcedido && (
+        <div className="insight-warning text-sm leading-relaxed">
+          <strong>Acima do sublimite de R$ 3,6 milhões.</strong> Com a receita do mercado interno nesse patamar, ICMS e ISS
+          deixam de ser recolhidos no Simples (LC 123, art. 20 §1º) e são pagos por fora do DAS — estimados em{' '}
+          <strong className="num">{fmt.moeda(icmsIssPorForaSimplesMensal)}/mês</strong> (ICMS por débito/crédito e ISS médio de 3%;
+          informe a UF para refinar o ICMS). Com a reforma, esse valor vira IBS no regime regular (estimado em{' '}
+          <strong className="num">{fmt.moeda(ibsRegularSublimiteMensal)}/mês</strong> em 2033) e a CBS continua dentro do DAS.
+          Se o excesso for de até 20%, o efeito só começa no ano seguinte (não modelado).
+        </div>
+      )}
+
       {/* ── Resumo executivo — recado factual no topo ────────────────────── */}
       <div className={`${resumoClasse} text-sm leading-relaxed`}>
         {resumo.texto}
@@ -185,7 +200,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · {fmt.moeda(impostoAtualAnual)}/ano</span>
             <div className="mt-2 text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2 leading-relaxed space-y-0.5">
               <div>CBS: <strong className="num">{fmt.pct(cbsSN)}</strong> · IBS: <strong className="num">{fmt.pct(ibsSN)}</strong></div>
-              <div>IRPJ+CSLL+CPP{fracConsumoSN < 1 ? '+IPI' : ''}: <strong className="num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN))}</strong></div>
+              <div>IRPJ+CSLL+CPP{fracConsumoSN < 1 ? '+IPI' : ''}: <strong className="num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN - foraSN))}</strong></div>
+              {foraSN > 0 && <div>ICMS/ISS por fora do DAS (estimado): <strong className="num">{fmt.pct(foraSN)}</strong></div>}
             </div>
           </div>
 
@@ -193,12 +209,18 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           <div className="stat-card border-l-4 border-l-info">
             <span className="stat-label flex items-center gap-1.5">
               Cenário 1 — Simples Pleno
-              <span className="badge badge-neutral text-[10px] font-medium">sem mudança</span>
+              <span className="badge badge-neutral text-[10px] font-medium">{sublimiteExcedido ? 'em 2033' : 'sem mudança'}</span>
             </span>
-            <span className="stat-value text-info num">{fmt.moeda(impostoAtualMensal)}</span>
-            <span className="text-xs text-ink-muted num">{fmt.pct(aliquotaAtual)} efetivo · DAS inalterado</span>
+            <span className="stat-value text-info num">{fmt.moeda(sublimiteExcedido ? cargaTotalReformaMensal : impostoAtualMensal)}</span>
+            <span className="text-xs text-ink-muted num">
+              {sublimiteExcedido
+                ? <>{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)} efetivo · DAS + IBS regular</>
+                : <>{fmt.pct(aliquotaAtual)} efetivo · DAS inalterado</>}
+            </span>
             <div className="mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border bg-subtle border-border text-ink-secondary">
-              Permanece no Simples. CBS e IBS migram internamente no DAS sem alterar o valor total.
+              {sublimiteExcedido
+                ? 'Permanece no Simples, mas acima do sublimite o IBS é recolhido no regime regular, por fora do DAS (CBS continua no DAS).'
+                : 'Permanece no Simples. CBS e IBS migram internamente no DAS sem alterar o valor total.'}
             </div>
           </div>
 
@@ -448,7 +470,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <table className="w-full text-xs">
                 <tbody className="divide-y divide-border">
                   <tr>
-                    <td className="py-1.5 text-ink-secondary">DAS Total / mês</td>
+                    <td className="py-1.5 text-ink-secondary">DAS Total / mês{icmsIssPorForaSimplesMensal > 0 ? ' (+ ICMS/ISS por fora)' : ''}</td>
                     <td className="py-1.5 text-right font-medium num">{fmt.moeda(impostoAtualMensal)}</td>
                     <td className="py-1.5 text-right text-ink-muted num w-16">{fmt.pct(aliquotaAtual)}</td>
                   </tr>
@@ -464,9 +486,16 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                   </tr>
                   <tr>
                     <td className="py-1.5 text-ink-secondary pl-3">→ IRPJ + CSLL + CPP{fracConsumoSN < 1 ? ' (+ IPI)' : ''}</td>
-                    <td className="py-1.5 text-right num">{fmt.moeda(Math.max(0, impostoAtualMensal - faturamentoMensal * (cbsSN + ibsSN)))}</td>
-                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN))}</td>
+                    <td className="py-1.5 text-right num">{fmt.moeda(Math.max(0, impostoAtualMensal - icmsIssPorForaSimplesMensal - faturamentoMensal * (cbsSN + ibsSN)))}</td>
+                    <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(Math.max(0, aliquotaAtual - cbsSN - ibsSN - foraSN))}</td>
                   </tr>
+                  {icmsIssPorForaSimplesMensal > 0 && (
+                    <tr>
+                      <td className="py-1.5 text-ink-secondary pl-3">→ ICMS/ISS por fora do DAS (estimado)</td>
+                      <td className="py-1.5 text-right num">{fmt.moeda(icmsIssPorForaSimplesMensal)}</td>
+                      <td className="py-1.5 text-right text-ink-muted num">{fmt.pct(foraSN)}</td>
+                    </tr>
+                  )}
                   <tr className="border-t-2 border-border font-semibold">
                     <td className="pt-2 text-ink-primary">Carga Total</td>
                     <td className="pt-2 text-right num">{fmt.moeda(impostoAtualMensal)}</td>
