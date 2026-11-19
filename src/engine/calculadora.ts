@@ -890,6 +890,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctMedicamentos = 0,
     pctCestaZero = 0,
     pctCestaReduzida = 0,
+    pctReceitaAliquotaCheia = 0,
     folhaPagamentoLRMensal = 0,
     aliquotaICMSEfetiva,
     aliquotaISSEfetiva,
@@ -1257,6 +1258,12 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     const aliqMedicamentos = ALIQUOTA_IVA_PADRAO * (1 - 0.60)  // Art. 133: medicamentos 60% de redução
     aliquotaIVABruta = fracMed * aliqMedicamentos + (1 - fracMed) * aliquotaIVABruta
   }
+  // Hotelaria/restaurantes: bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo ficam fora do
+  // regime específico (art. 273 §2º LC 214) e pagam a alíquota cheia — a média ponderada vale para o débito
+  if (setor.receitaMistaReducao && pctReceitaAliquotaCheia > 0) {
+    const fCheia = Math.min(1, Math.max(0, pctReceitaAliquotaCheia / 100))
+    aliquotaIVABruta = fCheia * ALIQUOTA_IVA_PADRAO + (1 - fCheia) * aliquotaIVABruta
+  }
   // Supermercados — cesta mista: parte alíquota zero, parte redução 60%, restante cheia
   if (setor.cestaMista && (pctCestaZero > 0 || pctCestaReduzida > 0)) {
     const fz = Math.min(1, Math.max(0, pctCestaZero / 100))            // Arts. 125/148: alíquota zero
@@ -1312,9 +1319,12 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const cbsFornecedorSimples = getCBSSimples('I', Math.min(faturamentoAnual, 720_000))
 
   const fracSimples = Math.min(1, Math.max(0, pctFornecedoresSimples / 100))
-  const aliquotaCreditoEfetiva = fracSimples * cbsFornecedorSimples + (1 - fracSimples) * aliquotaIVABruta
+  // Crédito = imposto cobrado pelo fornecedor. Por padrão usa a alíquota das vendas do próprio setor; em
+  // hotelaria (creditoInsumosAliquotaCheia) os insumos vêm com alíquota cheia, não com a redução de 40%.
+  const aliquotaCreditoFornecedorRegular = setor.creditoInsumosAliquotaCheia ? ALIQUOTA_IVA_PADRAO : aliquotaIVABruta
+  const aliquotaCreditoEfetiva = fracSimples * cbsFornecedorSimples + (1 - fracSimples) * aliquotaCreditoFornecedorRegular
   const creditoInsumosMensal = insumosMensais * aliquotaCreditoEfetiva
-  const creditoPerdidoFornecedorSimples = insumosMensais * fracSimples * (aliquotaIVABruta - cbsFornecedorSimples)
+  const creditoPerdidoFornecedorSimples = insumosMensais * fracSimples * (aliquotaCreditoFornecedorRegular - cbsFornecedorSimples)
 
   // Crédito presumido — Arts. 168-169 LC 214/2025
   // Produtor rural não-contribuinte: crédito = compras × alíquota que incidiria (insumos agropecuários: 60% redução → 10,6%)

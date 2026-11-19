@@ -37,6 +37,8 @@ export interface Setor {
   regimeAutomotivo?: boolean        // Arts. 309-316 LC 214/2025: setor pode ter projeto habilitado ao crédito presumido automotivo (Lei 9.440/1997)
   zfm?: boolean                     // Arts. 439-457 LC 214/2025: indústria incentivada na Zona Franca de Manaus (créditos presumidos IBS/CBS)
   vedadoSimples?: boolean           // true = atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 ou Art. 3º §4º)
+  receitaMistaReducao?: boolean     // true = parte da receita fica FORA do regime específico e paga alíquota cheia — ex.: bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo em hotel/restaurante (LC 214 art. 273 §2º); informe o % em pctReceitaAliquotaCheia
+  creditoInsumosAliquotaCheia?: boolean // true = o crédito das compras usa a alíquota cheia de referência (o fornecedor cobra cheia), não a alíquota reduzida das vendas do próprio setor — ex.: hotelaria compra insumos sem redução
 }
 
 // Tipo de bem produzido pela indústria incentivada da ZFM — define o % do crédito presumido de IBS (Art. 450 §1º LC 214/2025)
@@ -108,6 +110,8 @@ export interface DadosEntrada {
   tipoBemZFM?: TipoBemZFM                // tipo de bem produzido — define o % do crédito presumido de IBS (Art. 450 §1º)
   // Farmácias/drogarias — cesta mista (Art. 133 LC 214/2025)
   pctMedicamentos?: number              // % do faturamento em medicamentos (60% de redução); o restante fica na alíquota cheia
+  // Hotelaria/restaurantes — receita fora do regime específico (LC 214 art. 273 §2º, art. 280 p.u.)
+  pctReceitaAliquotaCheia?: number      // % do faturamento em bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo (alíquota cheia, sem os 40% de redução)
   // Supermercados — composição da cesta (Arts. 125/148 + Art. 128 LC 214/2025)
   pctCestaZero?: number                 // % da receita em itens de alíquota zero (cesta básica, hortifruti, frutas, ovos)
   pctCestaReduzida?: number             // % da receita em itens de redução 60% (demais alimentos Anexo VII, higiene/limpeza Anexo VIII)

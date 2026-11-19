@@ -337,6 +337,58 @@ describe('Simulador de crescimento', () => {
   })
 })
 
+describe('Hotelaria com receita mista (caso Hotel Solar das Lajes, jan–set/2026)', () => {
+  // hospedagem R$ 1.362.225,61 (Anexo III, 40%) + alimentação preparada R$ 174.142,80 (Anexo I, 40%)
+  // + bebidas R$ 204.141,00 (Anexo I, alíquota cheia, art. 273 §2º); compras R$ 197.286,73 em 9 meses
+  const total = 1362225.61 + 174142.80 + 204141.00
+  const fat = total / 9
+  const hotel = (extra = {}) => calc('simples_nacional', 'hoteis_pousadas', fat, {
+    insumosMensais: 197286.73 / 9, perfilClientes: 'b2c', uf: 'MG',
+    anexoSimples: 'III', anexoSimples2: 'I', pctAnexo1: 1362225.61 / total * 100,
+    pctReceitaAliquotaCheia: 204141 / total * 100, ...extra,
+  })
+
+  it('hospedagem usa o Anexo III sem Fator R e o DAS mistura III e I pelo mesmo RBT12', () => {
+    const r = hotel()
+    const p1 = 1362225.61 / total
+    const rbt12 = fat * 12
+    const esperado = p1 * eng.getAliquotaDAS('III', rbt12) + (1 - p1) * eng.getAliquotaDAS('I', rbt12)
+    perto(R(r.aliquotaAtual * 1e6), R(esperado * 1e6), 'alíquota efetiva do DAS')
+    assert.equal(r.analiseFatorR, null)
+  })
+
+  it('débito: 40% só no que está no regime específico; bebidas pagam a alíquota cheia', () => {
+    const r = hotel()
+    const f = 204141 / total
+    perto(R(r.aliquotaIVABruta * 1e6), R((f * 0.265 + (1 - f) * 0.265 * 0.6) * 1e6), 'alíquota bruta ponderada')
+    // sem informar o %, tudo fica com a redução (comportamento anterior)
+    perto(R(hotel({ pctReceitaAliquotaCheia: 0 }).aliquotaIVABruta * 1e6), R(0.265 * 0.6 * 1e6))
+  })
+
+  it('crédito das compras usa a alíquota cheia (fornecedor não tem a redução do hotel)', () => {
+    const r = hotel()
+    perto(R(r.creditoInsumosMensal), R(197286.73 / 9 * 0.265), 'crédito a 26,5%')
+    // restaurante mantém o comportamento anterior (crédito na alíquota do próprio setor)
+    const rest = calc('simples_nacional', 'restaurantes_bares', 100000, { insumosMensais: 30000 })
+    perto(R(rest.creditoInsumosMensal), R(30000 * rest.aliquotaIVABruta))
+  })
+
+  it('híbrido = DAS sem a parcela de consumo + IVA líquido (não só o IVA, como no relatório da IA)', () => {
+    const r = hotel()
+    const h = r.cenarioHibridoVerdadeiro
+    const consumo = (r.cbsSimplesEfetivo + r.ibsSimplesEfetivo) * fat
+    perto(R(h.dasReduzidoMensal), R(r.impostoAtualMensal - consumo), 'DAS reduzido')
+    perto(R(h.totalMensal), R(h.dasReduzidoMensal + h.ibsCBSLiquidoMensal), 'total')
+    assert.ok(h.dasReduzidoMensal > 10000, 'o resíduo do DAS (IRPJ/CSLL/CPP) não pode sumir do híbrido')
+  })
+
+  it('o campo só vale para setores que o habilitam', () => {
+    const a = calc('simples_nacional', 'comercio_varejo', 100000, { pctReceitaAliquotaCheia: 50 })
+    const b = calc('simples_nacional', 'comercio_varejo', 100000)
+    assert.equal(a.aliquotaIVABruta, b.aliquotaIVABruta)
+  })
+})
+
 describe('Receitas sem CBS/IBS no Simples (tpRBSN 2)', () => {
   it('livros, jornais e periódicos não pagam a parcela de tributos sobre consumo do DAS', () => {
     const r = calc('simples_nacional', 'livros_periodicos', 50000, { perfilClientes: 'b2c' })

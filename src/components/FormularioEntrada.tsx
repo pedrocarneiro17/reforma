@@ -214,6 +214,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [pctMedicamentos, setPctMedicamentos] = useState(0)  // Art. 133 — % da receita em medicamentos (60% redução)
   const [pctCestaZero, setPctCestaZero] = useState(0)          // supermercados — % alíquota zero
   const [pctCestaReduzida, setPctCestaReduzida] = useState(0)  // supermercados — % redução 60%
+  const [pctReceitaAliquotaCheia, setPctReceitaAliquotaCheia] = useState(0) // hotelaria/restaurantes — % de bebidas e itens de terceiros (alíquota cheia)
   // Lucro Real — apuração efetiva
   const [folhaPagamentoLRStr, setFolhaPagamentoLRStr] = useState('')
   const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
@@ -327,6 +328,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarZFM = setorSelecionado?.zfm === true
   const mostrarMedicamentos = setorSelecionado?.vendeMedicamentos === true
   const mostrarCestaMista = setorSelecionado?.cestaMista === true
+  const mostrarReceitaMista = setorSelecionado?.receitaMistaReducao === true
 
   const fatEfetivo = modoEntrada === 'detalhado' && agregado12m
     ? agregado12m.medias.faturamento
@@ -406,6 +408,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctMedicamentos: mostrarMedicamentos ? pctMedicamentos : 0,
       pctCestaZero: mostrarCestaMista ? pctCestaZero : 0,
       pctCestaReduzida: mostrarCestaMista ? pctCestaReduzida : 0,
+      pctReceitaAliquotaCheia: mostrarReceitaMista ? pctReceitaAliquotaCheia : 0,
       folhaPagamentoLRMensal: parseMoeda(folhaPagamentoLRStr),
       despesasOperacionaisMensais: parseMoeda(despesasOperacionaisStr),
       aliquotaICMSEfetiva: (circulaMercadoria && aliquotaICMSStr) ? parseFloat(aliquotaICMSStr.replace(',', '.')) / 100 : undefined,
@@ -1664,6 +1667,38 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               <option value="intermediario">Bem intermediário — crédito IBS 90,25%</option>
               <option value="informatica">Bem de informática — crédito IBS 100%</option>
             </select>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hotelaria/restaurantes — receita fora do regime específico (art. 273 §2º) ── */}
+      {mostrarReceitaMista && (
+        <div className="card p-5 space-y-3 border-l-4 border-l-warning">
+          <div>
+            <h3 className="text-sm font-bold text-ink">Composição da Receita — Itens fora da redução de 40% (LC 214/2025, art. 273 §2º)</h3>
+            <p className="text-xs text-ink-muted mt-0.5">
+              Hospedagem e alimentação preparada no estabelecimento têm <strong>redução de 40%</strong>. <strong>Bebidas alcoólicas</strong> e
+              bebidas ou alimentos comprados de terceiros e revendidos sem preparo (água, refrigerante, suco de lata) pagam a <strong>alíquota cheia</strong>.
+              Informe o % do faturamento nesses itens.
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">% do faturamento em itens de alíquota cheia</label>
+              <span className="num text-sm font-bold text-ink w-10 text-right">{pctReceitaAliquotaCheia}%</span>
+            </div>
+            <input type="range" min={0} max={100} step={1}
+              value={pctReceitaAliquotaCheia}
+              onChange={e => setPctReceitaAliquotaCheia(Number(e.target.value))}
+              className="w-full accent-[var(--color-ink)]"
+            />
+            {pctReceitaAliquotaCheia > 0 && (
+              <p className="text-xs text-warning mt-1.5">
+                Alíquota efetiva estimada: <strong className="num">
+                  {(pctReceitaAliquotaCheia / 100 * 0.265 + (1 - pctReceitaAliquotaCheia / 100) * 0.265 * 0.60).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                </strong> (itens com redução a 15,9% · itens fora da redução a 26,5%)
+              </p>
+            )}
           </div>
         </div>
       )}

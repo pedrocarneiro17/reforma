@@ -142,6 +142,16 @@ Recolhimento unificado via DAS. Alíquota varia pelo **Anexo** (tipo de atividad
 - **Sublimite de R$ 3,6 milhões.** Com RBT12 do mercado interno acima disso, a empresa fica impedida de recolher ICMS e ISS no Simples (LC 123, art. 20 §1º) e os paga por fora, pelas regras normais; a 6ª faixa das tabelas já não tem essas parcelas. O simulador soma esse valor à carga de hoje (ICMS por débito/crédito, com a UF informada ou uma média; ISS médio de 3%). Com a reforma, o ICMS/ISS por fora caem 10% ao ano (2029–2032) e o **IBS regular** entra no lugar, integral em 2033; a CBS continua dentro do DAS, como no tratamento da Receita para o "excesso de sublimite".
 - **Vedações.** Atividades impedidas de optar pelo Simples (LC 123, art. 17 — por exemplo geração, distribuição e comercialização de energia elétrica, serviços financeiros) e o produtor rural pessoa física aparecem como inaplicáveis.
 
+### 6.5 Hotelaria e receita mista (hotel com restaurante e bar)
+
+- **Anexo da hospedagem.** O setor "Hotéis, Pousadas, Flats e Temporada" usa o **Anexo III** por padrão, sem Fator R. O art. 18 da LC 123 não lista a hospedagem entre as atividades do Fator R nem do Anexo IV/V, e o §5º-F manda o resto dos serviços para o Anexo III. Não achei item expresso para hospedagem no texto da lei; confirme no PGDAS-D. A seleção manual do anexo continua valendo.
+- **Receita mista.** Hospedagem (Anexo III) e a venda de mercadoria (Anexo I) usam o par `anexoSimples`/`anexoSimples2` com `pctAnexo1`. Os dois anexos usam o mesmo RBT12.
+- **Redução de 40% só no que é regime específico.** Hospedagem e alimentação preparada no estabelecimento têm 40% de redução (arts. 275, 280 p.u. e 281 da LC 214). **Bebidas alcoólicas** e bebidas ou alimentos comprados de terceiros e vendidos sem preparo (água, refrigerante, suco de lata) ficam fora (art. 273 §2º) e pagam a alíquota cheia. O campo `pctReceitaAliquotaCheia` (hotelaria e restaurantes) informa essa fatia; a alíquota do débito é a média ponderada.
+- **Crédito das compras na alíquota cheia (só hotelaria).** O fornecedor cobra a alíquota cheia, e a redução de 40% é das vendas do hotel. Nos demais setores o crédito continua na alíquota do próprio setor, uma simplificação que subestima o crédito de quem compra insumos sem redução. Restaurantes e parques ainda usam essa simplificação.
+- **Híbrido = DAS sem a parcela de consumo + IVA líquido.** O DAS que sobra paga IRPJ, CSLL e CPP. Comparar o DAS inteiro com só o IVA líquido do híbrido, como fez o relatório da IA do caso do hotel, subestima o custo do Simples e inverte a conclusão.
+- **Compradores não creditam** hospedagem nem alimentação de restaurante (arts. 276 e 283): o ganho comercial do híbrido (cliente creditar o IVA cheio) não existe aqui.
+- **O que ainda não está:** a alíquota de referência é fixa em 26,5% (estimativa); não há campo para simular outra (por exemplo 9,25%, que é a soma de PIS e COFINS, não de CBS e IBS).
+
 ---
 
 ## 7. Cálculos Principais
