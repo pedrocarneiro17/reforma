@@ -235,6 +235,8 @@ Slider de −40% a +200% de variação de faturamento. Para cada ponto:
 - Alerta quando o faturamento ultrapassa o teto do Simples Nacional
 - Gera insights automáticos em texto
 
+**O que cresce junto com o faturamento:** insumos, exportações e despesas operacionais (base do Lucro Real). **O que fica fixo:** folha (por isso o Fator R cai ao crescer, podendo levar do Anexo III ao V), venda de imobilizado e créditos adicionais informados. É uma premissa de modelagem, não regra legal.
+
 ### 8.5 Simples Nacional Híbrido
 
 Para empresas no Simples com clientes B2B, o sistema avalia se vale optar pelo **Simples Híbrido** (pagar CBS+IBS fora do DAS), que permite ao cliente B2B se creditar do IVA:

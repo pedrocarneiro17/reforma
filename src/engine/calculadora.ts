@@ -2021,6 +2021,9 @@ export function calcularCurvaCrescimento(dados: DadosEntrada, percentuais: numbe
       // exportações crescem junto com o faturamento (mantém a participação na receita)
       exportacoesMensais: (dados.exportacoesMensais ?? 0) * fator,
       folhaMensal: dados.folhaMensal ?? 0,  // folha NÃO escala — mantém valor absoluto
+      // despesas operacionais (base do Lucro Real) acompanham o faturamento, como os insumos;
+      // venda de imobilizado e créditos adicionais seguem fixos (não são recorrentes por receita)
+      despesasOperacionaisMensais: (dados.despesasOperacionaisMensais ?? 0) * fator,
       aliquotaAtualOverride: null,
       dadosMensais: null,
     })

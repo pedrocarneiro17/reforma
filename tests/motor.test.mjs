@@ -323,6 +323,18 @@ describe('Simulador de crescimento', () => {
     perto(R(dobro.impostoAtualMensal), R(direto(200000, 60000, 80000).impostoAtualMensal), '+100%')
     perto(R(menos40.impostoAtualMensal), R(direto(60000, 18000, 24000).impostoAtualMensal), '−40%')
   })
+
+  it('despesas operacionais acompanham o faturamento (base do Lucro Real); folha segue fixa', () => {
+    const extra = { insumosMensais: 20000, despesasOperacionaisMensais: 30000, folhaMensal: 15000 }
+    const dados = calc('lucro_real', 'comercio_varejo', 100000, extra)
+    const [dobro] = eng.calcularCurvaCrescimento(dados, [100])
+    const escalado = calc('lucro_real', 'comercio_varejo', 200000,
+      { insumosMensais: 40000, despesasOperacionaisMensais: 60000, folhaMensal: 15000 })
+    const fixo = calc('lucro_real', 'comercio_varejo', 200000,
+      { insumosMensais: 40000, despesasOperacionaisMensais: 30000, folhaMensal: 15000 })
+    perto(R(dobro.impostoIVAMensal), R(escalado.cargaTotalReformaMensal), 'despesas escaladas')
+    assert.notEqual(R(escalado.cargaTotalReformaMensal), R(fixo.cargaTotalReformaMensal), 'o teste precisa distinguir fixo de escalado')
+  })
 })
 
 describe('Receitas sem CBS/IBS no Simples (tpRBSN 2)', () => {
