@@ -1514,14 +1514,21 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Decomposição da carga atual (LP sempre; LR quando há dados efetivos) — permite projetar
   // a transição pelo CONJUNTO de tributos, convergindo de impostoAtualMensal (2026) para
   // cargaTotalReformaMensal (2033) sem dupla contagem do PIS/COFINS→CBS.
-  const temDecomposicaoLPLR =
-    regime === 'lucro_presumido' ||
-    (regime === 'lucro_real' && (folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0))
+  // Lucro Real SEM dados efetivos também entra: antes caía no modelo legado (feito para PF/produtor rural), que
+  // mantém a base fixa (PIS/COFINS e o ICMS que a tabela embute) para sempre e somava o IVA por cima — em 2033
+  // a projeção ficava bem acima da carga total pós-reforma (R$ 21.224 contra R$ 13.204 num comércio de R$ 100 mil).
+  const temDecomposicaoLPLR = regime === 'lucro_presumido' || regime === 'lucro_real'
   const pisCofinsHojeComp = regime === 'lucro_presumido'
     ? receitaInternaHojeMensal * 0.0365
     : Math.max(0, (receitaInternaHojeMensal - insumosMensais) * 0.0925)
   const icmsIssHojeComp = icmsAtualMensal + issAtualMensal + (apuracaoLucroPresumido?.ipi ?? 0)
-  const irpjCsllHojeComp = Math.max(0, impostoAtualMensal - pisCofinsHojeComp - icmsIssHojeComp - contribPrevidenciariaMensal)
+  // Resíduo da carga de hoje que não é PIS/COFINS, ICMS/ISS nem CPP. No Lucro Presumido e no Lucro Real com
+  // dados é exatamente o IRPJ/CSLL. No Lucro Real sem dados a carga de hoje vem de uma alíquota de tabela
+  // (que embute ICMS e margem estimados): o resíduo carrega a diferença e some junto com o ICMS/ISS, e o ponto
+  // de 2026 continua igual à carga de hoje — por isso não se limita a zero nesse caso.
+  const temDadosEfetivosLR = folhaEmpregadosMensal > 0 || aliquotaICMSEfetiva != null || aliquotaISSEfetiva != null || despesasOperacionaisMensais > 0 || totalProLaboreMensal > 0
+  const residuoHojeComp = impostoAtualMensal - pisCofinsHojeComp - icmsIssHojeComp - contribPrevidenciariaMensal
+  const irpjCsllHojeComp = regime === 'lucro_real' && !temDadosEfetivosLR ? residuoHojeComp : Math.max(0, residuoHojeComp)
 
   const anosProjecao = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
   const projecaoAnos: ProjecaoAno[] = anosProjecao.map(ano => {

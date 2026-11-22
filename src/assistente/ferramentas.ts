@@ -172,7 +172,7 @@ function alertas(r: ResultadoCalculo): string[] {
   if (r.setor.creditoVedadoComprador) a.push('Quem compra deste setor (hotelaria, restaurantes, parques) não pode creditar IBS/CBS.')
   const p2033 = r.projecaoAnos[r.projecaoAnos.length - 1]
   if (p2033 && Math.abs(p2033.impostoMensal - r.cargaTotalReformaMensal) > 1) {
-    a.push('A projeção ano a ano e a carga total de 2033 partem de bases diferentes para este regime (no Lucro Real, sem folha e despesas informadas, o IRPJ/CSLL é estimado de formas distintas). Cite a carga total de 2033 como resultado principal e avise o usuário da divergência.')
+    a.push('A projeção ano a ano e a carga total de 2033 partem de bases diferentes neste caso. Cite a carga total de 2033 como resultado principal e avise o usuário da divergência.')
   }
   return a
 }

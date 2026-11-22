@@ -39,17 +39,19 @@ describe('Ferramentas do motor', () => {
     assert.equal(r.projecaoAnoAno.at(-1).ano, 2033)
   })
 
-  it('o ponto de 2033 da projeção é o mesmo número da carga pós-reforma; quando diverge, a IA é avisada', () => {
-    for (const regime of ['simples_nacional', 'lucro_presumido']) {
+  it('o ponto de 2033 da projeção é o mesmo número da carga pós-reforma em todos os regimes', () => {
+    for (const regime of ['simples_nacional', 'lucro_presumido', 'lucro_real']) {
       const r = ferr.executarFerramentaMotor('calcular_cenarios', { ...EMPRESA, regime })
       assert.equal(r.projecaoAnoAno.at(-1).impostoMensal, r.cargaPosReforma2033.impostoMensal, regime)
       assert.ok(!r.alertas.some(a => /bases diferentes/.test(a)), regime)
     }
-    // Lucro Real sem folha/despesas: a projeção mantém o IRPJ/CSLL estimado do regime atual e a carga
-    // total usa a referência do Presumido — divergência conhecida do motor, sinalizada à IA
-    const lr = ferr.executarFerramentaMotor('calcular_cenarios', { ...EMPRESA, regime: 'lucro_real' })
-    assert.notEqual(lr.projecaoAnoAno.at(-1).impostoMensal, lr.cargaPosReforma2033.impostoMensal)
-    assert.ok(lr.alertas.some(a => /bases diferentes/.test(a)))
+  })
+
+  it('se um dia a projeção e a carga total voltarem a divergir, a IA é avisada', () => {
+    const resultado = eng.calcularTodosOsCenarios(ferr.montarDados(EMPRESA))
+    const adulterado = { ...resultado, projecaoAnos: resultado.projecaoAnos.map((p, i, a) => (i === a.length - 1 ? { ...p, impostoMensal: p.impostoMensal + 500 } : p)) }
+    assert.ok(ferr.resumirResultado(adulterado).alertas.some(a => /bases diferentes/.test(a)))
+    assert.ok(!ferr.resumirResultado(resultado).alertas.some(a => /bases diferentes/.test(a)))
   })
 
   it('recusa setor inexistente, número inválido e regime ausente, com mensagem para a IA corrigir', () => {

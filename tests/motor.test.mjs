@@ -337,6 +337,40 @@ describe('Simulador de crescimento', () => {
   })
 })
 
+describe('Projeção 2026–2033 coerente com a carga de hoje e a carga pós-reforma', () => {
+  const REGIMES = ['simples_nacional', 'lucro_presumido', 'lucro_real', 'mei', 'profissional_liberal', 'produtor_rural']
+
+  it('o ponto de 2026 é a carga de hoje e o de 2033 é a carga total pós-reforma — todos os setores e regimes', () => {
+    const quebras = []
+    for (const setor of setoresMod.SETORES) {
+      for (const regime of REGIMES) {
+        for (const fat of [5000, 100000, 400000]) {
+          for (const extra of [{}, { folhaPagamentoLRMensal: fat * 0.2, despesasOperacionaisMensais: fat * 0.1 }]) {
+            let r
+            try {
+              r = eng.calcularTodosOsCenarios({ regime, setor, faturamentoMensal: fat, insumosMensais: fat * 0.4, perfilClientes: 'b2c', uf: 'SP', ...extra })
+            } catch { continue }
+            const p = r.projecaoAnos
+            const d26 = Math.abs(p[0].impostoMensal - r.impostoAtualMensal)
+            const d33 = Math.abs(p[p.length - 1].impostoMensal - r.cargaTotalReformaMensal)
+            if (d26 > 1 || d33 > 1) quebras.push(`${regime}/${setor.value}/${fat}${Object.keys(extra).length ? '/dados' : ''}: 2026 ${d26.toFixed(0)}, 2033 ${d33.toFixed(0)}`)
+          }
+        }
+      }
+    }
+    assert.deepEqual(quebras.slice(0, 5), [], `${quebras.length} combinações divergem`)
+  })
+
+  it('Lucro Real sem dados efetivos: comércio de R$ 100 mil chega a 2033 na carga total, sem somar PIS/COFINS e ICMS duas vezes', () => {
+    const r = calc('lucro_real', 'comercio_varejo', 100000, { insumosMensais: 60000 })
+    perto(R(r.projecaoAnos.at(-1).impostoMensal), R(r.cargaTotalReformaMensal))
+    perto(R(r.cargaTotalReformaMensal), 13204)   // IVA líquido 10.600 + IRPJ/CSLL 2.280 + CPP 324
+    perto(R(r.projecaoAnos[0].impostoMensal), R(r.impostoAtualMensal))
+    // nenhum ano passa da carga de hoje: a reforma nesse caso só reduz
+    assert.ok(r.projecaoAnos.every(p => p.impostoMensal <= r.impostoAtualMensal + 1))
+  })
+})
+
 describe('Hotelaria com receita mista (caso Hotel Solar das Lajes, jan–set/2026)', () => {
   // hospedagem R$ 1.362.225,61 (Anexo III, 40%) + alimentação preparada R$ 174.142,80 (Anexo I, 40%)
   // + bebidas R$ 204.141,00 (Anexo I, alíquota cheia, art. 273 §2º); compras R$ 197.286,73 em 9 meses

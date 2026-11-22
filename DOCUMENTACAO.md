@@ -122,9 +122,11 @@ Recolhimento unificado via DAS. Alíquota varia pelo **Anexo** (tipo de atividad
 
 | Setor | Alíquota efetiva estimada | Característica |
 |---|---|---|
-| Serviços / Misto | 13,0% | PIS/COFINS não-cumulativo com créditos |
-| Comércio | 18,0% | Créditos de PIS/COFINS sobre compras |
-| Indústria | 20,0% | Créditos de PIS/COFINS + IPI |
+| Serviços / Misto | 12,34% | PIS/COFINS 6,94% (créditos de 25% da receita) + ISS 3% + IRPJ/CSLL 2,4% (margem de 10%) |
+| Comércio | 15,10% | PIS/COFINS 3,7% + ICMS 10,2% + IRPJ/CSLL 1,2% (margem de 5%) |
+| Indústria | 11,70% | PIS/COFINS 3,7% + ICMS 4,8% + IPI 2% + IRPJ/CSLL 1,2% (margem de 5%) |
+
+Quando o usuário informa folha, despesas, ICMS ou ISS, o motor apura o Lucro Real efetivo e a tabela deixa de valer. Em qualquer dos dois casos a projeção 2026–2033 parte da carga de hoje e termina na carga total pós-reforma (IVA líquido + IRPJ/CSLL + contribuição previdenciária): PIS/COFINS e ICMS/ISS saem da conta no fim da transição. Um teste confere isso em todos os setores e regimes.
 
 > **Fonte das alíquotas:** Tabelas do Simples Nacional vigentes, Decreto nº 9.580/2018 (RIR) e Instrução Normativa da Receita Federal. São **médias aproximadas** — a alíquota real varia conforme a margem de lucro, benefícios fiscais e deduções de cada empresa.
 
@@ -283,7 +285,7 @@ Botão "Assistente" no canto da tela. O usuário pergunta em português ("quanto
 
 **O que o assistente ainda não faz:** ler arquivos (PDF, CSV), mudar os dados do formulário, simular alíquota de referência diferente de 26,5%, nem calcular o adiamento de 20% do sublimite. Quando a pergunta cai nesses casos, ele é instruído a dizer isso em vez de adivinhar.
 
-**Divergência conhecida do motor:** no Lucro Real sem folha e despesas informadas, a projeção ano a ano e a carga total de 2033 usam bases diferentes para o IRPJ/CSLL. O assistente recebe um alerta nesses casos e deve citar a carga total de 2033.
+**Rede de segurança:** se um dia a projeção ano a ano e a carga total de 2033 divergirem (o motor garante que não, em teste), o assistente recebe um alerta e deve citar a carga total de 2033.
 
 ### 8.7 Importar CSV do Único
 
