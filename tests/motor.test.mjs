@@ -337,6 +337,82 @@ describe('Simulador de crescimento', () => {
   })
 })
 
+describe('Alíquota de referência (IBS+CBS) ajustável', () => {
+  const ref = (aliq, extra = {}) => calc('lucro_presumido', 'comercio_varejo', 100000, { insumosMensais: 60000, aliquotaReferencia: aliq, ...extra })
+
+  it('sem informar vale a estimativa padrão de 26,5%, e o resultado mostra a alíquota usada', () => {
+    const r = calc('lucro_presumido', 'comercio_varejo', 100000, { insumosMensais: 60000 })
+    assert.equal(r.aliquotaReferencia, 0.265)
+    assert.equal(r.aliquotaCBSReferencia, 0.0925)
+    perto(R(r.aliquotaIVABruta * 1e6), R(0.265 * 1e6))
+    assert.equal(R(ref(0.265).cargaTotalReformaMensal), R(r.cargaTotalReformaMensal))
+  })
+
+  it('o IVA acompanha a alíquota: débito, crédito e líquido', () => {
+    const r = ref(0.2791)
+    perto(R(r.aliquotaIVABruta * 1e6), R(0.2791 * 1e6))
+    perto(R(r.impostoIVABrutoMensal), R(100000 * 0.2791))
+    perto(R(r.creditoInsumosMensal), R(60000 * 0.2791))
+    perto(R(r.impostoIVALiquidoMensal), R(40000 * 0.2791))
+  })
+
+  it('as reduções por setor incidem sobre a alíquota informada', () => {
+    const h = calc('simples_nacional', 'hoteis_pousadas', 100000, { insumosMensais: 20000, aliquotaReferencia: 0.30 })
+    perto(R(h.aliquotaIVABruta * 1e6), R(0.30 * 0.6 * 1e6))
+    perto(R(h.creditoInsumosMensal), R(20000 * 0.30), 'hotelaria compra a alíquota cheia')
+    const f = calc('simples_nacional', 'farmacias_drogarias', 100000, { insumosMensais: 20000, aliquotaReferencia: 0.30, pctMedicamentos: 50 })
+    perto(R(f.aliquotaIVABruta * 1e6), R((0.5 * 0.30 * 0.4 + 0.5 * 0.30) * 1e6), 'medicamentos com 60% de redução')
+  })
+
+  it('o ponto de 2033 é a carga total pós-reforma e sobe com a alíquota', () => {
+    for (const regime of ['simples_nacional', 'lucro_presumido', 'lucro_real']) {
+      const base = calc(regime, 'comercio_varejo', 100000, { insumosMensais: 60000, aliquotaReferencia: 0.25 })
+      const alto = calc(regime, 'comercio_varejo', 100000, { insumosMensais: 60000, aliquotaReferencia: 0.30 })
+      perto(R(base.projecaoAnos.at(-1).impostoMensal), R(base.cargaTotalReformaMensal), regime)
+      perto(R(alto.projecaoAnos.at(-1).impostoMensal), R(alto.cargaTotalReformaMensal), regime)
+      if (regime !== 'simples_nacional') assert.ok(alto.cargaTotalReformaMensal > base.cargaTotalReformaMensal, regime)
+    }
+  })
+
+  it('a parte da CBS só muda a transição: 2033 igual, 2027 maior com CBS de 11,3%', () => {
+    const a = ref(0.265, { aliquotaCBSReferencia: 0.0925 })
+    const b = ref(0.265, { aliquotaCBSReferencia: 0.113 })
+    perto(R(a.projecaoAnos.at(-1).impostoMensal), R(b.projecaoAnos.at(-1).impostoMensal), '2033')
+    assert.equal(R(a.cargaTotalReformaMensal), R(b.cargaTotalReformaMensal))
+    assert.ok(b.projecaoAnos[1].impostoMensal > a.projecaoAnos[1].impostoMensal, '2027')
+    assert.equal(b.aliquotaCBSReferencia, 0.113)
+  })
+
+  it('valores inválidos voltam ao padrão e os extremos são limitados', () => {
+    for (const v of [0, -0.1, NaN]) assert.equal(ref(v).aliquotaReferencia, 0.265, String(v))
+    assert.equal(ref(0.99).aliquotaReferencia, 0.60)
+    assert.equal(ref(0.265, { aliquotaCBSReferencia: 0.9 }).aliquotaCBSReferencia, 0.265)   // CBS nunca passa do total
+  })
+
+  it('reproduz a premissa de 9,25% da equipe no caso do hotel (9 meses) e mostra que a conclusão depende da alíquota', () => {
+    const total = 1362225.61 + 174142.80 + 204141.00
+    const caso = aliq => calc('simples_nacional', 'hoteis_pousadas', total / 9, {
+      insumosMensais: 197286.73 / 9, perfilClientes: 'b2c', uf: 'MG', anexoSimples: 'III', anexoSimples2: 'I',
+      pctAnexo1: 1362225.61 / total * 100, pctReceitaAliquotaCheia: 204141 / total * 100, aliquotaReferencia: aliq,
+    })
+    const equipe = caso(0.0925), padrao = caso(0.265)
+    perto(R(equipe.cenarioHibridoVerdadeiro.totalMensal * 9), 216609, 'híbrido a 9,25%')
+    perto(R(padrao.cenarioHibridoVerdadeiro.totalMensal * 9), 376805, 'híbrido a 26,5%')
+    assert.ok(equipe.cenarioHibridoVerdadeiro.custoAdicionalVsSimples < 0, 'a 9,25% o híbrido sai mais barato')
+    assert.ok(padrao.cenarioHibridoVerdadeiro.custoAdicionalVsSimples > 0, 'a 26,5% o híbrido sai mais caro')
+    // o DAS de hoje não depende da alíquota da reforma
+    assert.equal(R(equipe.impostoAtualMensal), R(padrao.impostoAtualMensal))
+  })
+
+  it('o simulador de crescimento e o comparador herdam a alíquota informada', () => {
+    const dados = { regime: 'lucro_presumido', setor: S('comercio_varejo'), faturamentoMensal: 100000, insumosMensais: 60000, perfilClientes: 'b2c', aliquotaReferencia: 0.30 }
+    const [p0] = eng.calcularCurvaCrescimento(dados, [0])
+    perto(R(p0.impostoIVAMensal), R(eng.calcularTodosOsCenarios(dados).cargaTotalReformaMensal))
+    const lp = eng.calcularTodosOsRegimes(dados).find(x => x.regime === 'lucro_presumido')
+    assert.equal(lp.aliquotaReferencia, 0.30)
+  })
+})
+
 describe('Projeção 2026–2033 coerente com a carga de hoje e a carga pós-reforma', () => {
   const REGIMES = ['simples_nacional', 'lucro_presumido', 'lucro_real', 'mei', 'profissional_liberal', 'produtor_rural']
 

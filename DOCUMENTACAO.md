@@ -39,9 +39,24 @@ O Brasil substituirá **9 tributos** por **2 tributos não-cumulativos**:
 | ICMS (estadual) + ISS (municipal) | **IBS** — Imposto sobre Bens e Serviços |
 | IPI, IOF parcial, CIDE | **IS** — Imposto Seletivo (sobre produtos nocivos) |
 
-### Alíquota padrão estimada: **26,5%** (CBS + IBS)
+### Alíquota de referência: **fixa ou variável?** Variável — o padrão de 26,5% é estimativa
 
-Esta é a alíquota de referência usada no simulador, uma **estimativa de mercado** (a lei não a fixa). A CBS é estimada em 9,25% (substitui PIS/COFINS em 2027) e o IBS completa os 26,5%. As alíquotas de referência serão definidas por resolução do Senado — previsão de outubro/2026. O Imposto Seletivo não está incluído nesse percentual.
+A lei **não fixa** a alíquota (LC 214, arts. 14 e 18). O que existe:
+
+- **A alíquota de referência é definida por resolução do Senado, ano a ano:** a CBS de 2027 a 2033 e o IBS (parte estadual e parte municipal) de 2029 a 2033, com base em cálculo do TCU (art. 349). Depois de 2035 valem as do ano anterior.
+- **Cada ente pode legislar a sua:** a União fixa a CBS; cada estado e cada município fixa a sua parte do IBS, vinculando-a à de referência (mais ou menos pontos percentuais) ou não. Quem não legisla fica com a de referência. A alíquota do IBS de uma operação é a soma da do estado e a do município de destino (arts. 14 a 16).
+- **Há reajustes:** mudança na legislação que reduza ou aumente a arrecadação obriga o Senado a recalcular as de referência (art. 19), e há limites ("teto de referência") que reduzem a CBS em 2030 e as de CBS e IBS em 2035 se a receita passar do teto (arts. 367 a 369).
+- **2027 e 2028:** a CBS cobrada é a de referência menos 0,1 ponto percentual (art. 347), e o IBS é de teste (0,05% estadual + 0,05% municipal, art. 344).
+
+**Situação em nov/2026 (reportagens; o texto oficial da resolução ainda não foi publicado):** o TCU aprovou em 28/10/2026 a CBS de referência de 2027 em **11,3%** (cálculo exato 11,3468%, processo TC 006.529/2026-7), que o Senado confirma por resolução até 15/12/2026; se não agir no prazo, vale o cálculo do TCU (art. 349 §2º). O IBS só será fixado até o fim de 2028. O Comitê Gestor estima, sem caráter oficial, CBS 9,21% + IBS 18,7% = 27,91%. Fontes: [ConJur, 28/10/2026](https://conjur.com.br/2026-out-28/tcu-propoe-aliquota-de-referencia-da-cbs-em-113-para-2027/), [Brasil 61](https://brasil61.com/n/reforma-tributaria-aliquota-da-cbs-deve-ser-definida-pelo-senado-ate-15-de-dezembro-bras2617397) e [Rádio Senado](https://www12.senado.leg.br/radio/1/noticia/2026/04/30/aliquotas-de-bens-e-servicos-e-do-imposto-seletivo-devem-ser-fixadas-este-ano). A Brasil 61 também cita um teto de 26,5% para 2033, sem dizer se é só da CBS ou da soma; não achei esse número no texto da LC 214.
+
+**No simulador:** o padrão continua **26,5% no total e 9,25% de CBS** (estimativas), mas o campo "Alíquota de referência de IBS + CBS" (formulário, seção avançada) permite trocar os dois valores, com atalhos para a estimativa do Comitê Gestor (27,91%) e a CBS de 11,3% do TCU.
+- **Total** define débito, crédito, reduções por setor (40% de redução = 60% da alíquota informada), a carga de 2033, o híbrido e a comparação entre regimes.
+- **Parte da CBS** só muda como o IVA se divide na transição de 2027 a 2032 (a CBS entra em 2027 e o IBS só em 2029); a carga de 2033 depende apenas do total.
+- O resultado, a memória de cálculo, o comparador, o simulador de crescimento e o assistente usam o valor informado e dizem de onde ele veio.
+- **Por que o padrão não virou 11,3% de CBS:** o número do TCU é de 2027, ainda depende da resolução do Senado (até 15/12/2026) e o IBS não foi fixado. Depois da resolução, vale trocar o padrão.
+- 9,25% de total não representa a reforma (é a soma de PIS e COFINS de hoje): o atalho existe só para reproduzir cenários de terceiros, e a tela avisa.
+- A análise da Holding Patrimonial ainda usa 26,5% fixo.
 
 ### Não-cumulatividade total
 
@@ -337,7 +352,7 @@ A lista completa está em `src/data/setores.ts`. Cada setor traz:
 
 ## 11. Limitações e Avisos
 
-1. **Alíquota padrão de 26,5%** é estimativa de mercado. A alíquota real do IVA Dual será definida por resolução do Senado (previsão: outubro de 2026).
+1. **Alíquota padrão de 26,5%** é estimativa de mercado e pode ser alterada no formulário. A real será definida por resolução do Senado, ano a ano, e cada ente pode legislar a sua (seção 3). O simulador usa uma alíquota única para todo o país, sem a diferença entre estados e municípios.
 2. **Alíquotas do regime atual** são médias setoriais. Empresas com margens, benefícios fiscais ou deduções específicas terão valores diferentes — por isso o modo detalhado com dados reais é mais preciso.
 3. **O IS (Imposto Seletivo)** sobre produtos nocivos (cigarro, bebidas alcoólicas etc.) não é calculado: as alíquotas serão fixadas por lei ordinária. O simulador apenas sinaliza os setores sujeitos a ele.
 4. **Exportações:** são imunes de IBS/CBS (art. 79 da LC 214) com manutenção dos créditos. No Simples, a receita exportada não paga a parcela de tributos sobre consumo do DAS (seção 6.4). Quando a alíquota vem do PGDAS-D, o simulador assume que as receitas já foram separadas.

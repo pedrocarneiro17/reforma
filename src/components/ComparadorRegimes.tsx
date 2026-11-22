@@ -106,9 +106,10 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.perfilClientes,
      dadosBase.folhaPagamentoLRMensal, dadosBase.aliquotaICMSEfetiva, dadosBase.aliquotaISSEfetiva,
      dadosBase.despesasOperacionaisMensais, dadosBase.sociosAdministradores,
-     dadosBase.exportacoesMensais, dadosBase.tipoExportacao],
+     dadosBase.exportacoesMensais, dadosBase.tipoExportacao, dadosBase.aliquotaReferencia, dadosBase.aliquotaCBSReferencia],
   )
 
+  const pctRef = `${(dadosBase.aliquotaReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
 
   // Simples híbrido projetado com faturamento +10% (regra: híbrido no faturamento atual e +10%).
@@ -567,7 +568,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               </div>
               <p className="text-xs text-ink-muted leading-relaxed">
                 CBS e IBS migram para dentro do DAS progressivamente. Custo total idêntico ao atual. Clientes B2B
-                só creditam a alíquota nominal embutida no DAS — menor que os 26,5% da alíquota plena do IVA Dual.
+                só creditam a alíquota nominal embutida no DAS — menor que os {pctRef} da alíquota plena do IVA Dual.
               </p>
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs">
@@ -588,7 +589,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   <span className="text-ink-muted font-medium">Crédito que o cliente recebe</span>
                   <span className="num text-warning font-medium">
                     {fmt.pct((dadosBase.cbsSimplesEfetivo ?? 0) + (dadosBase.ibsSimplesEfetivo ?? 0))}
-                    {' '}(vs 26,5% IVA pleno)
+                    {' '}(vs {pctRef} IVA pleno)
                   </span>
                 </div>
               </div>
@@ -604,7 +605,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 </span>
               </div>
               <p className="text-xs text-ink-muted leading-relaxed">
-                Recolhe CBS/IBS por fora do DAS à alíquota plena (26,5%), com crédito total de insumos.
+                Recolhe CBS/IBS por fora do DAS à alíquota plena ({pctRef}), com crédito total de insumos.
                 DAS recolhido apenas sobre IRPJ+CSLL+CPP. Clientes recebem crédito integral — vantagem em B2B.
               </p>
               <div className="space-y-1.5">
@@ -613,7 +614,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   <span className="font-semibold num text-ink">{fmt.moeda(dadosBase.cenarioHibridoVerdadeiro.dasReduzidoMensal)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-ink-muted">CBS/IBS bruto (26,5%)</span>
+                  <span className="text-ink-muted">CBS/IBS bruto ({pctRef})</span>
                   <span className="num text-ink-secondary">{fmt.moeda(dadosBase.cenarioHibridoVerdadeiro.ibsCBSBrutoMensal)}</span>
                 </div>
                 <div className="flex justify-between text-xs">

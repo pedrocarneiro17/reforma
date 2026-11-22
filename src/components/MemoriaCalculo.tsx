@@ -67,7 +67,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     creditoProdutorRural, creditoTranspAutonomo, creditoCapitalImediato, creditoDespesasAdicionais,
     creditoRegimeAutomotivo, creditoZFMIbs, creditoZFMCbs,
     ivaZeradoVendasRural, ivaZeradoVendasTransp, produtorRuralNaoContribuinte, naoContribuinteSetor, nanoempreendedor,
-    gorjetaMensal, pctFornecedoresSimples, inssAutonomoMensal,
+    gorjetaMensal, pctFornecedoresSimples, inssAutonomoMensal, aliquotaReferencia,
     alertaMEI, analiseProlabore, analiseFatorR, analiseGrupoSimples, analiseHolding,
     cenarioHibridoVerdadeiro,
   } = resultados
@@ -355,9 +355,9 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
         <Linha label="Setor de atuação" formula={setor.tipo} valor={setor.label.split('(')[0].trim()} />
         <Linha
           label="Alíquota de referência IVA Dual (CBS + IBS)"
-          formula={setor.reducao > 0 ? `26,5% × (1 − ${pct(setor.reducao)} redução)` : '26,5% (alíquota cheia)'}
+          formula={setor.reducao > 0 ? `${pct(aliquotaReferencia)} × (1 − ${pct(setor.reducao)} redução)` : `${pct(aliquotaReferencia)} (alíquota cheia)`}
           valor={pct(aliquotaIVABruta)}
-          refLegal="Estimativa de mercado — a ser fixada pelo Senado (LC 214/2025)"
+          refLegal={Math.abs(aliquotaReferencia - 0.265) < 1e-9 ? 'Estimativa de mercado — a ser fixada pelo Senado (LC 214/2025)' : 'Informada pelo usuário — a lei não a fixa (resolução do Senado, LC 214 art. 18)'}
         />
       </Bloco>
 
@@ -366,7 +366,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
 
       <p className="text-xs text-ink-muted leading-relaxed">
         Modelo simplificado para fins de planejamento. Não substitui a apuração oficial (LALUR, compensações de prejuízo,
-        RAT/FAP, créditos específicos, adições e exclusões). A alíquota de 26,5% do IVA Dual é estimativa de mercado.
+        RAT/FAP, créditos específicos, adições e exclusões). A alíquota de {pct(aliquotaReferencia)} do IVA Dual é {Math.abs(aliquotaReferencia - 0.265) < 1e-9 ? 'estimativa de mercado' : 'a informada por você'}.
         Consulte sempre o contador responsável antes de decisões fiscais.
       </p>
     </div>

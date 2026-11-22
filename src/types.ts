@@ -113,6 +113,9 @@ export interface DadosEntrada {
   pctMedicamentos?: number              // % do faturamento em medicamentos (60% de redução); o restante fica na alíquota cheia
   // Hotelaria/restaurantes — receita fora do regime específico (LC 214 art. 273 §2º, art. 280 p.u.)
   pctReceitaAliquotaCheia?: number      // % do faturamento em bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo (alíquota cheia, sem os 40% de redução)
+  // Alíquota de referência (IBS+CBS): a lei não a fixa; cada resolução do Senado a define por ano (LC 214, arts. 14 e 18)
+  aliquotaReferencia?: number           // total IBS+CBS em fração (0,265 = 26,5%, padrão). Define débito, crédito e a carga de 2033
+  aliquotaCBSReferencia?: number        // parte da CBS dentro do total, em fração (padrão 0,0925). Só muda como o IVA se divide na transição 2027–2032
   // Hotelaria/restaurantes/parques — composição das COMPRAS (só vale em setores com insumosComposicao)
   pctInsumosAliquotaZero?: number       // % das compras em itens de alíquota zero (cesta básica: carnes, hortifrúti, arroz, feijão, ovos): não geram crédito
   pctInsumosReduzidos?: number          // % das compras em itens com 60% de redução (demais alimentos do Anexo VII): crédito a 10,6%; o resto vem com alíquota cheia
@@ -306,6 +309,10 @@ export interface ResultadoCalculo {
   creditoPerdidoFornecedorSimples: number
   analiseProlabore: AnaliseProlabore | null
 
+  /** Alíquota de referência (IBS+CBS) efetivamente usada no cálculo, em fração */
+  aliquotaReferencia: number
+  /** Parte da CBS dentro dela, em fração */
+  aliquotaCBSReferencia: number
   aliquotaIVABruta: number
   aliquotaIVAEfetiva: number
   impostoIVABrutoMensal: number

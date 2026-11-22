@@ -72,6 +72,21 @@ describe('Ferramentas do motor', () => {
     assert.match(ferr.executarFerramentaMotor('calcular_cenarios', { ...base, pctInsumosReduzidos: 150 }).erro, /pctInsumosReduzidos/)
   })
 
+  it('alíquota de referência entra em % pela ferramenta, chega ao motor e aparece nas premissas', () => {
+    const base = { ...EMPRESA, regime: 'lucro_presumido' }
+    const padrao = ferr.executarFerramentaMotor('calcular_cenarios', base)
+    const alta = ferr.executarFerramentaMotor('calcular_cenarios', { ...base, aliquotaReferenciaPct: 27.91, aliquotaCBSReferenciaPct: 11.3 })
+    assert.equal(padrao.aliquotaReferenciaUsadaPct, 26.5)
+    assert.equal(alta.aliquotaReferenciaUsadaPct, 27.91)
+    assert.ok(alta.cargaPosReforma2033.impostoMensal > padrao.cargaPosReforma2033.impostoMensal)
+    assert.ok(alta.premissas.some(p => /27,91|27\.91/.test(p) && /informada pelo usuário/.test(p)))
+    assert.ok(padrao.premissas.some(p => /estimativa/.test(p)))
+    assert.match(ferr.executarFerramentaMotor('calcular_cenarios', { ...base, aliquotaReferenciaPct: 2 }).erro, /aliquotaReferenciaPct/)
+    assert.match(ferr.executarFerramentaMotor('calcular_cenarios', { ...base, aliquotaCBSReferenciaPct: 80 }).erro, /aliquotaCBSReferenciaPct/)
+    const cmp = ferr.executarFerramentaMotor('comparar_regimes', { ...base, aliquotaReferenciaPct: 27.91 })
+    assert.equal(cmp.aliquotaReferenciaUsadaPct, 27.91)
+  })
+
   it('listar_setores acha por palavra sem depender de acento', () => {
     const r = ferr.executarFerramentaMotor('listar_setores', { busca: 'hoteis' })
     assert.ok(r.setores.some(s => s.codigo === 'hoteis_pousadas'))

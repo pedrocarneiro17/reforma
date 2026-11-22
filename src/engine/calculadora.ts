@@ -52,7 +52,7 @@ export const ALIQUOTA_IVA_PADRAO = 0.265
  */
 export const ALIQUOTA_CBS_2027 = 0.0925
 export const ALERTA_DEFINICAO_ALIQUOTA =
-  'Alíquotas de referência (CBS/IBS) ainda serão definidas por resolução — previsão de outubro/2026. Os percentuais usados aqui (CBS 9,25% em 2027; 26,5% total em 2033) são estimativas.'
+  'As alíquotas de referência ainda não estão definidas em lei: o TCU aprovou (28/10/2026) 11,3% de CBS para 2027, que o Senado confirma por resolução até 15/12/2026, e o IBS só será fixado até o fim de 2028. Os percentuais usados aqui (CBS 9,25%; IBS+CBS 26,5% em 2033) são estimativas e podem ser trocados no campo "Alíquota de referência".'
 
 /**
  * INSS — Contribuinte Individual (Autônomo / Profissional Liberal)
@@ -371,6 +371,7 @@ export function calcularFatorR(
   folhaMensal: number,
 ): AnaliseFatorR {
   const faturamentoAnual = faturamentoMensal * 12
+
   const fatorR = faturamentoMensal > 0 ? folhaMensal / faturamentoMensal : 0
   const jaEstaNoIII = fatorR >= FATOR_R_LIMIAR
 
@@ -893,12 +894,25 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctReceitaAliquotaCheia = 0,
     pctInsumosAliquotaZero,
     pctInsumosReduzidos,
+    aliquotaReferencia: aliquotaReferenciaEntrada,
+    aliquotaCBSReferencia: aliquotaCBSReferenciaEntrada,
     folhaPagamentoLRMensal = 0,
     aliquotaICMSEfetiva,
     aliquotaISSEfetiva,
     despesasOperacionaisMensais = 0,
   } = dados
   const faturamentoAnual = faturamentoMensal * 12
+
+  // Alíquota de referência (IBS+CBS) usada em todo o cálculo. A lei não a fixa: ela é definida por resolução do
+  // Senado (CBS de 2027 a 2033; IBS de 2029 a 2033) e cada ente pode legislar a sua (LC 214, arts. 14 e 18). Sem
+  // informar, vale a estimativa padrão. A parte da CBS só decide como o IVA se divide na transição (CBS entra em
+  // 2027; IBS só em 2029): o ponto de 2033 depende apenas do total.
+  const ALIQ = aliquotaReferenciaEntrada != null && Number.isFinite(aliquotaReferenciaEntrada) && aliquotaReferenciaEntrada > 0
+    ? Math.min(0.60, Math.max(0.01, aliquotaReferenciaEntrada))
+    : ALIQUOTA_IVA_PADRAO
+  const ALIQ_CBS = Math.min(ALIQ, aliquotaCBSReferenciaEntrada != null && Number.isFinite(aliquotaCBSReferenciaEntrada) && aliquotaCBSReferenciaEntrada > 0
+    ? aliquotaCBSReferenciaEntrada
+    : ALIQUOTA_CBS_2027)
 
   // Simples Nacional — receita do mercado interno e da exportação são consideradas SEPARADAMENTE para
   // determinar a alíquota (LC 123 art. 3º §15, aplicável quando há receita de exportação — §14): cada uma
@@ -1254,24 +1268,24 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const reducaoEfetiva = (setor.duasVersoesMedicina && versaoMedicina)
     ? (versaoMedicina === 'saude' ? 0.60 : 0.30)
     : setor.reducao
-  let aliquotaIVABruta = ALIQUOTA_IVA_PADRAO * (1 - reducaoEfetiva)
+  let aliquotaIVABruta = ALIQ * (1 - reducaoEfetiva)
   if (setor.vendeMedicamentos && pctMedicamentos > 0) {
     const fracMed = Math.min(1, Math.max(0, pctMedicamentos / 100))
-    const aliqMedicamentos = ALIQUOTA_IVA_PADRAO * (1 - 0.60)  // Art. 133: medicamentos 60% de redução
+    const aliqMedicamentos = ALIQ * (1 - 0.60)  // Art. 133: medicamentos 60% de redução
     aliquotaIVABruta = fracMed * aliqMedicamentos + (1 - fracMed) * aliquotaIVABruta
   }
   // Hotelaria/restaurantes: bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo ficam fora do
   // regime específico (art. 273 §2º LC 214) e pagam a alíquota cheia — a média ponderada vale para o débito
   if (setor.receitaMistaReducao && pctReceitaAliquotaCheia > 0) {
     const fCheia = Math.min(1, Math.max(0, pctReceitaAliquotaCheia / 100))
-    aliquotaIVABruta = fCheia * ALIQUOTA_IVA_PADRAO + (1 - fCheia) * aliquotaIVABruta
+    aliquotaIVABruta = fCheia * ALIQ + (1 - fCheia) * aliquotaIVABruta
   }
   // Supermercados — cesta mista: parte alíquota zero, parte redução 60%, restante cheia
   if (setor.cestaMista && (pctCestaZero > 0 || pctCestaReduzida > 0)) {
     const fz = Math.min(1, Math.max(0, pctCestaZero / 100))            // Arts. 125/148: alíquota zero
     const fr = Math.min(1 - fz, Math.max(0, pctCestaReduzida / 100))   // Art. 128: redução 60%
     const fc = Math.max(0, 1 - fz - fr)                               // restante: alíquota do setor (cheia)
-    const aliqRed60 = ALIQUOTA_IVA_PADRAO * (1 - 0.60)
+    const aliqRed60 = ALIQ * (1 - 0.60)
     aliquotaIVABruta = fz * 0 + fr * aliqRed60 + fc * aliquotaIVABruta
   }
 
@@ -1326,11 +1340,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Hotelaria, restaurantes e parques podem informar a composição das compras (insumosComposicao): alimentos da
   // cesta básica têm alíquota zero (sem imposto, sem crédito), os demais alimentos do Anexo VII têm 60% de redução
   // e o resto vem com alíquota cheia. Sem a composição informada vale o padrão do setor.
-  let aliquotaCreditoFornecedorRegular = setor.creditoInsumosAliquotaCheia ? ALIQUOTA_IVA_PADRAO : aliquotaIVABruta
+  let aliquotaCreditoFornecedorRegular = setor.creditoInsumosAliquotaCheia ? ALIQ : aliquotaIVABruta
   if (setor.insumosComposicao && (pctInsumosAliquotaZero != null || pctInsumosReduzidos != null)) {
     const fz = Math.min(1, Math.max(0, (pctInsumosAliquotaZero ?? 0) / 100))
     const fr = Math.min(1 - fz, Math.max(0, (pctInsumosReduzidos ?? 0) / 100))
-    aliquotaCreditoFornecedorRegular = fr * ALIQUOTA_IVA_PADRAO * (1 - 0.60) + (1 - fz - fr) * ALIQUOTA_IVA_PADRAO
+    aliquotaCreditoFornecedorRegular = fr * ALIQ * (1 - 0.60) + (1 - fz - fr) * ALIQ
   }
   const aliquotaCreditoEfetiva = fracSimples * cbsFornecedorSimples + (1 - fracSimples) * aliquotaCreditoFornecedorRegular
   const creditoInsumosMensal = insumosMensais * aliquotaCreditoEfetiva
@@ -1338,9 +1352,9 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   // Crédito presumido — Arts. 168-169 LC 214/2025
   // Produtor rural não-contribuinte: crédito = compras × alíquota que incidiria (insumos agropecuários: 60% redução → 10,6%)
-  const ALIQ_PRESUMIDA_PRODUTOR_RURAL  = ALIQUOTA_IVA_PADRAO * (1 - 0.60)  // Anexo IX LC 214/2025: 60% reducao
+  const ALIQ_PRESUMIDA_PRODUTOR_RURAL  = ALIQ * (1 - 0.60)  // Anexo IX LC 214/2025: 60% reducao
   // Transportador autônomo PF: crédito = frete × alíquota que incidiria (transporte rodoviário: 40% redução → 15,9%)
-  const ALIQ_PRESUMIDA_TRANSP_AUTONOMO = ALIQUOTA_IVA_PADRAO * (1 - 0.40)  // Art. 128 + Anexo II LC 214/2025: 40% redução
+  const ALIQ_PRESUMIDA_TRANSP_AUTONOMO = ALIQ * (1 - 0.40)  // Art. 128 + Anexo II LC 214/2025: 40% redução
   const creditoProdutorRural  = (insumosMensais * pctInsumosProdutorRural / 100) * ALIQ_PRESUMIDA_PRODUTOR_RURAL
   const creditoTranspAutonomo = (insumosMensais * pctFreteAutonomo / 100) * ALIQ_PRESUMIDA_TRANSP_AUTONOMO
 
@@ -1366,7 +1380,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Fatia da CBS dentro do IVA Dual: 9,25% de 26,5% (a CBS substitui o PIS/COFINS a partir de
   // 2027 e é estimada em 9,25%). O IBS (17,25%) completa os 26,5% e só entra a partir de 2029.
   // ⚠️ Alíquotas de referência a serem DEFINIDAS por resolução em out/2026 (ver ALERTA_DEFINICAO_ALIQUOTA).
-  const CBS_SHARE_IVA = 9.25 / 26.5
+  const CBS_SHARE_IVA = ALIQ_CBS / ALIQ
   const pisCofinsNoDAsMensal = (regime === 'simples_nacional' && cbsSimplesEfetivo != null)
     ? receitaConsumoSimplesMensal * cbsSimplesEfetivo
     : 0
@@ -1397,7 +1411,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Zona Franca de Manaus — créditos presumidos IBS e CBS (Art. 450 LC 214/2025)
   // Estimativa da partilha IBS/CBS dentro dos 26,5%: CBS 9,25% (federal) + IBS 17,25% (estadual/municipal).
   // A partilha exata depende da alíquota de referência a ser fixada por resolução em out/2026.
-  const IBS_SHARE_ESTIMADO = 17.25 / 26.5  // ≈ 0,651
+  const IBS_SHARE_ESTIMADO = 1 - ALIQ_CBS / ALIQ  // padrão: ≈ 0,651
   const PCT_ZFM_IBS: Record<import('../types').TipoBemZFM, number> = {
     consumo_final: 0.55,    // Art. 450 §1º I
     capital:       0.75,    // Art. 450 §1º II
@@ -1743,6 +1757,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       ? calcularProlabore(sociosAdministradores, regime as 'lucro_presumido' | 'lucro_real')
       : null,
 
+    aliquotaReferencia: ALIQ,
+    aliquotaCBSReferencia: ALIQ_CBS,
     aliquotaIVABruta,
     aliquotaIVAEfetiva,
     impostoIVABrutoMensal,

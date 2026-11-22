@@ -59,7 +59,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     distribuicaoLucrosMensal, dividendosExcedenteMensal, irrfDividendosMensal,
     proLaboreConsideradoMensal, riscoReclassificacaoNivel,
     despesasParaZerarIVAMensal, pctFatParaZerarIVA,
+    aliquotaReferencia, aliquotaCBSReferencia,
   } = resultados
+  const pctRef = (x: number) => `${(x * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
+  const refPadrao = Math.abs(aliquotaReferencia - 0.265) < 1e-9
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
 
@@ -230,7 +233,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               Cenário 2 — Regime Híbrido
               <span
                 className="badge badge-neutral text-[10px] font-medium cursor-help"
-                title="A alíquota padrão de 26,5% (CBS+IBS) é uma estimativa de mercado — a LC 214/2025 não a fixa."
+                title={`A alíquota de referência de ${pctRef(aliquotaReferencia)} (CBS+IBS) ${refPadrao ? 'é uma estimativa de mercado' : 'foi informada por você'} — a LC 214/2025 não a fixa.`}
               >estimativa</span>
             </span>
             <span className="stat-value text-warning num">{fmt.moeda(cenarioHibridoVerdadeiro.totalMensal)}</span>
@@ -268,7 +271,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               {!isento && (
                 <span
                   className="badge badge-neutral text-[10px] font-medium cursor-help"
-                  title="A alíquota padrão de 26,5% (CBS+IBS) é uma estimativa de mercado — a LC 214/2025 não a fixa. O valor final será definido por lei ordinária e resolução do Senado."
+                  title={`A alíquota de referência de ${pctRef(aliquotaReferencia)} (CBS+IBS) ${refPadrao ? 'é uma estimativa de mercado' : 'foi informada por você'} — a LC 214/2025 não a fixa. O valor final será definido por lei ordinária e resolução do Senado.`}
                 >
                   estimativa
                 </span>
@@ -439,8 +442,10 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           pisCofinsAtualMensal={pisCofinsNoDAsMensal}
           cbsIVADualMensal={cbsIVADualMensal}
           aliquotaPisCofins={cbsSimplesEfetivo}
-          aliquotaCbsIVA={aliquotaIVAEfetiva * (8.8 / 26.5)}
-          creditoInsumosCBSMensal={creditoInsumosMensal * (8.8 / 26.5)}
+          aliquotaCbsIVA={aliquotaIVAEfetiva * (aliquotaCBSReferencia / aliquotaReferencia)}
+          creditoInsumosCBSMensal={creditoInsumosMensal * (aliquotaCBSReferencia / aliquotaReferencia)}
+          aliquotaReferencia={aliquotaReferencia}
+          aliquotaCBSReferencia={aliquotaCBSReferencia}
           faturamentoMensal={faturamentoMensal}
           anexo={anexoSimples}
         />
@@ -891,7 +896,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               Crédito presumido de IBS: <strong className="num">{fmt.moeda(creditoZFMIbs)}/mês</strong> · CBS: <strong className="num">{fmt.moeda(creditoZFMCbs)}/mês</strong>. Total <strong className="num text-success">{fmt.moeda((creditoZFMIbs + creditoZFMCbs))}/mês</strong>, já deduzido no IVA líquido acima.
             </p>
             <p className="text-xs text-ink-muted leading-relaxed">
-              A parcela de IBS usa estimativa da partilha IBS/CBS dentro dos 26,5% (≈17,7% IBS). Os créditos só compensam IBS/CBS devidos (sem ressarcimento em dinheiro) e prescrevem em 5 anos (Art. 452).
+              A parcela de IBS usa estimativa da partilha IBS/CBS dentro dos {pctRef(aliquotaReferencia)} (≈{pctRef(aliquotaReferencia - aliquotaCBSReferencia)} IBS). Os créditos só compensam IBS/CBS devidos (sem ressarcimento em dinheiro) e prescrevem em 5 anos (Art. 452).
             </p>
           </div>
         </div>
@@ -979,7 +984,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           <div className="space-y-1">
             <p className="text-sm font-semibold text-ink">Crédito de IVA reduzido — {pctFornecedoresSimples}% das compras vêm do Simples Nacional</p>
             <p className="text-xs text-ink-secondary leading-relaxed">
-              Fornecedores no Simples geram crédito de apenas <strong>~5,88%</strong> (vs. {fmt.pct(0.265 * (1 - setor.reducao))} do IVA cheio do seu setor).
+              Fornecedores no Simples geram crédito de apenas <strong>~5,88%</strong> (vs. {fmt.pct(aliquotaReferencia * (1 - setor.reducao))} do IVA cheio do seu setor).
               O crédito perdido chega a <strong className="num">{fmt.moeda(creditoPerdidoFornecedorSimples)}/mês</strong>{' '}
               (<strong className="num">{fmt.moeda(creditoPerdidoFornecedorSimples * 12)}/ano</strong>).
             </p>
@@ -2210,6 +2215,8 @@ interface CardPisCofinsVsCBSProps {
   creditoInsumosCBSMensal: number
   faturamentoMensal: number
   anexo?: import('../types').AnexoSimples
+  aliquotaReferencia: number
+  aliquotaCBSReferencia: number
 }
 
 function CardPisCofinsVsCBS({
@@ -2220,6 +2227,8 @@ function CardPisCofinsVsCBS({
   creditoInsumosCBSMensal,
   faturamentoMensal,
   anexo,
+  aliquotaReferencia,
+  aliquotaCBSReferencia,
 }: CardPisCofinsVsCBSProps) {
   const diferenca     = cbsIVADualMensal - pisCofinsAtualMensal
   const aumentou      = diferenca > 0
@@ -2234,7 +2243,7 @@ function CardPisCofinsVsCBS({
         <p className="text-xs text-ink-muted leading-relaxed">
           Comparativo entre o PIS/COFINS embutido no DAS atual{anexo ? ` (Anexo ${anexo})` : ''} e a CBS estimada
           no IVA Dual pleno. A CBS é não-cumulativa — permite deduzir créditos sobre insumos.
-          Proporção CBS estimada em 33,2% do IVA (8,8/26,5 pp — estimativa de mercado).
+          Proporção CBS estimada em {((aliquotaCBSReferencia / aliquotaReferencia) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}% do IVA ({(aliquotaCBSReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}/{(aliquotaReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} pp — estimativa, não fixada em lei).
         </p>
       </div>
 
@@ -2322,7 +2331,7 @@ function CardPisCofinsVsCBS({
       </div>
 
       <p className="text-xs text-ink-muted leading-relaxed">
-        A alíquota de CBS estimada usa a proporção de 8,8 pp dentro dos 26,5% do IVA Dual — valor de mercado, não fixado em lei.
+        A alíquota de CBS estimada usa a proporção de {(aliquotaCBSReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })} pp dentro dos {(aliquotaReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}% do IVA Dual — estimativa, não fixada em lei.
         O crédito de insumos corresponde à CBS proporcional sobre suas compras tributadas, conforme Art. 103 LC 214/2025.
       </p>
     </div>

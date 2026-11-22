@@ -39,6 +39,8 @@ const PROPRIEDADES_EMPRESA = {
   folhaMensal: { type: 'number', description: 'Folha de pagamento mensal (inclui pró-labore). Define o Fator R no Simples.' },
   pctFornecedoresSimples: { type: 'number', description: '% das compras feitas de fornecedores do Simples Nacional (geram crédito menor).' },
   pctReceitaAliquotaCheia: { type: 'number', description: 'Hotelaria e restaurantes: % da receita em bebidas alcoólicas e itens de terceiros sem preparo (alíquota cheia, sem os 40% de redução).' },
+  aliquotaReferenciaPct: { type: 'number', description: 'Alíquota de referência TOTAL de IBS+CBS em % (ex.: 26.5). Opcional; padrão 26,5. A lei não a fixa: serve para testar cenários, como 27.91 (estimativa do Comitê Gestor).' },
+  aliquotaCBSReferenciaPct: { type: 'number', description: 'Parte da CBS dentro da alíquota de referência, em % (ex.: 11.3 = proposta do TCU para 2027). Opcional; padrão 9,25. Só muda a divisão do IVA na transição, não a carga de 2033.' },
   pctInsumosAliquotaZero: { type: 'number', description: 'Hotelaria, restaurantes e parques: % das COMPRAS em alimentos da cesta básica (alíquota zero, não geram crédito). Informe junto com pctInsumosReduzidos.' },
   pctInsumosReduzidos: { type: 'number', description: 'Hotelaria, restaurantes e parques: % das compras em alimentos com 60% de redução (crédito a 10,6%). O restante das compras vem com alíquota cheia.' },
   pctMedicamentos: { type: 'number', description: 'Farmácias: % da receita em medicamentos.' },
@@ -140,6 +142,10 @@ export function montarDados(entrada: Record<string, unknown>): DadosEntrada {
   set('folhaMensal', numero(entrada.folhaMensal, 'folhaMensal'))
   set('pctFornecedoresSimples', numero(entrada.pctFornecedoresSimples, 'pctFornecedoresSimples', 0, 100))
   set('pctReceitaAliquotaCheia', numero(entrada.pctReceitaAliquotaCheia, 'pctReceitaAliquotaCheia', 0, 100))
+  const refPct = numero(entrada.aliquotaReferenciaPct, 'aliquotaReferenciaPct', 5, 60)
+  if (refPct !== undefined) dados.aliquotaReferencia = refPct / 100
+  const cbsPct = numero(entrada.aliquotaCBSReferenciaPct, 'aliquotaCBSReferenciaPct', 1, 40)
+  if (cbsPct !== undefined) dados.aliquotaCBSReferencia = cbsPct / 100
   set('pctInsumosAliquotaZero', numero(entrada.pctInsumosAliquotaZero, 'pctInsumosAliquotaZero', 0, 100))
   set('pctInsumosReduzidos', numero(entrada.pctInsumosReduzidos, 'pctInsumosReduzidos', 0, 100))
   set('pctMedicamentos', numero(entrada.pctMedicamentos, 'pctMedicamentos', 0, 100))
@@ -158,10 +164,15 @@ export function montarDados(entrada: Record<string, unknown>): DadosEntrada {
 
 // ─── Resumos compactos (a IA não precisa dos ~200 campos do resultado) ───────
 
-const PREMISSAS = [
-  `A alíquota de referência de IBS+CBS (${pct(ALIQUOTA_IVA_PADRAO)}%) é uma estimativa de mercado: a LC 214/2025 não a fixa.`,
-  'Os valores são estimativas para apoio à decisão e não substituem a apuração do contador.',
-]
+function premissas(r: ResultadoCalculo): string[] {
+  const padrao = Math.abs(r.aliquotaReferencia - ALIQUOTA_IVA_PADRAO) < 1e-9
+  return [
+    padrao
+      ? `A alíquota de referência de IBS+CBS (${pct(r.aliquotaReferencia)}%) é uma estimativa: a LC 214/2025 não a fixa (ela é definida por resolução do Senado e varia por ano e por ente).`
+      : `Alíquota de referência de IBS+CBS usada: ${pct(r.aliquotaReferencia)}% (informada pelo usuário; a estimativa padrão é ${pct(ALIQUOTA_IVA_PADRAO)}%). A lei não a fixa.`,
+    'Os valores são estimativas para apoio à decisão e não substituem a apuração do contador.',
+  ]
+}
 
 function alertas(r: ResultadoCalculo): string[] {
   const a: string[] = []
@@ -237,7 +248,8 @@ export function resumirResultado(r: ResultadoCalculo) {
       } : null,
     } : null,
     alertas: alertas(r),
-    premissas: [...PREMISSAS, ALERTA_DEFINICAO_ALIQUOTA],
+    aliquotaReferenciaUsadaPct: pct(r.aliquotaReferencia),
+    premissas: [...premissas(r), ALERTA_DEFINICAO_ALIQUOTA],
   }
 }
 
@@ -295,7 +307,8 @@ export function executarFerramentaMotor(nome: string, entrada: unknown): unknown
             menorCustoPos2033: r.melhorIVA,
             sePrecisarDeFatorR: r.anexoAtingivel,
           })),
-          premissas: [...PREMISSAS, 'No Simples, a carga pós-reforma não inclui IRPJ/CSLL/CPP à parte: estão dentro do DAS.'],
+          aliquotaReferenciaUsadaPct: pct(lista[0].aliquotaReferencia),
+          premissas: [...premissas(lista[0]), 'No Simples, a carga pós-reforma não inclui IRPJ/CSLL/CPP à parte: estão dentro do DAS.'],
         }
       }
 

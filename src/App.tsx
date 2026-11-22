@@ -322,7 +322,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
             Simulação baseada na{' '}
             <strong className="text-ink-secondary">LC 214/2025</strong> e{' '}
             <strong className="text-ink-secondary">LC 227/2026</strong>.
-            Alíquota padrão <strong className="text-ink-secondary">26,5%</strong> (CBS + IBS).
+            Alíquota de referência de <strong className="text-ink-secondary">26,5%</strong> (CBS + IBS) por padrão — a lei não a fixa; ajustável no formulário.
             Valores para fins educacionais — consulte um contador para análise fiscal completa.
           </p>
         </footer>

@@ -220,6 +220,14 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [informarComposicaoInsumos, setInformarComposicaoInsumos] = useState(false) // hotelaria/restaurantes/parques — informar o que é comprado
   const [pctInsumosAliquotaZero, setPctInsumosAliquotaZero] = useState(0)           // % das compras da cesta básica (alíquota zero, sem crédito)
   const [pctInsumosReduzidos, setPctInsumosReduzidos] = useState(0)                 // % das compras com 60% de redução (crédito a 10,6%)
+  // Alíquota de referência (IBS+CBS): a lei não a fixa; padrão 26,5% (estimativa), CBS 9,25%
+  const [aliqRefTotalStr, setAliqRefTotalStr] = useState('26,5')
+  const [aliqRefCBSStr, setAliqRefCBSStr] = useState('9,25')
+  const lerPct = (v: string, padrao: number) => { const n = parseFloat(v.replace(',', '.')); return Number.isFinite(n) && n > 0 ? n / 100 : padrao }
+  const aliqRef = Math.min(0.60, Math.max(0.01, lerPct(aliqRefTotalStr, 0.265)))
+  const aliqRefCBS = Math.min(aliqRef, lerPct(aliqRefCBSStr, 0.0925))
+  const refAlterada = Math.abs(aliqRef - 0.265) > 1e-9 || Math.abs(aliqRefCBS - 0.0925) > 1e-9
+  const pctTxt = (x: number) => `${(x * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
   // Lucro Real — apuração efetiva
   const [folhaPagamentoLRStr, setFolhaPagamentoLRStr] = useState('')
   const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
@@ -436,6 +444,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctCestaZero: mostrarCestaMista ? pctCestaZero : 0,
       pctCestaReduzida: mostrarCestaMista ? pctCestaReduzida : 0,
       pctReceitaAliquotaCheia: mostrarReceitaMista ? pctReceitaAliquotaCheia : 0,
+      aliquotaReferencia: Math.abs(aliqRef - 0.265) > 1e-9 ? aliqRef : undefined,
+      aliquotaCBSReferencia: Math.abs(aliqRefCBS - 0.0925) > 1e-9 ? aliqRefCBS : undefined,
       pctInsumosAliquotaZero: mostrarComposicaoInsumos && informarComposicaoInsumos ? pctInsumosAliquotaZero : undefined,
       pctInsumosReduzidos: mostrarComposicaoInsumos && informarComposicaoInsumos ? pctInsumosReduzidos : undefined,
       folhaPagamentoLRMensal: parseMoeda(folhaPagamentoLRStr),
@@ -900,7 +910,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">Crédito de IVA — Mix de Fornecedores</span>
             </div>
             <p className="text-xs text-ink-muted leading-relaxed">
-              Ao comprar de fornecedor no <strong className="text-ink-secondary">Simples Nacional</strong>, o crédito de IBS/CBS disponível é de apenas ~5,88% (vs. 26,5% de fornecedores no regime pleno). Informe o percentual das suas compras feitas de fornecedores no Simples para ajustar o cálculo.
+              Ao comprar de fornecedor no <strong className="text-ink-secondary">Simples Nacional</strong>, o crédito de IBS/CBS disponível é de apenas ~5,88% (vs. {pctTxt(aliqRef)} de fornecedores no regime pleno). Informe o percentual das suas compras feitas de fornecedores no Simples para ajustar o cálculo.
             </p>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -923,7 +933,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               {dados.pctFornecedoresSimples > 0 && parseMoeda(dados.insumosMensais) > 0 && (() => {
                 const insumos = parseMoeda(dados.insumosMensais)
                 const fat = parseMoeda(dados.faturamentoMensal)
-                const aliqIVA = 0.265 * (1 - (setorSelecionado?.reducao ?? 0))
+                const aliqIVA = aliqRef * (1 - (setorSelecionado?.reducao ?? 0))
                 const fracSimples = dados.pctFornecedoresSimples / 100
                 const creditoPerdido = insumos * fracSimples * (aliqIVA - 0.0588)
                 const aliqEfetiva = fracSimples * 0.0588 + (1 - fracSimples) * aliqIVA
@@ -1495,8 +1505,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               {pctInsumosProdutorRural > 0 && insEfetivo > 0 && (
                 <p className="text-xs text-success">
                   Crédito presumido estimado: <strong className="num">
-                    {fmt.moeda(insEfetivo * pctInsumosProdutorRural / 100 * 0.265 * 0.40)}/mês
-                  </strong> (alíquota efetiva insumos agropecuários: 10,6%)
+                    {fmt.moeda(insEfetivo * pctInsumosProdutorRural / 100 * aliqRef * 0.40)}/mês
+                  </strong> (alíquota efetiva insumos agropecuários: {pctTxt(aliqRef * 0.4)})
                 </p>
               )}
             </div>
@@ -1515,8 +1525,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               {pctFreteAutonomo > 0 && insEfetivo > 0 && (
                 <p className="text-xs text-success">
                   Crédito presumido estimado: <strong className="num">
-                    {fmt.moeda(insEfetivo * pctFreteAutonomo / 100 * 0.265 * 0.60)}/mês
-                  </strong> (alíquota efetiva frete rodoviário: 15,9%)
+                    {fmt.moeda(insEfetivo * pctFreteAutonomo / 100 * aliqRef * 0.60)}/mês
+                  </strong> (alíquota efetiva frete rodoviário: {pctTxt(aliqRef * 0.6)})
                 </p>
               )}
             </div>
@@ -1550,7 +1560,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {parseMoeda(vendaImobilizadoMensalStr) > 0 && setorSelecionado && (
               <p className="text-xs text-warning mt-1.5">
                 IBS/CBS estimado na venda: <strong className="num">
-                  {fmt.moeda(parseMoeda(vendaImobilizadoMensalStr) * 0.265 * (1 - setorSelecionado.reducao))}/mês
+                  {fmt.moeda(parseMoeda(vendaImobilizadoMensalStr) * aliqRef * (1 - setorSelecionado.reducao))}/mês
                 </strong>
               </p>
             )}
@@ -1578,7 +1588,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {parseMoeda(investimentoCapitalStr) > 0 && setorSelecionado && (
               <p className="text-xs text-[#4F46E5] mt-1.5">
                 Crédito IBS/CBS no mês: <strong className="num">
-                  {fmt.moeda(parseMoeda(investimentoCapitalStr) * 0.265 * (1 - setorSelecionado.reducao))}
+                  {fmt.moeda(parseMoeda(investimentoCapitalStr) * aliqRef * (1 - setorSelecionado.reducao))}
                 </strong> — vs. PIS/COFINS que creditaria <strong className="num">
                   {fmt.moeda(parseMoeda(investimentoCapitalStr) * 0.0925 / 48)}/mês
                 </strong> por 48 meses.
@@ -1646,7 +1656,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {parseMoeda(despesasCrediteisStr) > 0 && setorSelecionado && (
               <p className="text-xs text-[#0369A1] mt-1.5">
                 Crédito adicional estimado: <strong className="num">
-                  {fmt.moeda(parseMoeda(despesasCrediteisStr) * 0.265 * (1 - setorSelecionado.reducao))}/mês
+                  {fmt.moeda(parseMoeda(despesasCrediteisStr) * aliqRef * (1 - setorSelecionado.reducao))}/mês
                 </strong>
               </p>
             )}
@@ -1737,8 +1747,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {pctReceitaAliquotaCheia > 0 && (
               <p className="text-xs text-warning mt-1.5">
                 Alíquota efetiva estimada: <strong className="num">
-                  {(pctReceitaAliquotaCheia / 100 * 0.265 + (1 - pctReceitaAliquotaCheia / 100) * 0.265 * 0.60).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
-                </strong> (itens com redução a 15,9% · itens fora da redução a 26,5%)
+                  {(pctReceitaAliquotaCheia / 100 * aliqRef + (1 - pctReceitaAliquotaCheia / 100) * aliqRef * 0.60).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                </strong> (itens com redução a {pctTxt(aliqRef * 0.6)} · itens fora da redução a {pctTxt(aliqRef)})
               </p>
             )}
           </div>
@@ -1752,8 +1762,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             <h3 className="text-sm font-bold text-ink">Composição das compras — o que gera crédito de IBS/CBS</h3>
             <p className="text-xs text-ink-muted mt-0.5">
               O crédito é o imposto que o fornecedor cobrou. <strong>Alimentos da cesta básica</strong> (carnes, hortifrúti, arroz, feijão, ovos)
-              têm alíquota zero e <strong>não geram crédito</strong>. Outros alimentos do Anexo VII têm <strong>60% de redução</strong> (crédito de 10,6%).
-              Energia, manutenção, bebidas, limpeza e serviços vêm com alíquota cheia (26,5%).
+              têm alíquota zero e <strong>não geram crédito</strong>. Outros alimentos do Anexo VII têm <strong>60% de redução</strong> (crédito de {pctTxt(aliqRef * 0.4)}).
+              Energia, manutenção, bebidas, limpeza e serviços vêm com alíquota cheia ({pctTxt(aliqRef)}).
             </p>
           </div>
           <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
@@ -1763,8 +1773,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
           {!informarComposicaoInsumos && (
             <p className="text-xs text-ink-muted">
               Sem informar, o simulador usa {setorSelecionado?.creditoInsumosAliquotaCheia
-                ? 'a alíquota cheia de 26,5% em todas as compras (pode superestimar o crédito se há muita compra de alimento básico).'
-                : 'a mesma alíquota das suas vendas (15,9%) como média das compras.'}
+                ? `a alíquota cheia de ${pctTxt(aliqRef)} em todas as compras (pode superestimar o crédito se há muita compra de alimento básico).`
+                : `a mesma alíquota das suas vendas (${pctTxt(aliqRef * (1 - (setorSelecionado?.reducao ?? 0)))}) como média das compras.`}
             </p>
           )}
           {informarComposicaoInsumos && (
@@ -1789,8 +1799,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               </div>
               <p className="text-xs text-info">
                 Crédito médio estimado nas compras: <strong className="num">
-                  {((pctInsumosReduzidos / 100 * 0.265 * 0.40 + (100 - pctInsumosAliquotaZero - pctInsumosReduzidos) / 100 * 0.265)).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
-                </strong> (restante das compras a 26,5%: {100 - pctInsumosAliquotaZero - pctInsumosReduzidos}%)
+                  {((pctInsumosReduzidos / 100 * aliqRef * 0.40 + (100 - pctInsumosAliquotaZero - pctInsumosReduzidos) / 100 * aliqRef)).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                </strong> (restante das compras a {pctTxt(aliqRef)}: {100 - pctInsumosAliquotaZero - pctInsumosReduzidos}%)
               </p>
             </div>
           )}
@@ -1819,8 +1829,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             {pctMedicamentos > 0 && (
               <p className="text-xs text-success mt-1.5">
                 Alíquota efetiva estimada: <strong className="num">
-                  {(pctMedicamentos / 100 * 0.265 * 0.40 + (1 - pctMedicamentos / 100) * 0.265).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
-                </strong> (medicamentos a 10,6% · demais itens a 26,5%)
+                  {(pctMedicamentos / 100 * aliqRef * 0.40 + (1 - pctMedicamentos / 100) * aliqRef).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                </strong> (medicamentos a {pctTxt(aliqRef * 0.4)} · demais itens a {pctTxt(aliqRef)})
               </p>
             )}
           </div>
@@ -1840,8 +1850,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
           {/* Legenda das faixas */}
           <div className="bg-subtle rounded-lg p-3 space-y-1 text-xs text-ink-secondary">
             <p><strong className="text-success">Alíquota zero:</strong> cesta básica nacional, hortifruti, frutas e ovos (Arts. 125/148)</p>
-            <p><strong className="text-success">Redução 60% (10,6%):</strong> demais alimentos (Anexo VII) e higiene/limpeza popular (Anexo VIII)</p>
-            <p><strong className="text-ink">Cheia (26,5%):</strong> bebidas, limpeza premium, bazar, utilidades, eletro, pet, etc.</p>
+            <p><strong className="text-success">Redução 60% ({pctTxt(aliqRef * 0.4)}):</strong> demais alimentos (Anexo VII) e higiene/limpeza popular (Anexo VIII)</p>
+            <p><strong className="text-ink">Cheia ({pctTxt(aliqRef)}):</strong> bebidas, limpeza premium, bazar, utilidades, eletro, pet, etc.</p>
           </div>
 
           {/* Botão de referência */}
@@ -1878,7 +1888,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             <p className="text-xs text-success">
               Restante na alíquota cheia: <strong className="num">{100 - pctCestaZero - pctCestaReduzida}%</strong> ·
               Alíquota efetiva estimada: <strong className="num">
-                {((pctCestaReduzida / 100 * 0.265 * 0.40 + (100 - pctCestaZero - pctCestaReduzida) / 100 * 0.265)).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                {((pctCestaReduzida / 100 * aliqRef * 0.40 + (100 - pctCestaZero - pctCestaReduzida) / 100 * aliqRef)).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
               </strong>
             </p>
           )}
@@ -1982,6 +1992,43 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
         </div>
       )}
 
+      {/* ── Alíquota de referência (avançado) ─────────────────────────────── */}
+      <details className="card p-5 border-l-4 border-l-warning" open={refAlterada}>
+        <summary className="cursor-pointer text-sm font-bold text-ink">
+          Alíquota de referência de IBS + CBS <span className="font-normal text-ink-muted">(avançado — hoje {pctTxt(aliqRef)}{refAlterada ? ', alterada por você' : ', estimativa padrão'})</span>
+        </summary>
+        <div className="mt-3 space-y-3 text-xs text-ink-secondary leading-relaxed">
+          <p>
+            A lei <strong>não fixa</strong> a alíquota. Ela é definida por resolução do Senado, <strong>ano a ano</strong> (CBS de 2027 a 2033; IBS de 2029 a 2033), e cada
+            ente pode legislar a sua: a União fixa a CBS, cada estado e cada município fixa a sua parte do IBS (LC 214, arts. 14 e 18). Quem não legisla fica com a de referência.
+            Use este campo para testar cenários ou trocar pelo valor oficial.
+          </p>
+          <p>
+            <strong>Situação (nov/2026):</strong> o TCU aprovou em 28/10/2026 uma CBS de <strong>11,3%</strong> para 2027, que o Senado confirma por resolução até 15/12/2026.
+            O IBS só será fixado até o fim de 2028. O Comitê Gestor estima, sem caráter oficial, CBS 9,21% + IBS 18,7% = 27,91%.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label className="block">
+              <span className="label">Total IBS + CBS (%) — define débito, crédito e a carga de 2033</span>
+              <input type="text" inputMode="decimal" value={aliqRefTotalStr} onChange={e => setAliqRefTotalStr(e.target.value)} className="input-field" />
+            </label>
+            <label className="block">
+              <span className="label">Parte da CBS (%) — só muda a divisão na transição 2027–2032</span>
+              <input type="text" inputMode="decimal" value={aliqRefCBSStr} onChange={e => setAliqRefCBSStr(e.target.value)} className="input-field" />
+            </label>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-secondary !text-xs" onClick={() => { setAliqRefTotalStr('26,5'); setAliqRefCBSStr('9,25') }}>Padrão (26,5%)</button>
+            <button type="button" className="btn-secondary !text-xs" onClick={() => { setAliqRefTotalStr('27,91'); setAliqRefCBSStr('9,21') }}>Estimativa do Comitê Gestor (27,91%)</button>
+            <button type="button" className="btn-secondary !text-xs" onClick={() => setAliqRefCBSStr('11,3')}>CBS do TCU para 2027 (11,3%)</button>
+            <button type="button" className="btn-secondary !text-xs" onClick={() => { setAliqRefTotalStr('9,25'); setAliqRefCBSStr('9,25') }}>9,25% (= PIS+COFINS, só para comparação)</button>
+          </div>
+          {aliqRef < 0.15 && (
+            <p className="text-warning">Atenção: abaixo de 15% a alíquota não representa a reforma (9,25% é a soma de PIS e COFINS de hoje). Use só para comparar cenários.</p>
+          )}
+        </div>
+      </details>
+
       {/* ── Submit ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col items-center gap-3 pb-4">
         <button type="submit" className="btn-primary text-base min-w-[260px] flex items-center gap-2">
@@ -1989,7 +2036,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </button>
         <p className="text-ink-muted text-xs text-center max-w-sm">
-          Simulação baseada na alíquota padrão de <span className="num">26,5%</span> (CBS + IBS) conforme LC 214/2025.
+          Simulação baseada na alíquota de referência de <span className="num">{pctTxt(aliqRef)}</span> (CBS + IBS){refAlterada ? ' informada por você' : ', estimativa padrão'} — a LC 214/2025 não a fixa.
           Valores para fins educacionais — não constitui assessoria fiscal.
         </p>
       </div>
