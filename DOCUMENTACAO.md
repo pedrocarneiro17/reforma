@@ -259,6 +259,32 @@ Crédito_disponibilizado_ao_cliente = Faturamento × alíq_IVA
 
 Vale a pena quando o crédito gerado ao cliente ≥ custo adicional para a empresa.
 
+### 8.6 Assistente de perguntas
+
+Botão "Assistente" no canto da tela. O usuário pergunta em português ("quanto pago em 2033?", "e se meu faturamento dobrar?", "o que diz o art. 283?") e o assistente responde com base na simulação aberta.
+
+**Regra de ouro: a IA não calcula imposto.** Ela só entende a pergunta, chama o motor e explica o resultado. Todo número vem de `calcularTodosOsCenarios`, `calcularTodosOsRegimes` ou `calcularCurvaCrescimento`, as mesmas funções (e os mesmos testes) do simulador.
+
+**Como funciona**
+- O navegador manda só texto (a conversa e os dados da simulação aberta) para `POST /api/assistente`, que exige login (JWT).
+- O servidor monta o pedido à API de mensagens da Anthropic e roda o laço de ferramentas. O navegador nunca manda instruções de sistema nem resultados de ferramenta: o servidor ignora tudo que não seja texto de usuário/assistente.
+- Ferramentas do motor (`src/assistente/ferramentas.ts`): `listar_setores`, `calcular_cenarios`, `comparar_regimes`, `simular_crescimento`. A entrada é validada (setor existente, números dentro de faixas); erro volta à IA como dado, para ela corrigir a chamada.
+- Ferramentas de lei (`server/assistente/lei.js`): `buscar_na_lei` e `consultar_artigo`, sobre os textos da LC 214/2025 e do Decreto 12.955/2026 em `.claude/skills/reforma-tributaria`. A IA é instruída a só citar artigo que a consulta devolveu. Esses textos têm acentos gravados com a codificação errada; a leitura corrige.
+- O pacote do motor para o servidor é gerado por `npm run build:engine` (saída em `server/gerado/`, fora do git). `npm run build` e `npm run dev:all` já fazem isso.
+
+**Configuração (variáveis de ambiente)**
+- `ANTHROPIC_API_KEY`: obrigatória. Sem ela o botão não aparece. Na Railway, cadastre em Variables; nunca coloque a chave no código nem no navegador.
+- `ASSISTENTE_MODELO`: opcional (padrão `claude-sonnet-5-5`).
+- `ASSISTENTE_LIMITE_HORA`: opcional, perguntas por usuário por hora (padrão 30; contado em memória, zera ao reiniciar o servidor).
+
+**Limites de segurança:** até 20 mensagens de histórico, 4.000 caracteres por mensagem, 6 idas e vindas de ferramentas por pergunta, 60 s de espera pela API. O servidor não registra o conteúdo das conversas, só o status de erro.
+
+**Privacidade:** a pergunta e os dados da simulação (faturamento, regime, setor etc.) vão para a API da Anthropic. Confirme com o escritório se isso é aceitável antes de ativar em produção. O assistente não lê notas fiscais nem CNPJs.
+
+**O que o assistente ainda não faz:** ler arquivos (PDF, CSV), mudar os dados do formulário, simular alíquota de referência diferente de 26,5%, nem calcular o adiamento de 20% do sublimite. Quando a pergunta cai nesses casos, ele é instruído a dizer isso em vez de adivinhar.
+
+**Divergência conhecida do motor:** no Lucro Real sem folha e despesas informadas, a projeção ano a ano e a carga total de 2033 usam bases diferentes para o IRPJ/CSLL. O assistente recebe um alerta nesses casos e deve citar a carga total de 2033.
+
 ---
 
 ## 9. Setores Cadastrados (85 ao total)
@@ -329,6 +355,8 @@ npm test
 ```
 
 Os testes (`tests/motor.test.mjs`, runner nativo do Node; o Vite, já instalado, carrega os módulos TypeScript do motor, sem dependência extra) cobrem o motor de cálculo: regressões dos casos conferidos à mão contra a lei (DAS com exportação, teto do ISS, 6ª faixa, livros, exportações no Lucro Presumido e Real) e invariantes dos dados (cada linha da partilha soma 100%; todo setor elegível ao Simples tem um `cAtivSN` coerente com o anexo do cálculo). Quando a lei mudar: regenerar a partilha (`python -I scripts/gerar_partilha_simples.py`) e rodar os testes.
+
+`tests/assistente.test.mjs` cobre o assistente sem rede e sem chave: as ferramentas devolvem exatamente o que o motor calcula, recusam entrada inválida, a consulta à lei traz o texto certo (art. 273, 283) e o laço da conversa roda contra uma API simulada (execução de ferramenta, limite de voltas, regras de sistema que o cliente não consegue trocar, limite por usuário).
 
 ---
 

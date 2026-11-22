@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:server": "node server/index.js",
-    "dev:all": "concurrently -n FRONT,API -c cyan,yellow \"vite\" \"node server/index.js\"",
-    "build": "vite build",
+    "dev:server": "npm run build:engine && node server/index.js",
+    "dev:all": "npm run build:engine && concurrently -n FRONT,API -c cyan,yellow \"vite\" \"node server/index.js\"",
+    "build:engine": "vite build --config vite.config.assistente.ts",
+    "build": "vite build && npm run build:engine",
     "test": "node --test tests/*.test.mjs",
     "preview": "vite preview",
     "start": "node server/index.js"

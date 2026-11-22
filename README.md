@@ -17,9 +17,12 @@ npm run dev:all          # front-end (porta 3000) + API (porta 3001)
 ```
 
 - `npm run dev` sobe só o front-end (Vite, porta 3000); as chamadas a `/api` são encaminhadas para a porta 3001.
-- `npm run build` gera o `dist/`; `npm start` sobe a API e serve o `dist/`.
+- `npm run build` gera o `dist/` e o pacote do motor para o servidor (`server/gerado/`); `npm start` sobe a API e serve o `dist/`.
+- `npm run build:engine` gera só o pacote do motor usado pelo assistente de perguntas (já roda em `dev:all` e `dev:server`).
 
 Variáveis do `.env` (o arquivo **não** é versionado): `DATABASE_URL` (PostgreSQL), `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `NODE_ENV` e `PORT`. A API também aceita `API_PORT`, que tem prioridade sobre `PORT`. O `.env.example` mostra o formato.
+
+Assistente de perguntas: defina `ANTHROPIC_API_KEY` para ligá-lo (sem a chave o botão não aparece). Opcionais: `ASSISTENTE_MODELO` e `ASSISTENTE_LIMITE_HORA`. Detalhes na seção 8.6 de [DOCUMENTACAO.md](DOCUMENTACAO.md).
 
 ## Testes
 
@@ -27,7 +30,7 @@ Variáveis do `.env` (o arquivo **não** é versionado): `DATABASE_URL` (Postgre
 npm test
 ```
 
-Os testes ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
+Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.mjs](tests/assistente.test.mjs). Os do motor ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
 
 ## Estrutura
 
@@ -39,8 +42,9 @@ Os testes ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor
 | `src/data/tiposReceitaSimples.ts` | Tipos de receita bruta do Simples (`tpRBSN`) |
 | `src/data/partilhaSimples.ts` | Partilha do DAS por anexo, faixa e ano (**gerado**, não editar à mão) |
 | `src/components/` | Formulário, dashboard, comparador, memória de cálculo |
-| `server/` | API Express: autenticação, administração e limite de simulações |
-| `tests/` | Testes do motor |
+| `server/` | API Express: autenticação, administração, limite de simulações e assistente de perguntas |
+| `src/assistente/` | Ferramentas que o assistente usa para chamar o motor (a IA não calcula) |
+| `tests/` | Testes do motor e do assistente |
 | `.claude/skills/reforma-tributaria/` | Texto da LC 214/2025 e do Decreto 12.955/2026 por capítulo |
 
 ## Atualizar quando a lei mudar

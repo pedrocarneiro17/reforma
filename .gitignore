@@ -28,3 +28,6 @@ Thumbs.db
 
 # TypeScript
 *.tsbuildinfo
+
+# Pacote gerado das ferramentas do assistente (npm run build:engine)
+server/gerado/

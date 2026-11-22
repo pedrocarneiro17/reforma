@@ -7,6 +7,7 @@ import {
 // FileText mantido para ícone no sidebar; PDF export removido intencionalmente
 import FormularioEntrada from './components/FormularioEntrada'
 import ResultadosDashboard from './components/ResultadosDashboard'
+import AssistenteChat from './components/AssistenteChat'
 import { calcularTodosOsCenarios } from './engine/calculadora'
 import type { ResultadoCalculo, DadosEntrada } from './types'
 import { useAuth } from './auth/AuthContext'
@@ -215,6 +216,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
   const [resultados, setResultados] = useState<ResultadoCalculo | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [erroLimite, setErroLimite] = useState('')
+  const [ultimosDados, setUltimosDados] = useState<DadosEntrada | null>(null)  // contexto do assistente
 
   const handleCalcular = async (dados: DadosEntrada) => {
     setErroLimite('')
@@ -232,6 +234,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
     }
     const calc = calcularTodosOsCenarios(dados)
     setResultados(calc)
+    setUltimosDados(dados)
     setEtapa('resultados')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -324,6 +327,8 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
           </p>
         </footer>
       </div>
+
+      <AssistenteChat dados={ultimosDados} />
     </div>
   )
 }
