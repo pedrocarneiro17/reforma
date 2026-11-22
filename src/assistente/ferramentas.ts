@@ -39,6 +39,8 @@ const PROPRIEDADES_EMPRESA = {
   folhaMensal: { type: 'number', description: 'Folha de pagamento mensal (inclui pró-labore). Define o Fator R no Simples.' },
   pctFornecedoresSimples: { type: 'number', description: '% das compras feitas de fornecedores do Simples Nacional (geram crédito menor).' },
   pctReceitaAliquotaCheia: { type: 'number', description: 'Hotelaria e restaurantes: % da receita em bebidas alcoólicas e itens de terceiros sem preparo (alíquota cheia, sem os 40% de redução).' },
+  pctInsumosAliquotaZero: { type: 'number', description: 'Hotelaria, restaurantes e parques: % das COMPRAS em alimentos da cesta básica (alíquota zero, não geram crédito). Informe junto com pctInsumosReduzidos.' },
+  pctInsumosReduzidos: { type: 'number', description: 'Hotelaria, restaurantes e parques: % das compras em alimentos com 60% de redução (crédito a 10,6%). O restante das compras vem com alíquota cheia.' },
   pctMedicamentos: { type: 'number', description: 'Farmácias: % da receita em medicamentos.' },
   pctGorjeta: { type: 'number', description: 'Restaurantes: % de gorjeta repassada integralmente (até 15%).' },
   pctVendasGoverno: { type: 'number', description: '% das vendas feitas a órgãos públicos.' },
@@ -138,6 +140,8 @@ export function montarDados(entrada: Record<string, unknown>): DadosEntrada {
   set('folhaMensal', numero(entrada.folhaMensal, 'folhaMensal'))
   set('pctFornecedoresSimples', numero(entrada.pctFornecedoresSimples, 'pctFornecedoresSimples', 0, 100))
   set('pctReceitaAliquotaCheia', numero(entrada.pctReceitaAliquotaCheia, 'pctReceitaAliquotaCheia', 0, 100))
+  set('pctInsumosAliquotaZero', numero(entrada.pctInsumosAliquotaZero, 'pctInsumosAliquotaZero', 0, 100))
+  set('pctInsumosReduzidos', numero(entrada.pctInsumosReduzidos, 'pctInsumosReduzidos', 0, 100))
   set('pctMedicamentos', numero(entrada.pctMedicamentos, 'pctMedicamentos', 0, 100))
   set('pctGorjeta', numero(entrada.pctGorjeta, 'pctGorjeta', 0, 15))
   set('pctVendasGoverno', numero(entrada.pctVendasGoverno, 'pctVendasGoverno', 0, 100))

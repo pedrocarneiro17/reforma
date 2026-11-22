@@ -217,6 +217,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const [pctCestaZero, setPctCestaZero] = useState(0)          // supermercados — % alíquota zero
   const [pctCestaReduzida, setPctCestaReduzida] = useState(0)  // supermercados — % redução 60%
   const [pctReceitaAliquotaCheia, setPctReceitaAliquotaCheia] = useState(0) // hotelaria/restaurantes — % de bebidas e itens de terceiros (alíquota cheia)
+  const [informarComposicaoInsumos, setInformarComposicaoInsumos] = useState(false) // hotelaria/restaurantes/parques — informar o que é comprado
+  const [pctInsumosAliquotaZero, setPctInsumosAliquotaZero] = useState(0)           // % das compras da cesta básica (alíquota zero, sem crédito)
+  const [pctInsumosReduzidos, setPctInsumosReduzidos] = useState(0)                 // % das compras com 60% de redução (crédito a 10,6%)
   // Lucro Real — apuração efetiva
   const [folhaPagamentoLRStr, setFolhaPagamentoLRStr] = useState('')
   const [despesasOperacionaisStr, setDespesasOperacionaisStr] = useState('')
@@ -352,6 +355,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   const mostrarMedicamentos = setorSelecionado?.vendeMedicamentos === true
   const mostrarCestaMista = setorSelecionado?.cestaMista === true
   const mostrarReceitaMista = setorSelecionado?.receitaMistaReducao === true
+  const mostrarComposicaoInsumos = setorSelecionado?.insumosComposicao === true
 
   const fatEfetivo = modoEntrada === 'detalhado' && agregado12m
     ? agregado12m.medias.faturamento
@@ -432,6 +436,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
       pctCestaZero: mostrarCestaMista ? pctCestaZero : 0,
       pctCestaReduzida: mostrarCestaMista ? pctCestaReduzida : 0,
       pctReceitaAliquotaCheia: mostrarReceitaMista ? pctReceitaAliquotaCheia : 0,
+      pctInsumosAliquotaZero: mostrarComposicaoInsumos && informarComposicaoInsumos ? pctInsumosAliquotaZero : undefined,
+      pctInsumosReduzidos: mostrarComposicaoInsumos && informarComposicaoInsumos ? pctInsumosReduzidos : undefined,
       folhaPagamentoLRMensal: parseMoeda(folhaPagamentoLRStr),
       despesasOperacionaisMensais: parseMoeda(despesasOperacionaisStr),
       aliquotaICMSEfetiva: (circulaMercadoria && aliquotaICMSStr) ? parseFloat(aliquotaICMSStr.replace(',', '.')) / 100 : undefined,
@@ -1736,6 +1742,58 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               </p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ── Hotelaria/restaurantes/parques — composição das compras (crédito) ─────── */}
+      {mostrarComposicaoInsumos && (
+        <div className="card p-5 space-y-3 border-l-4 border-l-info">
+          <div>
+            <h3 className="text-sm font-bold text-ink">Composição das compras — o que gera crédito de IBS/CBS</h3>
+            <p className="text-xs text-ink-muted mt-0.5">
+              O crédito é o imposto que o fornecedor cobrou. <strong>Alimentos da cesta básica</strong> (carnes, hortifrúti, arroz, feijão, ovos)
+              têm alíquota zero e <strong>não geram crédito</strong>. Outros alimentos do Anexo VII têm <strong>60% de redução</strong> (crédito de 10,6%).
+              Energia, manutenção, bebidas, limpeza e serviços vêm com alíquota cheia (26,5%).
+            </p>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-ink cursor-pointer">
+            <input type="checkbox" checked={informarComposicaoInsumos} onChange={e => setInformarComposicaoInsumos(e.target.checked)} />
+            Informar a composição das minhas compras
+          </label>
+          {!informarComposicaoInsumos && (
+            <p className="text-xs text-ink-muted">
+              Sem informar, o simulador usa {setorSelecionado?.creditoInsumosAliquotaCheia
+                ? 'a alíquota cheia de 26,5% em todas as compras (pode superestimar o crédito se há muita compra de alimento básico).'
+                : 'a mesma alíquota das suas vendas (15,9%) como média das compras.'}
+            </p>
+          )}
+          {informarComposicaoInsumos && (
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">% das compras em alimentos da cesta básica (alíquota zero)</label>
+                  <span className="num text-sm font-bold text-ink w-10 text-right">{pctInsumosAliquotaZero}%</span>
+                </div>
+                <input type="range" min={0} max={100} step={1} value={pctInsumosAliquotaZero}
+                  onChange={e => { const v = Number(e.target.value); setPctInsumosAliquotaZero(v); setPctInsumosReduzidos(r => Math.min(r, 100 - v)) }}
+                  className="w-full accent-[var(--color-ink)]" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-ink-muted uppercase tracking-wide">% das compras com 60% de redução (outros alimentos)</label>
+                  <span className="num text-sm font-bold text-ink w-10 text-right">{pctInsumosReduzidos}%</span>
+                </div>
+                <input type="range" min={0} max={100 - pctInsumosAliquotaZero} step={1} value={pctInsumosReduzidos}
+                  onChange={e => setPctInsumosReduzidos(Number(e.target.value))}
+                  className="w-full accent-[var(--color-ink)]" />
+              </div>
+              <p className="text-xs text-info">
+                Crédito médio estimado nas compras: <strong className="num">
+                  {((pctInsumosReduzidos / 100 * 0.265 * 0.40 + (100 - pctInsumosAliquotaZero - pctInsumosReduzidos) / 100 * 0.265)).toLocaleString('pt-BR', { style: 'percent', minimumFractionDigits: 2 })}
+                </strong> (restante das compras a 26,5%: {100 - pctInsumosAliquotaZero - pctInsumosReduzidos}%)
+              </p>
+            </div>
+          )}
         </div>
       )}
 

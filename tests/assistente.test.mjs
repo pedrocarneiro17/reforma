@@ -63,6 +63,15 @@ describe('Ferramentas do motor', () => {
     assert.match(ferr.executarFerramentaMotor('nao_existe', {}).erro, /desconhecida/)
   })
 
+  it('composição das compras entra pela ferramenta e muda o crédito, com validação', () => {
+    const base = { ...EMPRESA, setor: 'restaurantes_bares' }
+    const sem = ferr.executarFerramentaMotor('calcular_cenarios', base)
+    const com = ferr.executarFerramentaMotor('calcular_cenarios', { ...base, pctInsumosAliquotaZero: 100 })
+    assert.equal(com.ivaDual.creditoMensal, 0)
+    assert.ok(sem.ivaDual.creditoMensal > 0)
+    assert.match(ferr.executarFerramentaMotor('calcular_cenarios', { ...base, pctInsumosReduzidos: 150 }).erro, /pctInsumosReduzidos/)
+  })
+
   it('listar_setores acha por palavra sem depender de acento', () => {
     const r = ferr.executarFerramentaMotor('listar_setores', { busca: 'hoteis' })
     assert.ok(r.setores.some(s => s.codigo === 'hoteis_pousadas'))

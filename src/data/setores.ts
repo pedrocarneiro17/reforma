@@ -246,6 +246,7 @@ export const SETORES: Setor[] = [
     anexoSimplesPadrao: 'III',     // hospedagem (LC 116 item 9.01) não está nas listas de Fator R/Anexo IV/V do art. 18 da LC 123 — regra residual do §5º-F: Anexo III (confirmar no PGDAS-D)
     receitaMistaReducao: true,     // café da manhã/alimentação preparada têm 40% (art. 280 p.u.); bebidas alcoólicas e bebidas de terceiros sem preparo pagam alíquota cheia (art. 273 §2º)
     creditoInsumosAliquotaCheia: true, // fornecedores de insumos (manutenção, energia, bebidas) cobram alíquota cheia; a redução de 40% é só das vendas do hotel (art. 281)
+    insumosComposicao: true,       // o café da manhã compra alimento da cesta básica (alíquota zero) — a composição das compras ajusta o crédito
   },
   {
     value: 'restaurantes_bares',
@@ -255,6 +256,7 @@ export const SETORES: Setor[] = [
     tipo: 'servico',
     creditoVedadoComprador: true,  // Art. 401 Dec. 12.955: adquirente B2B não pode creditar CBS
     receitaMistaReducao: true,     // bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo ficam fora do regime específico (art. 273 §2º)
+    insumosComposicao: true,       // compra muito alimento da cesta básica (zero) e do Anexo VII (60%): informe a composição para o crédito correto; sem ela vale a alíquota do próprio setor
   },
   {
     value: 'parques_eventos',
@@ -263,6 +265,8 @@ export const SETORES: Setor[] = [
     reducao: 0.40,
     tipo: 'servico',
     creditoVedadoComprador: true,  // Art. 407 Dec. 12.955: adquirente B2B não pode creditar CBS
+    creditoInsumosAliquotaCheia: true, // manutenção, energia, equipamentos e serviços vêm com alíquota cheia; a redução de 40% é só das vendas do parque (art. 281)
+    insumosComposicao: true,       // lanchonetes do parque compram alimento da cesta básica (zero)
   },
 
   // ─── REDUÇÃO 30% — Profissões Regulamentadas ─────────────────────────────

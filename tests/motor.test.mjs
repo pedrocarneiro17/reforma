@@ -371,6 +371,57 @@ describe('Projeção 2026–2033 coerente com a carga de hoje e a carga pós-ref
   })
 })
 
+describe('Crédito das compras em hotelaria, restaurantes e parques', () => {
+  const ALIQ = 0.265, RED60 = 0.265 * 0.4
+  const rest = (extra = {}) => calc('simples_nacional', 'restaurantes_bares', 100000, { insumosMensais: 30000, ...extra })
+
+  it('parques compram a alíquota cheia, como a hotelaria (a redução de 40% é só das vendas)', () => {
+    const r = calc('simples_nacional', 'parques_eventos', 100000, { insumosMensais: 30000 })
+    perto(R(r.creditoInsumosMensal), R(30000 * ALIQ))
+  })
+
+  it('restaurantes sem composição informada mantêm o padrão: crédito na alíquota das próprias vendas', () => {
+    const r = rest()
+    perto(R(r.creditoInsumosMensal), R(30000 * r.aliquotaIVABruta))
+  })
+
+  it('composição: alimento da cesta básica não gera crédito, Anexo VII credita a 10,6% e o resto a 26,5%', () => {
+    const r = rest({ pctInsumosAliquotaZero: 40, pctInsumosReduzidos: 20 })
+    perto(R(r.creditoInsumosMensal), R(30000 * (0.2 * RED60 + 0.4 * ALIQ)), '40% zero, 20% reduzido, 40% cheio')
+    perto(R(rest({ pctInsumosAliquotaZero: 100 }).creditoInsumosMensal), 0)
+    perto(R(rest({ pctInsumosAliquotaZero: 0, pctInsumosReduzidos: 0 }).creditoInsumosMensal), R(30000 * ALIQ), 'tudo cheio quando informado 0 e 0')
+  })
+
+  it('composição vale também na hotelaria e nos parques; fora deles é ignorada', () => {
+    const h = calc('simples_nacional', 'hoteis_pousadas', 100000, { insumosMensais: 30000, pctInsumosAliquotaZero: 50 })
+    perto(R(h.creditoInsumosMensal), R(30000 * 0.5 * ALIQ))
+    const p = calc('simples_nacional', 'parques_eventos', 100000, { insumosMensais: 30000, pctInsumosAliquotaZero: 50 })
+    perto(R(p.creditoInsumosMensal), R(30000 * 0.5 * ALIQ))
+    const com = calc('simples_nacional', 'comercio_varejo', 100000, { insumosMensais: 30000, pctInsumosAliquotaZero: 50 })
+    const sem = calc('simples_nacional', 'comercio_varejo', 100000, { insumosMensais: 30000 })
+    perto(R(com.creditoInsumosMensal), R(sem.creditoInsumosMensal))
+  })
+
+  it('os percentuais são limitados: zero + reduzido nunca passa de 100%', () => {
+    const r = rest({ pctInsumosAliquotaZero: 70, pctInsumosReduzidos: 60 })
+    perto(R(r.creditoInsumosMensal), R(30000 * 0.3 * RED60))
+  })
+
+  it('combina com fornecedores do Simples: essa fatia credita só a CBS do DAS do fornecedor', () => {
+    const r = rest({ pctInsumosAliquotaZero: 40, pctInsumosReduzidos: 20, pctFornecedoresSimples: 50 })
+    const regular = 0.2 * RED60 + 0.4 * ALIQ
+    const cbsSN = eng.getCBSSimples('I', Math.min(r.faturamentoAnual, 720000))
+    perto(R(r.creditoInsumosMensal), R(30000 * (0.5 * cbsSN + 0.5 * regular)))
+  })
+
+  it('a carga de 2033 acompanha o crédito: menos crédito, mais imposto no regime regular', () => {
+    const sem = calc('lucro_presumido', 'restaurantes_bares', 100000, { insumosMensais: 30000 })
+    const zero = calc('lucro_presumido', 'restaurantes_bares', 100000, { insumosMensais: 30000, pctInsumosAliquotaZero: 100 })
+    assert.ok(zero.cargaTotalReformaMensal > sem.cargaTotalReformaMensal)
+    perto(R(zero.projecaoAnos.at(-1).impostoMensal), R(zero.cargaTotalReformaMensal))
+  })
+})
+
 describe('Hotelaria com receita mista (caso Hotel Solar das Lajes, jan–set/2026)', () => {
   // hospedagem R$ 1.362.225,61 (Anexo III, 40%) + alimentação preparada R$ 174.142,80 (Anexo I, 40%)
   // + bebidas R$ 204.141,00 (Anexo I, alíquota cheia, art. 273 §2º); compras R$ 197.286,73 em 9 meses

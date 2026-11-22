@@ -891,6 +891,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctCestaZero = 0,
     pctCestaReduzida = 0,
     pctReceitaAliquotaCheia = 0,
+    pctInsumosAliquotaZero,
+    pctInsumosReduzidos,
     folhaPagamentoLRMensal = 0,
     aliquotaICMSEfetiva,
     aliquotaISSEfetiva,
@@ -1320,8 +1322,16 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   const fracSimples = Math.min(1, Math.max(0, pctFornecedoresSimples / 100))
   // Crédito = imposto cobrado pelo fornecedor. Por padrão usa a alíquota das vendas do próprio setor; em
-  // hotelaria (creditoInsumosAliquotaCheia) os insumos vêm com alíquota cheia, não com a redução de 40%.
-  const aliquotaCreditoFornecedorRegular = setor.creditoInsumosAliquotaCheia ? ALIQUOTA_IVA_PADRAO : aliquotaIVABruta
+  // hotelaria e parques (creditoInsumosAliquotaCheia) os insumos vêm com alíquota cheia, não com a redução de 40%.
+  // Hotelaria, restaurantes e parques podem informar a composição das compras (insumosComposicao): alimentos da
+  // cesta básica têm alíquota zero (sem imposto, sem crédito), os demais alimentos do Anexo VII têm 60% de redução
+  // e o resto vem com alíquota cheia. Sem a composição informada vale o padrão do setor.
+  let aliquotaCreditoFornecedorRegular = setor.creditoInsumosAliquotaCheia ? ALIQUOTA_IVA_PADRAO : aliquotaIVABruta
+  if (setor.insumosComposicao && (pctInsumosAliquotaZero != null || pctInsumosReduzidos != null)) {
+    const fz = Math.min(1, Math.max(0, (pctInsumosAliquotaZero ?? 0) / 100))
+    const fr = Math.min(1 - fz, Math.max(0, (pctInsumosReduzidos ?? 0) / 100))
+    aliquotaCreditoFornecedorRegular = fr * ALIQUOTA_IVA_PADRAO * (1 - 0.60) + (1 - fz - fr) * ALIQUOTA_IVA_PADRAO
+  }
   const aliquotaCreditoEfetiva = fracSimples * cbsFornecedorSimples + (1 - fracSimples) * aliquotaCreditoFornecedorRegular
   const creditoInsumosMensal = insumosMensais * aliquotaCreditoEfetiva
   const creditoPerdidoFornecedorSimples = insumosMensais * fracSimples * (aliquotaCreditoFornecedorRegular - cbsFornecedorSimples)

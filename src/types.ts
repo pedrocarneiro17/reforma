@@ -38,6 +38,7 @@ export interface Setor {
   zfm?: boolean                     // Arts. 439-457 LC 214/2025: indústria incentivada na Zona Franca de Manaus (créditos presumidos IBS/CBS)
   vedadoSimples?: boolean           // true = atividade impedida de optar pelo Simples Nacional (LC 123/2006 Art. 17 ou Art. 3º §4º)
   receitaMistaReducao?: boolean     // true = parte da receita fica FORA do regime específico e paga alíquota cheia — ex.: bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo em hotel/restaurante (LC 214 art. 273 §2º); informe o % em pctReceitaAliquotaCheia
+  insumosComposicao?: boolean       // true = aceita a composição das compras (pctInsumosAliquotaZero / pctInsumosReduzidos): hotelaria, restaurantes e parques compram muito alimento da cesta básica
   creditoInsumosAliquotaCheia?: boolean // true = o crédito das compras usa a alíquota cheia de referência (o fornecedor cobra cheia), não a alíquota reduzida das vendas do próprio setor — ex.: hotelaria compra insumos sem redução
 }
 
@@ -112,6 +113,9 @@ export interface DadosEntrada {
   pctMedicamentos?: number              // % do faturamento em medicamentos (60% de redução); o restante fica na alíquota cheia
   // Hotelaria/restaurantes — receita fora do regime específico (LC 214 art. 273 §2º, art. 280 p.u.)
   pctReceitaAliquotaCheia?: number      // % do faturamento em bebidas alcoólicas e bebidas/alimentos de terceiros sem preparo (alíquota cheia, sem os 40% de redução)
+  // Hotelaria/restaurantes/parques — composição das COMPRAS (só vale em setores com insumosComposicao)
+  pctInsumosAliquotaZero?: number       // % das compras em itens de alíquota zero (cesta básica: carnes, hortifrúti, arroz, feijão, ovos): não geram crédito
+  pctInsumosReduzidos?: number          // % das compras em itens com 60% de redução (demais alimentos do Anexo VII): crédito a 10,6%; o resto vem com alíquota cheia
   // Supermercados — composição da cesta (Arts. 125/148 + Art. 128 LC 214/2025)
   pctCestaZero?: number                 // % da receita em itens de alíquota zero (cesta básica, hortifruti, frutas, ovos)
   pctCestaReduzida?: number             // % da receita em itens de redução 60% (demais alimentos Anexo VII, higiene/limpeza Anexo VIII)
