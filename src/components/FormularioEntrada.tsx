@@ -7,6 +7,8 @@ import GrupoEmpresas from './GrupoEmpresas'
 import HoldingPatrimonial from './HoldingPatrimonial'
 import SociosAdministradores from './SociosAdministradores'
 import ImportarPGDAS from './ImportarPGDAS'
+import ImportarUnico from './ImportarUnico'
+import type { SugestaoFormulario } from '../utils/unico'
 import type { DadosPGDAS } from '../utils/pgdas'
 import type { Setor, TipoRegime, PerfilClientes, DadosEntrada, AggregateMeses, EmpresaGrupo, AnaliseHolding, SocioAdministrador } from '../types'
 
@@ -225,6 +227,27 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
   // Importação de PGDAS
   const [overridePGDAS, setOverridePGDAS] = useState<number | null>(null)  // alíquota real (DAS/receita) do extrato
   const [resumoPGDAS, setResumoPGDAS] = useState<string[] | null>(null)    // itens preenchidos para conferência
+  const [resumoUnico, setResumoUnico] = useState<string[] | null>(null)    // conferência da importação do CSV do Único
+
+  // Preenche o formulário a partir do CSV do Único já resumido (o arquivo já foi descartado).
+  const aplicarUnico = (s: SugestaoFormulario, conferencia: string[]) => {
+    setDados(prev => ({
+      ...prev,
+      setor: s.setorValue ?? prev.setor,
+      faturamentoMensal: valorParaMascara(s.faturamentoMensal),
+      insumosMensais: valorParaMascara(s.insumosMensais),
+      pctFornecedoresSimples: s.pctFornecedoresSimples,
+    }))
+    if (s.anexo1 && s.anexo2 && s.pctAnexo1 != null) {
+      setAnexoSimples(s.anexo1)
+      setAnexoSimples2(s.anexo2)
+      setPctAnexo1(s.pctAnexo1)
+      setAtivoAnexoMisto(true)
+    }
+    setPctReceitaAliquotaCheia(s.pctReceitaAliquotaCheia)
+    setResumoUnico(conferencia)
+    setErros({})
+  }
 
   // Preenche o formulário a partir de um PGDAS-D já lido (o PDF já foi descartado).
   const aplicarPGDAS = (d: DadosPGDAS) => {
@@ -421,6 +444,19 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
       {/* ── Importar PGDAS-D (preenche o formulário automaticamente) ────────── */}
       <ImportarPGDAS onImport={aplicarPGDAS} />
+      <ImportarUnico onImport={aplicarUnico} />
+
+      {resumoUnico && (
+        <div className="card p-4 border-l-4 border-l-success bg-success-soft space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-success">CSV do Único importado — confira os dados</p>
+            <button type="button" onClick={() => setResumoUnico(null)} className="text-xs text-ink-muted hover:text-ink underline">ocultar</button>
+          </div>
+          <ul className="text-xs text-ink-secondary space-y-1 list-disc pl-5">
+            {resumoUnico.map((item, i) => <li key={i}>{item}</li>)}
+          </ul>
+        </div>
+      )}
       {resumoPGDAS && (
         <div className="card p-4 border-l-4 border-l-success bg-success-soft space-y-2">
           <div className="flex items-center justify-between gap-2">

@@ -30,7 +30,7 @@ Assistente de perguntas: defina `ANTHROPIC_API_KEY` para ligá-lo (sem a chave o
 npm test
 ```
 
-Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.mjs](tests/assistente.test.mjs). Os do motor ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
+Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.mjs](tests/assistente.test.mjs) e os do importador do Único (arquivo sintético) em [tests/unico.test.mjs](tests/unico.test.mjs). Os do motor ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
 
 ## Estrutura
 
@@ -43,6 +43,7 @@ Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.m
 | `src/data/partilhaSimples.ts` | Partilha do DAS por anexo, faixa e ano (**gerado**, não editar à mão) |
 | `src/components/` | Formulário, dashboard, comparador, memória de cálculo |
 | `server/` | API Express: autenticação, administração, limite de simulações e assistente de perguntas |
+| `src/utils/unico.ts` | Importador do CSV de Produtos do Único (soma e classifica; não calcula imposto) |
 | `src/assistente/` | Ferramentas que o assistente usa para chamar o motor (a IA não calcula) |
 | `tests/` | Testes do motor e do assistente |
 | `.claude/skills/reforma-tributaria/` | Texto da LC 214/2025 e do Decreto 12.955/2026 por capítulo |

@@ -285,6 +285,26 @@ Botão "Assistente" no canto da tela. O usuário pergunta em português ("quanto
 
 **Divergência conhecida do motor:** no Lucro Real sem folha e despesas informadas, a projeção ano a ano e a carga total de 2033 usam bases diferentes para o IRPJ/CSLL. O assistente recebe um alerta nesses casos e deve citar a carga total de 2033.
 
+### 8.7 Importar CSV do Único
+
+Caixa "Importar CSV do Único" no formulário, ao lado da importação do PGDAS-D. Aceita a exportação de **Produtos** do Único (entradas, saídas, serviços prestados e serviços tomados). O arquivo é lido no navegador e descartado: nada é enviado nem salvo.
+
+**O que faz.** Soma e classifica; **não calcula imposto** (quem calcula é o motor). Mostra um resumo para conferir e, ao clicar em "Aplicar ao formulário", preenche faturamento médio mensal, compras consideradas para crédito, setor (hotelaria, quando a hospedagem é metade ou mais da receita), anexos III/I, % da receita por anexo, % de itens de alíquota cheia e % de compras sem destaque. Regime atual e perfil de clientes não estão no arquivo: o usuário escolhe.
+
+**Leitura.** Detecta UTF-8 ou Windows-1252; separador `;`; números brasileiros (`1.144,96`) e o formato do Excel (`="00"`). Reconhece as colunas pelo nome. Documentos cancelados são ignorados. Descontos das entradas são abatidos: o crédito vale sobre o valor efetivamente pago.
+
+**Receita** (por NCM e descrição): hospedagem (serviço emitido com "hospedagem" na descrição); bebidas alcoólicas (NCM 2203 a 2208); bebidas e alimentos de terceiros sem preparo (2201, 2202, 2009); alimentação preparada (descrição como "café da manhã", "refeição", "almoço"); o resto é "outras mercadorias" e entra como alíquota cheia, por prudência.
+
+**Entradas.** Natureza pelo CFOP (uso e consumo 1.407/1.556, ativo 1.551/2.551, revenda 1.102/1.403, combustíveis 1.653, serviços tomados, outras). Situação do crédito pelos campos de IBS/CBS que o próprio arquivo traz:
+- *com destaque*: há base e valor de IBS/CBS na nota;
+- *sem destaque*: o fornecedor não destacou (Simples, MEI ou sem informação). O motor trata como fornecedor do Simples, com crédito parcial;
+- *monofásico*: gás e combustíveis, com regra própria de crédito; ficam fora por padrão;
+- *alíquota zero*: base sem imposto; fora por padrão.
+
+O usuário marca quais situações contam como base de crédito antes de aplicar. O IBS/CBS destacado de 2026 é do ano-teste (0,9% + 0,1%): serve para saber quem destaca, não é o crédito de 2033.
+
+**Suposições que o resumo avisa:** o período do arquivo (menos de 12 meses não dá o RBT12 exato), a alimentação preparada reconhecida pela descrição, o Anexo I para as mercadorias e o Anexo III para a hospedagem (confirme no PGDAS-D).
+
 ---
 
 ## 9. Setores Cadastrados (85 ao total)
@@ -355,6 +375,8 @@ npm test
 ```
 
 Os testes (`tests/motor.test.mjs`, runner nativo do Node; o Vite, já instalado, carrega os módulos TypeScript do motor, sem dependência extra) cobrem o motor de cálculo: regressões dos casos conferidos à mão contra a lei (DAS com exportação, teto do ISS, 6ª faixa, livros, exportações no Lucro Presumido e Real) e invariantes dos dados (cada linha da partilha soma 100%; todo setor elegível ao Simples tem um `cAtivSN` coerente com o anexo do cálculo). Quando a lei mudar: regenerar a partilha (`python -I scripts/gerar_partilha_simples.py`) e rodar os testes.
+
+`tests/unico.test.mjs` cobre o importador do CSV do Único com um arquivo sintético (sem dados de cliente): leitura e codificação, classificação por CFOP/NCM/campos de IBS/CBS, totais, desconto e cancelados, a sugestão para o formulário e a execução dela no motor.
 
 `tests/assistente.test.mjs` cobre o assistente sem rede e sem chave: as ferramentas devolvem exatamente o que o motor calcula, recusam entrada inválida, a consulta à lei traz o texto certo (art. 273, 283) e o laço da conversa roda contra uma API simulada (execução de ferramenta, limite de voltas, regras de sistema que o cliente não consegue trocar, limite por usuário).
 
