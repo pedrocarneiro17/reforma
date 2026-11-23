@@ -30,7 +30,7 @@ Assistente de perguntas: defina `ANTHROPIC_API_KEY` para ligá-lo (sem a chave o
 npm test
 ```
 
-Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.mjs](tests/assistente.test.mjs) e os do importador do Único (arquivo sintético) em [tests/unico.test.mjs](tests/unico.test.mjs). Os do motor ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
+Os testes do assistente (sem rede e sem chave) ficam em [tests/assistente.test.mjs](tests/assistente.test.mjs) os do importador do Único (arquivo sintético) em [tests/unico.test.mjs](tests/unico.test.mjs) e os da análise por ano da transição (2026–2033) em [tests/transicao.test.mjs](tests/transicao.test.mjs). Os do motor ficam em [tests/motor.test.mjs](tests/motor.test.mjs) e cobrem o motor de cálculo: valores conferidos à mão contra a lei (DAS do Simples, 6ª faixa, teto do ISS, exportações, livros, vendas ao governo), as tabelas de partilha e o enquadramento dos setores. Usam o runner nativo do Node e o Vite já instalado, sem dependências extras.
 
 ## Estrutura
 

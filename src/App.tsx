@@ -1,4 +1,4 @@
-import { useState, Component } from 'react'
+import { useState, useMemo, Component } from 'react'
 import type { ReactNode } from 'react'
 import {
   Calculator, BarChart2, ChevronLeft, ChevronRight,
@@ -8,7 +8,7 @@ import {
 import FormularioEntrada from './components/FormularioEntrada'
 import ResultadosDashboard from './components/ResultadosDashboard'
 import AssistenteChat from './components/AssistenteChat'
-import { calcularTodosOsCenarios } from './engine/calculadora'
+import { calcularTodosOsCenarios, ANO_PLENO } from './engine/calculadora'
 import type { ResultadoCalculo, DadosEntrada } from './types'
 import { useAuth } from './auth/AuthContext'
 import { useApi } from './auth/useApi'
@@ -213,10 +213,17 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
   const { atualizarContador } = useAuth()
 
   const [etapa, setEtapa]           = useState<Etapa>('formulario')
-  const [resultados, setResultados] = useState<ResultadoCalculo | null>(null)
   const [collapsed, setCollapsed]   = useState(false)
   const [erroLimite, setErroLimite] = useState('')
   const [ultimosDados, setUltimosDados] = useState<DadosEntrada | null>(null)  // contexto do assistente
+  // Ano da transição em análise: trocar o ano recalcula na hora, sem gastar uma simulação do limite
+  const [anoAnalise, setAnoAnalise] = useState(ANO_PLENO)
+  const resultados: ResultadoCalculo | null = useMemo(
+    () => (ultimosDados ? calcularTodosOsCenarios({ ...ultimosDados, anoAnalise }) : null),
+    [ultimosDados, anoAnalise],
+  )
+  // O assistente responde sobre o mesmo ano que está na tela
+  const dadosDoAssistente = useMemo(() => (ultimosDados ? { ...ultimosDados, anoAnalise } : null), [ultimosDados, anoAnalise])
 
   const handleCalcular = async (dados: DadosEntrada) => {
     setErroLimite('')
@@ -232,8 +239,6 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
       setErroLimite('Erro ao verificar limite. Tente novamente.')
       return
     }
-    const calc = calcularTodosOsCenarios(dados)
-    setResultados(calc)
     setUltimosDados(dados)
     setEtapa('resultados')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -312,7 +317,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
             <FormularioEntrada onCalcular={handleCalcular} />
           ) : resultados ? (
             <ErrorBoundary onVoltar={handleVoltar}>
-              <ResultadosDashboard resultados={resultados} onVoltar={handleVoltar} />
+              <ResultadosDashboard resultados={resultados} onVoltar={handleVoltar} onMudarAno={setAnoAnalise} />
             </ErrorBoundary>
           ) : null}
         </main>
@@ -328,7 +333,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
         </footer>
       </div>
 
-      <AssistenteChat dados={ultimosDados} />
+      <AssistenteChat dados={dadosDoAssistente} />
     </div>
   )
 }

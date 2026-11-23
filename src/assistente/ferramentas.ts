@@ -39,6 +39,7 @@ const PROPRIEDADES_EMPRESA = {
   folhaMensal: { type: 'number', description: 'Folha de pagamento mensal (inclui pró-labore). Define o Fator R no Simples.' },
   pctFornecedoresSimples: { type: 'number', description: '% das compras feitas de fornecedores do Simples Nacional (geram crédito menor).' },
   pctReceitaAliquotaCheia: { type: 'number', description: 'Hotelaria e restaurantes: % da receita em bebidas alcoólicas e itens de terceiros sem preparo (alíquota cheia, sem os 40% de redução).' },
+  anoAnalise: { type: 'integer', minimum: 2026, maximum: 2033, description: 'Ano da transição que os números devem descrever (2026 a 2033). A reforma é gradual: 2026 só tem teste, 2027 traz a CBS cheia, o IBS só entra em 2029 (10% ao ano até 2032) e 2033 é o regime pleno. Padrão 2033. Use 2027 para "ano que vem". A resposta SEMPRE traz também a trajetória de todos os anos em projecaoAnoAno.' },
   aliquotaReferenciaPct: { type: 'number', description: 'Alíquota de referência TOTAL de IBS+CBS em % (ex.: 26.5). Opcional; padrão 26,5. A lei não a fixa: serve para testar cenários, como 27.91 (estimativa do Comitê Gestor).' },
   aliquotaCBSReferenciaPct: { type: 'number', description: 'Parte da CBS dentro da alíquota de referência, em % (ex.: 11.3 = proposta do TCU para 2027). Opcional; padrão 9,25. Só muda a divisão do IVA na transição, não a carga de 2033.' },
   pctInsumosAliquotaZero: { type: 'number', description: 'Hotelaria, restaurantes e parques: % das COMPRAS em alimentos da cesta básica (alíquota zero, não geram crédito). Informe junto com pctInsumosReduzidos.' },
@@ -72,12 +73,12 @@ export const FERRAMENTAS_MOTOR = [
   },
   {
     name: 'calcular_cenarios',
-    description: 'Roda o motor do simulador para UMA empresa: carga tributária de hoje, carga pós-reforma em 2033, projeção ano a ano (2026–2033), IBS/CBS bruto, crédito e líquido, cenário híbrido do Simples e alertas. É a única fonte de números do assistente.',
+    description: 'Roda o motor do simulador para UMA empresa: carga tributária de hoje, carga no ano pedido (anoAnalise; padrão 2033, o regime pleno), projeção ano a ano de 2026 a 2033 com as alíquotas de CBS/IBS em vigor, variação e preço necessário de cada ano, IBS/CBS bruto, crédito e líquido do ano, cenário híbrido do Simples (que muda a cada ano) e alertas. É a única fonte de números do assistente.',
     input_schema: { type: 'object', properties: PROPRIEDADES_EMPRESA, required: OBRIGATORIOS },
   },
   {
     name: 'comparar_regimes',
-    description: 'Compara Simples Nacional, Lucro Presumido e Lucro Real (e MEI/profissional liberal quando couber) com os mesmos dados. Indica qual regime é inaplicável e qual tem menor carga hoje e em 2033.',
+    description: 'Compara Simples Nacional, Lucro Presumido e Lucro Real (e MEI/profissional liberal quando couber) com os mesmos dados. Indica qual regime é inaplicável e qual tem menor carga hoje e no ano pedido (anoAnalise; padrão 2033). A melhor escolha pode mudar de um ano para outro: compare mais de um ano quando o usuário perguntar sobre o curto prazo.',
     input_schema: { type: 'object', properties: PROPRIEDADES_EMPRESA, required: OBRIGATORIOS },
   },
   {
@@ -142,6 +143,11 @@ export function montarDados(entrada: Record<string, unknown>): DadosEntrada {
   set('folhaMensal', numero(entrada.folhaMensal, 'folhaMensal'))
   set('pctFornecedoresSimples', numero(entrada.pctFornecedoresSimples, 'pctFornecedoresSimples', 0, 100))
   set('pctReceitaAliquotaCheia', numero(entrada.pctReceitaAliquotaCheia, 'pctReceitaAliquotaCheia', 0, 100))
+  const ano = numero(entrada.anoAnalise, 'anoAnalise', 2026, 2033)
+  if (ano !== undefined) {
+    if (!Number.isInteger(ano)) throw new Error('"anoAnalise" deve ser um ano inteiro de 2026 a 2033.')
+    dados.anoAnalise = ano
+  }
   const refPct = numero(entrada.aliquotaReferenciaPct, 'aliquotaReferenciaPct', 5, 60)
   if (refPct !== undefined) dados.aliquotaReferencia = refPct / 100
   const cbsPct = numero(entrada.aliquotaCBSReferenciaPct, 'aliquotaCBSReferenciaPct', 1, 40)
@@ -170,6 +176,9 @@ function premissas(r: ResultadoCalculo): string[] {
     padrao
       ? `A alíquota de referência de IBS+CBS (${pct(r.aliquotaReferencia)}%) é uma estimativa: a LC 214/2025 não a fixa (ela é definida por resolução do Senado e varia por ano e por ente).`
       : `Alíquota de referência de IBS+CBS usada: ${pct(r.aliquotaReferencia)}% (informada pelo usuário; a estimativa padrão é ${pct(ALIQUOTA_IVA_PADRAO)}%). A lei não a fixa.`,
+    r.anoAnalise === 2033
+      ? 'Os números principais são do regime pleno (2033). A reforma é gradual: veja projecaoAnoAno para a carga de cada ano.'
+      : `Os números principais descrevem ${r.anoAnalise}, não o regime pleno: nesse ano valem CBS de ${pct(r.aliquotaCBSAno)}% e IBS de ${pct(r.aliquotaIBSAno)}%, com ${Math.round(r.fracaoLegadoIcmsIssAno * 100)}% do ICMS/ISS ainda existindo. A alíquota plena (${pct(r.aliquotaReferencia)}%) só vale em 2033.`,
     'Os valores são estimativas para apoio à decisão e não substituem a apuração do contador.',
   ]
 }
@@ -185,18 +194,27 @@ function alertas(r: ResultadoCalculo): string[] {
   if (r.alertaContratoAdministrativo) a.push('Há vendas ao governo: direito a reequilíbrio dos contratos administrativos (LC 214, arts. 373–377).')
   if (r.alertaCashback) a.push('Setor com cashback elevado ao consumidor de baixa renda (LC 214, art. 118).')
   if (r.setor.creditoVedadoComprador) a.push('Quem compra deste setor (hotelaria, restaurantes, parques) não pode creditar IBS/CBS.')
-  const p2033 = r.projecaoAnos[r.projecaoAnos.length - 1]
-  if (p2033 && Math.abs(p2033.impostoMensal - r.cargaTotalReformaMensal) > 1) {
-    a.push('A projeção ano a ano e a carga total de 2033 partem de bases diferentes neste caso. Cite a carga total de 2033 como resultado principal e avise o usuário da divergência.')
+  const pAno = r.projecaoAnos.find(p => p.ano === r.anoAnalise)
+  if (pAno && Math.abs(pAno.impostoMensal - r.cargaTotalReformaMensal) > 1) {
+    a.push(`A projeção ano a ano e a carga total de ${r.anoAnalise} partem de bases diferentes neste caso. Cite a carga total de ${r.anoAnalise} como resultado principal e avise o usuário da divergência.`)
   }
   return a
 }
 
 export function resumirResultado(r: ResultadoCalculo) {
   const cargaAtual = r.impostoAtualMensal
-  const cargaPos = r.cargaTotalReformaMensal
+  const ehPleno = r.anoAnalise === 2033
+  // A carga de 2033 vem sempre da projeção quando o resultado descreve outro ano; no ano pleno é a carga total
+  const cargaPos = ehPleno ? r.cargaTotalReformaMensal : r.projecaoAnos[r.projecaoAnos.length - 1].impostoMensal
   const h = r.cenarioHibridoVerdadeiro
+  const bloco = (carga: number) => ({
+    impostoMensal: arred(carga),
+    aliquotaEfetivaPct: pct(r.faturamentoMensal > 0 ? carga / r.faturamentoMensal : 0),
+    variacaoMensal: arred(carga - cargaAtual),
+    variacaoPct: cargaAtual > 0 ? pct((carga - cargaAtual) / cargaAtual) : null,
+  })
   return {
+    anoAnalisado: r.anoAnalise,
     empresa: {
       regime: r.regime,
       setor: { codigo: r.setor.value, nome: r.setor.label, reducaoAliquotaPct: pct(r.setor.reducao) },
@@ -209,13 +227,19 @@ export function resumirResultado(r: ResultadoCalculo) {
       aliquotaEfetivaPct: pct(r.faturamentoMensal > 0 ? cargaAtual / r.faturamentoMensal : 0),
       origemDaAliquota: r.fonteAliquota === 'real' ? 'informada pelo usuário' : 'estimada pelo motor',
     },
-    cargaPosReforma2033: {
-      impostoMensal: arred(cargaPos),
-      aliquotaEfetivaPct: pct(r.faturamentoMensal > 0 ? cargaPos / r.faturamentoMensal : 0),
-      variacaoMensal: arred(cargaPos - cargaAtual),
-      variacaoPct: cargaAtual > 0 ? pct((cargaPos - cargaAtual) / cargaAtual) : null,
-    },
+    // Só quando o ano pedido não é 2033: a carga nesse ano, com as alíquotas em vigor nele
+    ...(ehPleno ? {} : {
+      cargaNoAnoAnalisado: {
+        ano: r.anoAnalise,
+        ...bloco(r.cargaTotalReformaMensal),
+        aliquotaCbsEmVigorPct: pct(r.aliquotaCBSAno),
+        aliquotaIbsEmVigorPct: pct(r.aliquotaIBSAno),
+        icmsIssRestantePct: Math.round(r.fracaoLegadoIcmsIssAno * 100),
+      },
+    }),
+    cargaPosReforma2033: bloco(cargaPos),
     ivaDual: {
+      ano: r.anoAnalise,
       aliquotaBrutaAplicadaPct: pct(r.aliquotaIVABruta),
       debitoMensal: arred(r.impostoIVABrutoMensal),
       creditoMensal: arred(r.creditoInsumosMensal),
@@ -225,6 +249,19 @@ export function resumirResultado(r: ResultadoCalculo) {
       ano: p.ano,
       impostoMensal: arred(p.impostoMensal),
       aliquotaEfetivaPct: pct(p.aliquotaEfetiva),
+      variacaoMensal: arred(p.variacaoMensal),
+      precoParaManterMargemPct: arred(p.reajustePrecoNecessario),
+      aliquotaCbsPct: pct(p.aliquotaCBS),
+      aliquotaIbsPct: pct(p.aliquotaIBS),
+      icmsIssRestantePct: Math.round(p.fracaoLegadoIcmsIss * 100),
+      ...(p.hibrido ? {
+        hibrido: {
+          compensa: p.hibrido.vale,
+          custoAdicionalMensal: arred(p.hibrido.custoAdicionalMensal),
+          creditoClienteNoSimplesPuroMensal: arred(p.hibrido.creditoClienteSimplesPuro),
+          creditoClienteNoHibridoMensal: arred(p.hibrido.creditoPlenoCliente),
+        },
+      } : {}),
     })),
     simples: r.regime === 'simples_nacional' ? {
       anexo: r.anexoSimples ?? null,
@@ -297,6 +334,7 @@ export function executarFerramentaMotor(nome: string, entrada: unknown): unknown
         const dados = montarDados(obj)
         const lista = calcularTodosOsRegimes(dados, { desdobrarFatorR: true })
         return {
+          anoAnalisado: lista[0].anoAnalise,
           regimes: lista.map(r => ({
             regime: r.regime,
             anexo: r.anexoComparado ?? r.anexoSimples ?? null,
@@ -307,11 +345,11 @@ export function executarFerramentaMotor(nome: string, entrada: unknown): unknown
                 : r.acimaDaFaixaMEI ? 'receita acima do limite do MEI' : 'não aplicável')
               : null,
             cargaHojeMensal: arred(r.impostoAtualMensal),
-            cargaPos2033Mensal: arred(r.cargaTotalReformaMensal),
+            cargaNoAnoMensal: arred(r.cargaTotalReformaMensal),
             aliquotaHojePct: pct(r.faturamentoMensal > 0 ? r.impostoAtualMensal / r.faturamentoMensal : 0),
-            aliquotaPos2033Pct: pct(r.faturamentoMensal > 0 ? r.cargaTotalReformaMensal / r.faturamentoMensal : 0),
+            aliquotaNoAnoPct: pct(r.faturamentoMensal > 0 ? r.cargaTotalReformaMensal / r.faturamentoMensal : 0),
             menorCustoHoje: r.melhorAtual,
-            menorCustoPos2033: r.melhorIVA,
+            menorCustoNoAno: r.melhorIVA,
             sePrecisarDeFatorR: r.anexoAtingivel,
           })),
           aliquotaReferenciaUsadaPct: pct(lista[0].aliquotaReferencia),
@@ -329,13 +367,14 @@ export function executarFerramentaMotor(nome: string, entrada: unknown): unknown
           return p
         })
         return {
+          anoAnalisado: dados.anoAnalise ?? 2033,
           pontos: calcularCurvaCrescimento(dados, percentuais).map(p => ({
             variacaoFaturamentoPct: p.pct,
             faturamentoMensal: arred(p.faturamentoMensal),
             cargaHojeMensal: arred(p.impostoAtualMensal),
-            cargaPos2033Mensal: arred(p.impostoIVAMensal),
+            cargaNoAnoMensal: arred(p.impostoIVAMensal),
             aliquotaHojePct: pct(p.aliquotaAtual),
-            aliquotaPos2033Pct: pct(p.aliquotaIVA),
+            aliquotaNoAnoPct: pct(p.aliquotaIVA),
             acimaDoLimiteDoSimples: p.acimaDaFaixaSimples,
           })),
           observacao: 'Insumos, exportações e despesas operacionais crescem junto com o faturamento; folha, venda de imobilizado e créditos adicionais ficam fixos.',

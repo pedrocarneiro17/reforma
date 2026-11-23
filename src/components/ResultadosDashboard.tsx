@@ -5,6 +5,7 @@ import PainelHistorico12m from './PainelHistorico12m'
 import ComparadorRegimes from './ComparadorRegimes'
 import SimuladorCrescimento from './SimuladorCrescimento'
 import MemoriaCalculo from './MemoriaCalculo'
+import LinhaDoTempo from './LinhaDoTempo'
 import type { ResultadoCalculo, TipoRegime, PerfilClientes, AnaliseGrupoSimples, AnaliseHolding, AnaliseICMS, AnaliseFatorR, AnaliseProlabore } from '../types'
 import { UF_NOMES } from '../engine/calculadora'
 
@@ -26,9 +27,11 @@ const NOMES_PERFIL: Record<PerfilClientes, string> = {
 interface ResultadosDashboardProps {
   resultados: ResultadoCalculo
   onVoltar: () => void
+  /** troca o ano da transição analisado (2026–2033) */
+  onMudarAno: (ano: number) => void
 }
 
-export default function ResultadosDashboard({ resultados, onVoltar }: ResultadosDashboardProps) {
+export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }: ResultadosDashboardProps) {
   const [aba, setAba] = useState<'analise' | 'memoria'>('analise')
   const {
     regime, setor, faturamentoMensal, insumosMensais, perfilClientes,
@@ -60,9 +63,16 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     proLaboreConsideradoMensal, riscoReclassificacaoNivel,
     despesasParaZerarIVAMensal, pctFatParaZerarIVA,
     aliquotaReferencia, aliquotaCBSReferencia,
+    anoAnalise, aliquotaCBSAno, aliquotaIBSAno,
   } = resultados
   const pctRef = (x: number) => `${(x * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
   const refPadrao = Math.abs(aliquotaReferencia - 0.265) < 1e-9
+  // Ano da transição em análise: 2033 é o regime pleno (o resultado de sempre); os demais mostram a transição
+  const ehPleno = anoAnalise === 2033
+  const pAno = projecaoAnos.find(p => p.ano === anoAnalise)
+  const nomeAno = ehPleno ? 'pós-reforma' : `em ${anoAnalise}`
+  // CBS + IBS que o cliente B2B credita no Simples puro: o embutido no DAS no ano analisado (no ano pleno, a partilha de hoje)
+  const aliqEmbutidaDAS = analiseSimplesHibrido?.aliquotaEmbutidaNoDAS ?? ((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))
 
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
 
@@ -92,7 +102,11 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
 
   // ── Resumo executivo — o recado factual mais relevante para este caso ──────
   const resumo: { texto: string; tom: 'success' | 'danger' | 'info' } = (() => {
-    if (isento || aliquotaIVABruta === 0)
+    if (isento)
+      return { tom: 'success', texto: 'Setor isento — alíquota zero no IVA Dual. Não há IBS/CBS sobre suas vendas.' }
+    if (anoAnalise === 2026)
+      return { tom: 'info', texto: 'Em 2026 a CBS (0,9%) e o IBS (0,1%) são só de teste: aparecem na nota, mas são compensados com o PIS/COFINS e dispensados do recolhimento quando as obrigações acessórias são cumpridas (art. 348). A carga é a de hoje — o impacto começa em 2027.' }
+    if (aliquotaIVABruta === 0)
       return { tom: 'success', texto: 'Setor isento — alíquota zero no IVA Dual. Não há IBS/CBS sobre suas vendas.' }
     if (produtorRuralNaoContribuinte)
       return { tom: 'success', texto: 'Produtor rural não-contribuinte — sem IBS/CBS abaixo de R$ 3,6M/ano.' }
@@ -103,13 +117,13 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
     if (isMEI)
       return { tom: 'info', texto: 'No MEI, o DAS fixo mensal continua o mesmo com a reforma — CBS e IBS não mudam o valor da sua guia.' }
     if (ehSimplesOuMEI)
-      return { tom: 'info', texto: `No Simples Nacional, o DAS total não muda com a reforma: CBS e IBS substituem PIS/COFINS e ICMS/ISS dentro da mesma guia.${vendeB2B ? ` Seus clientes empresas, porém, só creditam a parcela embutida no DAS (${fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}) — veja no comparador a opção de recolher IBS/CBS por fora.` : ''}` }
+      return { tom: 'info', texto: `No Simples Nacional, o DAS total não muda com a reforma: CBS e IBS substituem PIS/COFINS e ICMS/ISS dentro da mesma guia.${vendeB2B ? ` Seus clientes empresas, porém, só creditam a parcela embutida no DAS (${fmt.pct(aliqEmbutidaDAS)}) — veja no comparador a opção de recolher IBS/CBS por fora.` : ''}` }
     if (cargaReducao)
-      return { tom: 'success', texto: `Com o IVA Dual, sua carga líquida cai ${Math.abs(variacaoPercentual).toFixed(1)}% — economia de ${fmt.moeda(Math.abs(variacaoAbsolutaMensal))}/mês.` }
+      return { tom: 'success', texto: `${ehPleno ? 'Com o IVA Dual' : `Em ${anoAnalise}`}, sua carga líquida cai ${Math.abs(variacaoPercentual).toFixed(1)}% — economia de ${fmt.moeda(Math.abs(variacaoAbsolutaMensal))}/mês.` }
     if (cargaAumentou && vendeB2B)
-      return { tom: 'info', texto: `O imposto destacado passa a ${fmt.moeda(impostoIVALiquidoMensal)}/mês, mas seus clientes empresas (B2B) creditam esse valor integralmente — é repasse na cadeia, não custo direto da sua operação. O impacto real está no preço final ao consumidor e no fluxo de caixa (split payment).` }
+      return { tom: 'info', texto: `O imposto destacado passa a ${fmt.moeda(impostoIVALiquidoMensal)}/mês${ehPleno ? '' : ` em ${anoAnalise}`}, mas seus clientes empresas (B2B) creditam esse valor integralmente — é repasse na cadeia, não custo direto da sua operação. O impacto real está no preço final ao consumidor e no fluxo de caixa (split payment).` }
     if (cargaAumentou)
-      return { tom: 'danger', texto: `Com o IVA Dual, sua carga líquida sobe ${Math.abs(variacaoPercentual).toFixed(1)}% — ${fmt.moeda(variacaoAbsolutaMensal)}/mês. Como você vende ao consumidor final (B2C), o aumento tende a recair sobre o preço.` }
+      return { tom: 'danger', texto: `${ehPleno ? 'Com o IVA Dual' : `Em ${anoAnalise}`}, sua carga líquida sobe ${Math.abs(variacaoPercentual).toFixed(1)}% — ${fmt.moeda(variacaoAbsolutaMensal)}/mês. Como você vende ao consumidor final (B2C), o aumento tende a recair sobre o preço.` }
     return { tom: 'info', texto: 'Carga praticamente neutra entre o regime atual e o IVA Dual.' }
   })()
   const resumoClasse = resumo.tom === 'success' ? 'insight-success' : resumo.tom === 'danger' ? 'insight-danger' : 'insight-info'
@@ -134,6 +148,9 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           </p>
         </div>
       </div>
+
+      {/* ── Ano da transição em análise ──────────────────────────────────── */}
+      <LinhaDoTempo resultados={resultados} onMudarAno={onMudarAno} />
 
       {/* ── Abas: Análise Tributária | Memória de Cálculo ────────────────── */}
       <div className="flex items-center justify-between gap-3 border-b border-border -mt-2 no-print">
@@ -182,7 +199,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           deixam de ser recolhidos no Simples (LC 123, art. 20 §1º) e são pagos por fora do DAS — estimados em{' '}
           <strong className="num">{fmt.moeda(icmsIssPorForaSimplesMensal)}/mês</strong> (ICMS por débito/crédito e ISS médio de 3%;
           informe a UF para refinar o ICMS). Com a reforma, esse valor vira IBS no regime regular (estimado em{' '}
-          <strong className="num">{fmt.moeda(ibsRegularSublimiteMensal)}/mês</strong> em 2033) e a CBS continua dentro do DAS.
+          <strong className="num">{fmt.moeda(ibsRegularSublimiteMensal)}/mês</strong> em {anoAnalise}) e a CBS continua dentro do DAS.
           Se o excesso for de até 20%, o efeito só começa no ano seguinte (não modelado).
         </div>
       )}
@@ -212,7 +229,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           <div className="stat-card border-l-4 border-l-info">
             <span className="stat-label flex items-center gap-1.5">
               Cenário 1 — Simples Pleno
-              <span className="badge badge-neutral text-[10px] font-medium">{sublimiteExcedido ? 'em 2033' : 'sem mudança'}</span>
+              <span className="badge badge-neutral text-[10px] font-medium">{sublimiteExcedido ? `em ${anoAnalise}` : 'sem mudança'}</span>
             </span>
             <span className="stat-value text-info num">{fmt.moeda(sublimiteExcedido ? cargaTotalReformaMensal : impostoAtualMensal)}</span>
             <span className="text-xs text-ink-muted num">
@@ -242,7 +259,9 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               {' '}· <span className="text-danger">+{fmt.moeda(cenarioHibridoVerdadeiro.custoAdicionalVsSimples)}/mês</span>
             </span>
             <div className="mt-2 text-xs rounded-md px-3 py-2 leading-relaxed border bg-warning-soft border-warning-border text-ink-secondary">
-              DAS reduzido + IVA pleno. Custo maior, mas clientes B2B creditam os <strong>{fmt.pct(aliquotaIVABruta)}</strong> cheios.
+              {ehPleno
+                ? <>DAS reduzido + IVA pleno. Custo maior, mas clientes B2B creditam os <strong>{fmt.pct(aliquotaIVABruta)}</strong> cheios.</>
+                : <>DAS reduzido + IVA de {anoAnalise}. Clientes B2B creditam <strong>{fmt.pct(aliquotaIVABruta)}</strong> (a alíquota em vigor no ano; chega a {fmt.pct(aliquotaIVABruta * (aliquotaReferencia / Math.max(1e-9, aliquotaCBSAno + aliquotaIBSAno)))} em 2033).</>}
             </div>
           </div>
         </div>
@@ -267,7 +286,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
           {/* Carga Nova */}
           <div className={`stat-card border-l-4 ${cargaAumentou ? 'border-l-danger' : 'border-l-success'}`}>
             <span className="stat-label flex items-center gap-1.5">
-              {mostraCargaTotal ? 'Carga Nova — Pós-Reforma (Mensal)' : 'Carga Nova — IVA Dual (Mensal)'}
+              {mostraCargaTotal ? `Carga Nova — ${ehPleno ? 'Pós-Reforma' : anoAnalise} (Mensal)` : `Carga Nova — IVA Dual${ehPleno ? '' : ` ${anoAnalise}`} (Mensal)`}
               {!isento && (
                 <span
                   className="badge badge-neutral text-[10px] font-medium cursor-help"
@@ -298,10 +317,15 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                     {' '}+ tributos que permanecem ({isPF ? 'IRPF, INSS…' : 'IRPJ, CSLL…'}) <strong className="text-ink num">{fmt.moeda(cargaPermanenteMensal)}</strong>
                   </>
                 : ehLPouLR
-                ? <>IVA <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
-                    {' '}+ IR/CSLL <strong className="text-ink num">{fmt.moeda(irpjCsllPersistenteMensal)}</strong>
-                    {contribPrevidenciariaMensal > 0 && <> + prev. <strong className="text-ink num">{fmt.moeda(contribPrevidenciariaMensal)}</strong></>}
-                  </>
+                ? (ehPleno
+                  ? <>IVA <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
+                      {' '}+ IR/CSLL <strong className="text-ink num">{fmt.moeda(irpjCsllPersistenteMensal)}</strong>
+                      {contribPrevidenciariaMensal > 0 && <> + prev. <strong className="text-ink num">{fmt.moeda(contribPrevidenciariaMensal)}</strong></>}
+                    </>
+                  : <>IBS/CBS <strong className="text-ink num">{fmt.moeda(impostoIVALiquidoMensal)}</strong>
+                      {' '}+ tributos de hoje que ainda restam <strong className="text-ink num">{fmt.moeda(pAno?.parcelaAtual ?? 0)}</strong>
+                      {' '}(PIS/COFINS, ICMS/ISS, IR/CSLL{contribPrevidenciariaMensal > 0 ? ', prev.' : ''})
+                    </>)
                 : <>Alíquota bruta: <strong className="text-ink num">{fmt.pct(aliquotaIVABruta)}</strong>
                     {' '}→ créditos: <strong className="text-success num">−{fmt.moeda(creditoInsumosMensal)}</strong></>}
             </div>
@@ -399,8 +423,11 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                     {regime === 'simples_nacional' && irpjCsllLPMensal > 0 && (
                       <TabelaRow label="Carga Total (IBS+CBS+IRPJ+CSLL)" atual={impostoAtualMensal} nova={impostoIVALiquidoMensal + irpjCsllLPMensal} destaque />
                     )}
+                    {ehLPouLR && !ehPleno && (pAno?.legadoConsumoMensal ?? 0) > 0.5 && (
+                      <TabelaRow label={`PIS/COFINS e ICMS/ISS que ainda existem em ${anoAnalise}`} atual={0} nova={pAno?.legadoConsumoMensal ?? 0} />
+                    )}
                     {ehLPouLR && irpjCsllHoje > 0 && (
-                      <TabelaRow label="IRPJ + CSLL" atual={irpjCsllHoje} nova={irpjCsllPersistenteMensal} />
+                      <TabelaRow label="IRPJ + CSLL" atual={irpjCsllHoje} nova={ehPleno ? irpjCsllPersistenteMensal : (pAno?.irpjCsllMensal ?? irpjCsllPersistenteMensal)} />
                     )}
                     {ehLPouLR && contribPrevidenciariaMensal > 0 && (
                       <TabelaRow label="Contribuição previdenciária" atual={contribPrevidenciariaMensal} nova={contribPrevidenciariaMensal} />
@@ -510,7 +537,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               </table>
 
               <div className="rounded-lg bg-warning-soft border border-warning-border px-3 py-2 text-xs text-ink-secondary leading-relaxed">
-                Seus clientes B2B já creditam, mas só <strong>{fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}</strong> (CBS + IBS embutidos no DAS, pela alíquota da tabela do Simples),
+                Seus clientes B2B já creditam, mas só <strong>{fmt.pct(aliqEmbutidaDAS)}</strong> (CBS + IBS embutidos no DAS, pela alíquota da tabela do Simples),
                 não os {fmt.pct(aliquotaIVABruta)} cheios do IVA. Isso pode reduzir sua competitividade em cadeias B2B.
               </div>
             </div>
@@ -1145,7 +1172,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                 </span>
                 <div className="text-sm text-ink-secondary leading-snug">
                   <div>Alíquota atual: <strong className="text-ink num">{fmt.pct(aliquotaAtual)}</strong></div>
-                  <div>Alíquota pós-reforma: <strong className="text-ink num">{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)}</strong></div>
+                  <div>Alíquota {nomeAno}: <strong className="text-ink num">{fmt.pct(faturamentoMensal > 0 ? cargaTotalReformaMensal / faturamentoMensal : 0)}</strong></div>
                 </div>
               </div>
             </div>
@@ -1206,8 +1233,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <p className="text-ink-secondary text-sm mt-1.5 leading-relaxed">
                 Como você vende para empresas (B2B) e está no {regime === 'mei' ? 'MEI' : 'Simples Nacional'},
                 seus clientes <em>já creditam</em>, mas só a parcela de CBS/IBS efetivamente tributada dentro do DAS, pela
-                alíquota da tabela do Simples{regime !== 'mei' ? <> (<span className="num">{fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}</span> da venda)</> : null}
-                {' '}— menor que os <span className="num">{fmt.pct(aliquotaIVABruta)}</span> do IVA pleno. O híbrido dá o crédito pleno, a um custo maior.
+                alíquota da tabela do Simples{regime !== 'mei' ? <> (<span className="num">{fmt.pct(aliqEmbutidaDAS)}</span> da venda)</> : null}
+                {' '}— menor que os <span className="num">{fmt.pct(aliquotaIVABruta)}</span> do {ehPleno ? 'IVA pleno' : `IVA em vigor em ${anoAnalise}`}. O híbrido dá o crédito pleno, a um custo maior.
               </p>
             </div>
 
@@ -1484,31 +1511,45 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
       <div className="card p-6">
         <h3 className="section-title mb-4"><span className="font-display">Cronograma de Transição Completo</span></h3>
         <div className="overflow-x-auto">
-          <table className="table-premium text-sm min-w-[480px]">
+          <table className="table-premium text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Ano</th>
-                <th className="text-right px-4 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Imposto / Mês</th>
-                <th className="text-right px-4 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Imposto / Ano</th>
-                <th className="text-right px-4 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Alíq. Efetiva</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">CBS</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">IBS</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">ICMS/ISS</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Imposto / Mês</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Imposto / Ano</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Alíq. Efetiva</th>
+                <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Preço p/ manter margem</th>
                 <th className="text-right py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">vs. Atual</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {projecaoAnos.map(p => {
-                const delta = p.impostoMensal - impostoAtualMensal
-                const isLast = p.ano === 2033
+                const delta = p.variacaoMensal
+                const emAnalise = p.ano === anoAnalise
                 return (
-                  <tr key={p.ano} className={`transition-colors ${isLast ? 'bg-info-soft' : 'hover:bg-subtle'}`}>
+                  <tr
+                    key={p.ano}
+                    onClick={() => onMudarAno(p.ano)}
+                    className={`cursor-pointer transition-colors ${emAnalise ? 'bg-info-soft' : 'hover:bg-subtle'}`}
+                    title={`Ver o painel em ${p.ano}`}
+                  >
                     <td className="py-3 text-ink font-semibold num">
                       {p.ano}
-                      {p.ano === 2026 && <span className="ml-2 text-xs text-ink-muted font-normal">(atual)</span>}
-                      {p.ano === 2033 && <span className="ml-2 text-xs text-info font-normal">(IVA pleno)</span>}
+                      {p.ano === 2026 && <span className="ml-2 text-xs text-ink-muted font-normal">(hoje)</span>}
+                      {p.ano === 2033 && <span className="ml-2 text-xs text-info font-normal">(pleno)</span>}
+                      {emAnalise && <span className="ml-2 text-xs text-ink-muted font-normal">· em análise</span>}
                     </td>
-                    <td className="px-4 py-3 text-right text-ink-secondary num">{fmt.moeda(p.impostoMensal)}</td>
-                    <td className="px-4 py-3 text-right text-ink-secondary num">{fmt.moeda(p.impostoAnual)}</td>
-                    <td className="px-4 py-3 text-right text-ink-muted num">{fmt.pct(p.aliquotaEfetiva)}</td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-3 py-3 text-right text-ink-muted num">{pctRef(p.aliquotaCBS)}</td>
+                    <td className="px-3 py-3 text-right text-ink-muted num">{pctRef(p.aliquotaIBS)}</td>
+                    <td className="px-3 py-3 text-right text-ink-muted num">{Math.round(p.fracaoLegadoIcmsIss * 100)}%</td>
+                    <td className="px-3 py-3 text-right text-ink-secondary num">{fmt.moeda(p.impostoMensal)}</td>
+                    <td className="px-3 py-3 text-right text-ink-secondary num">{fmt.moeda(p.impostoAnual)}</td>
+                    <td className="px-3 py-3 text-right text-ink-muted num">{fmt.pct(p.aliquotaEfetiva)}</td>
+                    <td className="px-3 py-3 text-right text-ink-muted num">{p.reajustePrecoNecessario > 0 ? `+${p.reajustePrecoNecessario.toFixed(2).replace('.', ',')}%` : '—'}</td>
+                    <td className="py-3 text-right">
                       <span className={`text-xs font-medium num ${
                         Math.abs(delta) < 1 ? 'text-ink-muted opacity-40' :
                         delta > 0 ? 'text-danger' : 'text-success'
@@ -1522,6 +1563,11 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-ink-muted mt-3 leading-relaxed">
+          CBS e IBS são as alíquotas de referência em vigor em cada ano (antes das reduções do seu setor), com a alíquota plena de{' '}
+          <span className="num">{pctRef(aliquotaReferencia)}</span>; o IBS entra em 10%, 20%, 30% e 40% do valor pleno de 2029 a 2032 e o
+          ICMS/ISS caem na mesma proporção. Clique em um ano para ver todo o painel nele.
+        </p>
       </div>
 
       {/* ── CTA final ────────────────────────────────────────────────── */}

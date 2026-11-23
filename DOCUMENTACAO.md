@@ -215,9 +215,27 @@ Reajuste_preço (%) = [(1 − aliq_atual) / (1 − aliq_IVA_efetiva) − 1] × 1
 
 **Lógica:** a receita líquida (após impostos) só se mantém se o preço for ajustado proporcionalmente à diferença entre as alíquotas.
 
-### 7.4 Projeção da Transição (2026–2033)
+### 7.4 Projeção da Transição (2026–2033) e análise por ano
 
-Para cada ano, o sistema soma a parcela que ainda é do regime atual e a parcela que já é do IVA Dual, seguindo o cronograma da seção 4: PIS/COFINS viram CBS em 2027 e ICMS/ISS reduzem 10% ao ano de 2029 a 2032 (arts. 501 e 508). No Simples e no MEI o total é o DAS, constante, e a projeção mostra só quanto dele já é CBS/IBS.
+A reforma **não chega de uma vez**: o que vale em 2027 não é o que vale em 2033. Por isso o motor trata cada ano da transição, e não só o ponto final. O calendário (LC 214/2025, arts. 342 a 348, 361 a 365, 501 e 508):
+
+| Ano | CBS | IBS | ICMS e ISS | PIS/COFINS |
+|---|---|---|---|---|
+| 2026 | teste de 0,9%, compensado | teste de 0,1%, compensado | inteiros | inteiros |
+| 2027–2028 | alíquota de referência (art. 347 reduz 0,1 p.p., compensado pelo IBS de 0,05% + 0,05% do art. 344: líquido zero) | só teste | inteiros | extintos (a CBS os substitui) |
+| 2029 a 2032 | de referência | 10%, 20%, 30%, 40% da alíquota plena | 90%, 80%, 70%, 60% | extintos |
+| 2033 | de referência | 100% | extintos | extintos |
+
+**Ano de análise.** `DadosEntrada.anoAnalise` (2026 a 2033; sem informar vale 2033, o resultado de sempre) faz o motor descrever aquele ano: a alíquota bruta, os créditos, o IBS/CBS líquido, o Simples híbrido, o comparador de regimes, o simulador de crescimento, o reajuste de preço e a carga total passam a ser os do ano. Na tela, a **linha do tempo** no topo do resultado troca o ano sem gastar uma simulação do limite; o assistente recebe o mesmo ano.
+
+**Como é calculado.**
+- As alíquotas em vigor no ano são `CBS = referência da CBS × (1 desde 2027)` e `IBS = (referência − CBS) × fração do ano`. Tudo que depende da alíquota (débito, crédito sobre compras, crédito de bens de capital, crédito presumido, ZFM e regime automotivo) usa essas alíquotas, então o IVA líquido de um ano é o do ano pleno × `(CBS×fCBS + IBS×fIBS) ÷ referência` (teste).
+- A **carga total do ano é o ponto da projeção**. A projeção (`projecaoAnos`) é sempre calculada a partir do ano pleno e **não depende do ano analisado** (teste em mais de 6 mil combinações de setor × regime × faturamento × ano).
+- Cada ponto da projeção traz também: variação contra hoje (R$ e %), reajuste de preço para manter a margem, CBS e IBS em vigor, parte do ICMS/ISS que resta, IVA líquido do ano, o que resta de PIS/COFINS e ICMS/ISS, o IRPJ/CSLL do ano e, no Simples e no MEI com clientes B2B, a decisão do híbrido naquele ano.
+- No **Simples híbrido** o crédito que o cliente já tem no Simples puro é o CBS+IBS embutido no DAS **daquele ano** (partilha de cada ano da LC 214) e o crédito pleno é a alíquota em vigor no ano. Em 2027 o cliente só credita a CBS; o crédito pleno cresce a cada ano e salta em 2033. O custo adicional do híbrido soma o ICMS/ISS por fora que ainda existe acima do sublimite. O ano pleno mantém a base de sempre (partilha de hoje, com o teto do ISS na 5ª faixa).
+- Em **2026** não há IBS/CBS a recolher (só o teste, compensado com PIS/COFINS, art. 348; o Simples fica de fora) e o híbrido ainda não existe: a carga é a de hoje.
+
+**Simplificações.** O IVA líquido de cada ano escala o do ano pleno de forma proporcional (todo crédito acompanha a alíquota, mesmo o dos fornecedores do Simples). Os créditos presumidos do regime automotivo e da ZFM-CBS acompanham o mesmo fator, sem modelar a redução de 20% ao ano do regime automotivo. A divisão da CBS e do IBS na alíquota de referência é a informada no formulário (padrão: CBS 9,25%); o IBS só será fixado até o fim de 2028 e a lei prevê alíquotas de referência que mudam a cada ano (arts. 353 a 365). O simulador usa uma única alíquota plena para todos os anos.
 
 ---
 
@@ -236,14 +254,15 @@ Para cada ano, o sistema soma a parcela que ainda é do regime atual e a parcela
 
 Exibe, na seguinte ordem:
 
-1. **Cards de resumo** — Carga atual vs. IVA Dual vs. variação
+0. **Linha do tempo** — escolha do ano da transição (2026 a 2033); cada ano mostra a carga, a variação contra hoje e, no Simples B2B, se o híbrido compensa
+1. **Cards de resumo** — Carga atual vs. carga do ano analisado vs. variação
 2. **Painel Histórico 12 meses** — Gráficos com dados reais (se modo detalhado)
 3. **Tabela de apuração** — Breakdown linha a linha do cálculo
-4. **Gráfico de transição** — Evolução do imposto mensal de 2026 a 2033
+4. **Gráfico de transição** — Evolução do imposto de 2026 a 2033 (todos os anos), com o ano analisado destacado
 5. **Comparador de Regimes** — Os 3 regimes calculados com os mesmos dados financeiros, lado a lado
 6. **Simulador de Crescimento** — Curva interativa mostrando como o imposto evolui com o crescimento do faturamento
 7. **Alertas** — Reajuste de preço, Simples Nacional Híbrido
-8. **Tabela de transição detalhada** — Ano a ano com parcela antiga e nova
+8. **Tabela de transição detalhada** — Ano a ano: CBS, IBS e ICMS/ISS em vigor, imposto, alíquota efetiva e preço para manter a margem (clicar na linha troca o ano)
 
 ### 8.3 Comparador de Regimes
 
@@ -307,7 +326,9 @@ Botão "Assistente" no canto da tela. O usuário pergunta em português ("quanto
 
 **O que o assistente ainda não faz:** ler arquivos (PDF, CSV), mudar os dados do formulário, simular alíquota de referência diferente de 26,5%, nem calcular o adiamento de 20% do sublimite. Quando a pergunta cai nesses casos, ele é instruído a dizer isso em vez de adivinhar.
 
-**Rede de segurança:** se um dia a projeção ano a ano e a carga total de 2033 divergirem (o motor garante que não, em teste), o assistente recebe um alerta e deve citar a carga total de 2033.
+**Ano da transição:** as ferramentas aceitam `anoAnalise` (2026 a 2033) e **sempre** devolvem a trajetória ano a ano (`projecaoAnoAno`, com alíquotas, variação, preço e a decisão do híbrido). As instruções do modelo dizem que a reforma é gradual: para "ano que vem" ele deve usar 2027, olhar mais de um ano nas decisões e só chamar de regime pleno o que for de 2033.
+
+**Rede de segurança:** se um dia a projeção ano a ano e a carga total do ano analisado divergirem (o motor garante que não, em teste), o assistente recebe um alerta e deve citar a carga total do ano.
 
 ### 8.7 Importar CSV do Único
 
@@ -366,7 +387,8 @@ A lista completa está em `src/data/setores.ts`. Cada setor traz:
 6. **Transportador autônomo de carga (PF):** tratado como **não contribuinte** de IBS/CBS (LC 214, art. 26, VII, e art. 169; o cClassTrib oficial 410015 confirma): IVA zero, e os clientes contribuintes apropriam crédito presumido. A opção pelo regime regular (art. 26 §1º, V) não é modelada. **Nanoempreendedor** (pessoa física com receita anual abaixo de 50% do limite do MEI, hoje R$ 40.500, que não aderiu ao MEI) também não é contribuinte (art. 26, IV). Acima desse porte, o profissional liberal PF **é** contribuinte (art. 21, I, c), sem outro corte de faturamento: os R$ 240 mil valem só para operações com imóveis (art. 251).
 7. **Teto do ISS no Simples:** modelado no regime atual e na transição. Os percentuais do teto do regime atual são consequência aritmética da regra do art. 18 §1º-B, I, e da tabela de partilha (verificado em teste). A tabela de partilha e as alíquotas nominais vêm da redação da LC 155/2016 (texto do Planalto, que não é o publicado no Diário Oficial) e coincidem com a tabela de 2033 da LC 214. Não foram comparadas com um texto consolidado de 2026 que considere alterações posteriores: veja a seção 14 para conferir.
 8. **Sublimite de R$ 3,6 milhões (estimativas):** o ICMS/ISS por fora do DAS é uma **estimativa** (a apuração real depende das operações, de substituição tributária, benefícios e créditos), e o IBS regular é o IVA líquido × (1 − fatia da CBS). Não é modelado o adiamento ao ano seguinte quando o excesso é de até 20% (art. 20 §1º-A). A regra de faixa separada por mercado e o limite por mercado vêm do texto das LC 147/2014 e 155/2016 no Planalto (não consolidado); o regulamento do Comitê Gestor (Resolução CGSN 140/2018) e o manual do PGDAS-D não foram lidos, então vale conferir com um extrato real (seção 14).
-6. **Consulte sempre um contador** para decisões fiscais — este simulador é educacional.
+9. **Transição ano a ano:** a alíquota de referência plena é uma só para todos os anos. A lei prevê alíquotas de referência próprias para cada ano (CBS de 2027 a 2033, IBS de 2029 a 2033, arts. 353 a 365), fixadas pelo Senado, que ainda não existem; o simulador as aproxima pela proporção de 10%, 20%, 30% e 40% do IBS (o que reproduz a substituição gradual do ICMS/ISS). Quando o Senado publicar a CBS de 2027, ela entra no campo da alíquota de referência (seção 3).
+10. **Consulte sempre um contador** para decisões fiscais — este simulador é educacional.
 
 ---
 
@@ -399,6 +421,8 @@ npm test
 ```
 
 Os testes (`tests/motor.test.mjs`, runner nativo do Node; o Vite, já instalado, carrega os módulos TypeScript do motor, sem dependência extra) cobrem o motor de cálculo: regressões dos casos conferidos à mão contra a lei (DAS com exportação, teto do ISS, 6ª faixa, livros, exportações no Lucro Presumido e Real) e invariantes dos dados (cada linha da partilha soma 100%; todo setor elegível ao Simples tem um `cAtivSN` coerente com o anexo do cálculo). Quando a lei mudar: regenerar a partilha (`python -I scripts/gerar_partilha_simples.py`) e rodar os testes.
+
+`tests/transicao.test.mjs` cobre a análise por ano: o calendário (CBS desde 2027, IBS de 10% a 40% de 2029 a 2032), as alíquotas em vigor de cada ano (com a referência padrão e com uma informada), a invariante "carga do ano = ponto da projeção; projeção independente do ano" em todos os setores, regimes e anos, o IVA líquido proporcional à alíquota do ano, o Simples híbrido ano a ano (crédito do cliente, custo, ponto da projeção igual à análise do ano) e o comparador, o simulador de crescimento e o reajuste de preço herdando o ano. Sem informar o ano, o resultado é idêntico ao de 2033.
 
 `tests/unico.test.mjs` cobre o importador do CSV do Único com um arquivo sintético (sem dados de cliente): leitura e codificação, classificação por CFOP/NCM/campos de IBS/CBS, totais, desconto e cancelados, a sugestão para o formulário e a execução dela no motor.
 

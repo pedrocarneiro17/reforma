@@ -69,8 +69,12 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     ivaZeradoVendasRural, ivaZeradoVendasTransp, produtorRuralNaoContribuinte, naoContribuinteSetor, nanoempreendedor,
     gorjetaMensal, pctFornecedoresSimples, inssAutonomoMensal, aliquotaReferencia,
     alertaMEI, analiseProlabore, analiseFatorR, analiseGrupoSimples, analiseHolding,
-    cenarioHibridoVerdadeiro,
+    cenarioHibridoVerdadeiro, anoAnalise, projecaoAnos,
   } = resultados
+  // Ano da transição em análise (2033 = regime pleno)
+  const ehPleno = anoAnalise === 2033
+  const pAno = projecaoAnos.find(p => p.ano === anoAnalise)
+  const rotuloAno = ehPleno ? 'pós-reforma' : `em ${anoAnalise}`
 
   const NOMES_REGIME: Record<string, string> = {
     simples_nacional: 'Simples Nacional', lucro_presumido: 'Lucro Presumido', lucro_real: 'Lucro Real',
@@ -88,7 +92,7 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     () => calcularTodosOsRegimes(resultados),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [faturamentoMensal, insumosMensais, setor?.value, perfilClientes,
-     inssPatronalFolhaMensal, cppProLaboreMensal, aLP?.icms, aLR?.icmsLiquido],
+     inssPatronalFolhaMensal, cppProLaboreMensal, aLP?.icms, aLR?.icmsLiquido, anoAnalise],
   )
 
   // ── Bloco: carga tributária de um regime (recebe o resultado desse regime) ──
@@ -248,13 +252,16 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
   blocos.push(blocoIVA)
 
   if (ehLPouLR) blocos.push(n => (
-    <Bloco key="pos" numero={n} titulo="Carga total pós-reforma (2033)" base="Tributos que não são substituídos pelo IVA Dual">
-      <Linha label="IBS/CBS líquido" valor={impostoIVALiquidoMensal} />
-      <Linha label="(+) IRPJ + CSLL" formula="sobre o lucro pós-reforma (sem dedução de ICMS/ISS/PIS-COFINS)" valor={irpjCsllPersistenteMensal} refLegal="IR/CSLL não são substituídos pela reforma" />
+    <Bloco key="pos" numero={n} titulo={ehPleno ? 'Carga total pós-reforma (2033)' : `Carga total em ${anoAnalise} (transição)`} base={ehPleno ? 'Tributos que não são substituídos pelo IVA Dual' : 'IBS/CBS do ano + tributos de hoje que ainda existem · arts. 342-348, 501 e 508 LC 214/2025'}>
+      <Linha label={ehPleno ? 'IBS/CBS líquido' : `IBS/CBS líquido em ${anoAnalise}`} valor={impostoIVALiquidoMensal} />
+      {!ehPleno && (pAno?.legadoConsumoMensal ?? 0) > 0.5 && (
+        <Linha label="(+) PIS/COFINS e ICMS/ISS que ainda existem" formula={`${Math.round((pAno?.fracaoLegadoIcmsIss ?? 0) * 100)}% do ICMS/ISS de hoje${anoAnalise < 2027 ? ' + PIS/COFINS' : ''}`} valor={pAno?.legadoConsumoMensal ?? 0} refLegal="Arts. 501 e 508 LC 214/2025" />
+      )}
+      <Linha label="(+) IRPJ + CSLL" formula={ehPleno ? 'sobre o lucro pós-reforma (sem dedução de ICMS/ISS/PIS-COFINS)' : 'migra da base de hoje para a pós-reforma conforme o ICMS/ISS caem'} valor={ehPleno ? irpjCsllPersistenteMensal : (pAno?.irpjCsllMensal ?? irpjCsllPersistenteMensal)} refLegal="IR/CSLL não são substituídos pela reforma" />
       {contribPrevidenciariaMensal > 0 && (
         <Linha label="(+) Contribuição previdenciária" formula={`CPP ${moeda(inssPatronalFolhaMensal)} + terceiros ${moeda(terceirosFolhaMensal)}${cppProLaboreMensal > 0 ? ` + pró-labore ${moeda(cppProLaboreMensal)}` : ''}`} valor={contribPrevidenciariaMensal} />
       )}
-      <Linha label="= Carga total pós-reforma" valor={cargaTotalReformaMensal} destaque />
+      <Linha label={ehPleno ? '= Carga total pós-reforma' : `= Carga total em ${anoAnalise}`} valor={cargaTotalReformaMensal} destaque />
       <Linha label="Alíquota efetiva total" formula={`${moeda(cargaTotalReformaMensal)} ÷ ${moeda(faturamentoMensal)}`} valor={pct(cargaTotalReformaMensal / faturamentoMensal)} />
     </Bloco>
   ))
@@ -315,9 +322,9 @@ export default function MemoriaCalculo({ resultados }: MemoriaCalculoProps) {
     ? cargaTotalReformaMensal
     : impostoIVALiquidoMensal
   blocos.push(n => (
-    <Bloco key="comp" numero={n} titulo="Comparativo — hoje vs pós-reforma">
+    <Bloco key="comp" numero={n} titulo={`Comparativo — hoje vs ${rotuloAno}`}>
       <Linha label="Carga hoje" valor={impostoAtualMensal} />
-      <Linha label="Carga pós-reforma" valor={cargaPosReforma} />
+      <Linha label={`Carga ${rotuloAno}`} valor={cargaPosReforma} />
       <Linha
         label={variacaoAbsolutaMensal > 0 ? 'Aumento de carga' : variacaoAbsolutaMensal < 0 ? 'Redução de carga' : 'Carga neutra'}
         formula={`${moeda(cargaPosReforma)} − ${moeda(impostoAtualMensal)}`}

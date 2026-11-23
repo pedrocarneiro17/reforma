@@ -43,7 +43,7 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
   const curva = useMemo(
     () => calcularCurvaCrescimento(dadosBase, PERCENTUAIS),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.regime],
+    [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.regime, dadosBase.anoAnalise, dadosBase.aliquotaReferencia, dadosBase.aliquotaCBSReferencia],
   )
 
   const pontoAtual = useMemo<PontoCrescimento | undefined>(() => {

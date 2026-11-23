@@ -116,6 +116,8 @@ export interface DadosEntrada {
   // Alíquota de referência (IBS+CBS): a lei não a fixa; cada resolução do Senado a define por ano (LC 214, arts. 14 e 18)
   aliquotaReferencia?: number           // total IBS+CBS em fração (0,265 = 26,5%, padrão). Define débito, crédito e a carga de 2033
   aliquotaCBSReferencia?: number        // parte da CBS dentro do total, em fração (padrão 0,0925). Só muda como o IVA se divide na transição 2027–2032
+  // Ano da transição que o resultado descreve (2026 a 2033). Sem informar vale 2033, o regime pleno.
+  anoAnalise?: number
   // Hotelaria/restaurantes/parques — composição das COMPRAS (só vale em setores com insumosComposicao)
   pctInsumosAliquotaZero?: number       // % das compras em itens de alíquota zero (cesta básica: carnes, hortifrúti, arroz, feijão, ovos): não geram crédito
   pctInsumosReduzidos?: number          // % das compras em itens com 60% de redução (demais alimentos do Anexo VII): crédito a 10,6%; o resto vem com alíquota cheia
@@ -188,6 +190,30 @@ export interface ProjecaoAno {
   parcelaAtualAnual: number
   parcelaNovaAnual: number
   aliquotaEfetiva: number
+  /** carga do ano menos a carga de hoje (mensal); positivo = a empresa paga mais */
+  variacaoMensal: number
+  variacaoPercentual: number
+  /** reajuste de preço que mantém a margem de hoje com a carga deste ano (%) */
+  reajustePrecoNecessario: number
+  /** alíquotas de IBS/CBS em vigor no ano (como fração da receita, antes das reduções do setor) */
+  aliquotaCBS: number
+  aliquotaIBS: number
+  /** parte do ICMS/ISS que ainda existe (1 = inteiro, 0 = extinto) */
+  fracaoLegadoIcmsIss: number
+  /** IBS/CBS líquido do regime regular neste ano (débito − crédito), mensal */
+  ivaLiquidoMensal: number
+  /** tributos sobre consumo de hoje que ainda existem no ano (PIS/COFINS até 2026, ICMS/ISS até 2032), mensal */
+  legadoConsumoMensal: number
+  /** IRPJ + CSLL do ano (Lucro Presumido/Real; migram da base de hoje para a pós-reforma), mensal */
+  irpjCsllMensal: number
+  /** Simples/MEI com clientes B2B: o que a opção pelo híbrido representa neste ano */
+  hibrido: {
+    vale: boolean
+    custoAdicionalMensal: number
+    creditoPlenoCliente: number
+    creditoClienteSimplesPuro: number
+    creditoIncrementalCliente: number
+  } | null
 }
 
 export interface AnaliseSimplesHibrido {
@@ -200,6 +226,8 @@ export interface AnaliseSimplesHibrido {
   creditoClienteSimplesPuro: number
   /** o que o híbrido acrescenta para o cliente: crédito pleno − crédito do Simples puro */
   creditoIncrementalCliente: number
+  /** CBS + IBS embutidos no DAS no ano analisado, como fração da venda interna (o que o cliente credita no Simples puro) */
+  aliquotaEmbutidaNoDAS: number
   aliquotaIVABruta: number
 }
 
@@ -318,6 +346,14 @@ export interface ResultadoCalculo {
   aliquotaReferencia: number
   /** Parte da CBS dentro dela, em fração */
   aliquotaCBSReferencia: number
+  /** Ano da transição que este resultado descreve (2026 a 2033; 2033 = regime pleno) */
+  anoAnalise: number
+  /** CBS e IBS efetivamente em vigor no ano analisado, em fração (aliquotaCBSAno + aliquotaIBSAno = IVA em vigor) */
+  aliquotaCBSAno: number
+  aliquotaIBSAno: number
+  /** Parte do ICMS/ISS ainda existente no ano (1 até 2028; 0 em 2033) */
+  fracaoLegadoIcmsIssAno: number
+  /** Alíquota bruta do setor: já é a do ano analisado (CBS + IBS em vigor, com as reduções do setor) */
   aliquotaIVABruta: number
   aliquotaIVAEfetiva: number
   impostoIVABrutoMensal: number

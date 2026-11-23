@@ -298,3 +298,65 @@ describe('Limite de uso por usuário', () => {
     assert.equal(dentroDoLimite('u-teste', t0 + 60 * 60 * 1000 + 5, 3), true)
   })
 })
+
+describe('Ferramentas do motor — ano da transição', () => {
+  const LP = { ...EMPRESA, regime: 'lucro_presumido', perfilClientes: 'b2b' }
+
+  it('anoAnalise muda os números do ano, e a carga de 2033 e a trajetória continuam no resultado', () => {
+    const a2027 = ferr.executarFerramentaMotor('calcular_cenarios', { ...LP, anoAnalise: 2027 })
+    const a2033 = ferr.executarFerramentaMotor('calcular_cenarios', LP)
+    assert.equal(a2027.anoAnalisado, 2027)
+    assert.equal(a2033.anoAnalisado, 2033)
+    assert.equal(a2033.cargaNoAnoAnalisado, undefined, 'em 2033 o bloco do ano é a própria carga de 2033')
+    assert.equal(a2027.cargaNoAnoAnalisado.ano, 2027)
+    assert.equal(a2027.cargaNoAnoAnalisado.aliquotaCbsEmVigorPct, 9.25)
+    assert.equal(a2027.cargaNoAnoAnalisado.aliquotaIbsEmVigorPct, 0)
+    assert.equal(a2027.cargaNoAnoAnalisado.icmsIssRestantePct, 100)
+    // o IVA de 2027 é só a CBS: menor que o de 2033
+    assert.ok(a2027.ivaDual.liquidoMensal < a2033.ivaDual.liquidoMensal)
+    assert.equal(a2027.ivaDual.aliquotaBrutaAplicadaPct, 9.25)
+    // a carga de 2033 e a trajetória não dependem do ano pedido
+    assert.deepEqual(a2027.cargaPosReforma2033, a2033.cargaPosReforma2033)
+    assert.deepEqual(a2027.projecaoAnoAno, a2033.projecaoAnoAno)
+    assert.equal(a2027.cargaNoAnoAnalisado.impostoMensal, a2027.projecaoAnoAno.find(p => p.ano === 2027).impostoMensal)
+    assert.ok(a2027.premissas.some(p => /2027, não o regime pleno/.test(p)))
+  })
+
+  it('a trajetória traz alíquotas, preço e o híbrido do Simples ano a ano', () => {
+    const r = ferr.executarFerramentaMotor('calcular_cenarios', { ...EMPRESA, perfilClientes: 'b2b', setor: 'tecnologia_ti', anexoSimples: 'III', anoAnalise: 2029 })
+    const p = ano => r.projecaoAnoAno.find(x => x.ano === ano)
+    assert.equal(p(2026).hibrido, undefined, 'em 2026 não há o que optar')
+    assert.ok(p(2027).hibrido && p(2033).hibrido)
+    assert.ok(p(2029).hibrido.creditoClienteNoHibridoMensal > p(2027).hibrido.creditoClienteNoHibridoMensal)
+    assert.equal(p(2029).aliquotaIbsPct, 1.73)
+    assert.equal(p(2029).icmsIssRestantePct, 90)
+    assert.equal(r.simples.hibrido.totalMensal > 0, true)
+  })
+
+  it('o comparador e o simulador de crescimento informam o ano e herdam a carga dele', () => {
+    const c27 = ferr.executarFerramentaMotor('comparar_regimes', { ...LP, anoAnalise: 2027 })
+    const c33 = ferr.executarFerramentaMotor('comparar_regimes', LP)
+    assert.equal(c27.anoAnalisado, 2027)
+    assert.equal(c33.anoAnalisado, 2033)
+    const lp27 = c27.regimes.find(r => r.regime === 'lucro_presumido')
+    const lp33 = c33.regimes.find(r => r.regime === 'lucro_presumido')
+    assert.notEqual(lp27.cargaNoAnoMensal, lp33.cargaNoAnoMensal)
+    const direto = eng.calcularTodosOsCenarios(ferr.montarDados({ ...LP, anoAnalise: 2027 }))
+    assert.equal(lp27.cargaNoAnoMensal, Math.round(direto.cargaTotalReformaMensal * 100) / 100)
+    const g27 = ferr.executarFerramentaMotor('simular_crescimento', { ...LP, anoAnalise: 2027, percentuais: [0] })
+    assert.equal(g27.anoAnalisado, 2027)
+    assert.equal(g27.pontos[0].cargaNoAnoMensal, lp27.cargaNoAnoMensal)
+  })
+
+  it('recusa ano fora do calendário ou quebrado', () => {
+    for (const ano of [2025, 2034, 2029.5, 'dois mil']) {
+      assert.match(ferr.executarFerramentaMotor('calcular_cenarios', { ...LP, anoAnalise: ano }).erro, /anoAnalise/, String(ano))
+    }
+  })
+
+  it('as instruções ao modelo tratam a reforma como gradual e mandam usar o ano', async () => {
+    const { INSTRUCOES } = await import('../server/assistente/conversa.js')
+    assert.match(INSTRUCOES, /GRADUAL/)
+    assert.match(INSTRUCOES, /anoAnalise/)
+  })
+})

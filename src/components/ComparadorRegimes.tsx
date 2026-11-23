@@ -106,9 +106,12 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.perfilClientes,
      dadosBase.folhaPagamentoLRMensal, dadosBase.aliquotaICMSEfetiva, dadosBase.aliquotaISSEfetiva,
      dadosBase.despesasOperacionaisMensais, dadosBase.sociosAdministradores,
-     dadosBase.exportacoesMensais, dadosBase.tipoExportacao, dadosBase.aliquotaReferencia, dadosBase.aliquotaCBSReferencia],
+     dadosBase.exportacoesMensais, dadosBase.tipoExportacao, dadosBase.aliquotaReferencia, dadosBase.aliquotaCBSReferencia, dadosBase.anoAnalise],
   )
 
+  // Ano da transição em análise (2033 = regime pleno)
+  const ehPleno = dadosBase.anoAnalise === 2033
+  const rotuloAno = ehPleno ? 'pós-reforma (2033)' : `em ${dadosBase.anoAnalise}`
   const pctRef = `${(dadosBase.aliquotaReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
 
@@ -122,7 +125,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
     })
     return r.cenarioHibridoVerdadeiro
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.regime, dadosBase.perfilClientes])
+  }, [dadosBase.faturamentoMensal, dadosBase.insumosMensais, dadosBase.setor?.value, dadosBase.regime, dadosBase.perfilClientes, dadosBase.anoAnalise])
 
   // Anexos comprovadamente NÃO atingíveis pelo Fator R não são exibidos — com a folha informada,
   // mostra-se só o anexo em que a empresa realmente se enquadra; sem folha, mostram-se III e V.
@@ -148,7 +151,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
       'Lucro Real':      R(lr.impostoAtualMensal),
     },
     {
-      cenario: 'Pós-reforma (2033)',
+      cenario: ehPleno ? 'Pós-reforma (2033)' : `Em ${dadosBase.anoAnalise}`,
       ...(desdobrado
         ? { 'SN Anexo III': R(snIII!.cargaTotalReformaMensal), 'SN Anexo V': R(snV!.cargaTotalReformaMensal) }
         : {
@@ -331,7 +334,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 ) : (
                   <>
                     <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-3">
-                      <div className="text-ink-muted text-xs mb-1">Carga total pós-reforma / mês</div>
+                      <div className="text-ink-muted text-xs mb-1">Carga total {ehPleno ? 'pós-reforma' : `em ${dadosBase.anoAnalise}`} / mês</div>
                       <div className={`font-bold text-lg num ${
                         r.variacaoAbsolutaMensal > 0 ? 'text-danger' : 'text-success'
                       }`}>
@@ -406,7 +409,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
 
       {/* ── Gráfico comparativo ───────────────────────────────────────── */}
       <div className="rounded-xl border border-border bg-[#FBFAF7] p-5 space-y-3">
-        <h4 className="text-sm font-medium text-ink-secondary">Carga tributária total por regime — hoje vs pós-reforma (2033): CBS, IBS, IR, CSLL e INSS</h4>
+        <h4 className="text-sm font-medium text-ink-secondary">Carga tributária total por regime — hoje vs {rotuloAno}: CBS, IBS, IR, CSLL e INSS</h4>
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dataGrafico} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barGap={4}>
@@ -452,8 +455,8 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               <th className="text-left py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Regime</th>
               <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Alíq. Atual</th>
               <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Imposto Atual/mês</th>
-              <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Alíq. Total Pós-Reforma</th>
-              <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Total Pós-Reforma/mês</th>
+              <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Alíq. Total {ehPleno ? 'Pós-Reforma' : dadosBase.anoAnalise}</th>
+              <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Total {ehPleno ? 'Pós-Reforma' : dadosBase.anoAnalise}/mês</th>
               <th className="text-right py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Variação</th>
             </tr>
           </thead>

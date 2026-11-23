@@ -176,6 +176,30 @@ export const REDUCAO_ICMS_ISS: Record<number, number> = {
   2033: 1.00,  // ICMS e ISS extintos
 }
 
+/** Último ano da transição: IBS e CBS nas alíquotas de referência plenas, ICMS e ISS extintos. */
+export const ANO_PLENO = 2033
+/** Primeiro ano da transição (testes de CBS 0,9% e IBS 0,1%, compensados com PIS/COFINS). */
+export const ANO_INICIAL_TRANSICAO = 2026
+
+/** Ano de análise válido (inteiro de 2026 a 2033); qualquer outro valor cai no ano pleno. */
+export function normalizarAnoAnalise(ano?: number | null): number {
+  return ano != null && Number.isInteger(ano) && ano >= ANO_INICIAL_TRANSICAO && ano <= ANO_PLENO ? ano : ANO_PLENO
+}
+
+/**
+ * Quanto de cada tributo está em vigor em um ano da transição, como fração da alíquota de referência plena.
+ *  • CBS: 2026 é só teste (0,9% compensado com PIS/COFINS, arts. 346 e 348); a partir de 2027 vale a alíquota de
+ *    referência fixada pelo Senado (art. 347 reduz 0,1 p.p. em 2027–2028, compensado pelo IBS de 0,05% + 0,05% do
+ *    art. 344 — líquido zero, por isso não aparece aqui).
+ *  • IBS: só passa de teste em 2029 e cresce 10%, 20%, 30% e 40% da alíquota plena até 2032 (arts. 342, 361–365),
+ *    na mesma proporção em que o ICMS e o ISS caem (arts. 501 e 508). 100% em 2033.
+ *  • ICMS e ISS: o que sobra é 1 − redução.
+ */
+export function fasesDoAno(ano: number): { cbs: number; ibs: number; legado: number } {
+  const reducao = REDUCAO_ICMS_ISS[ano] ?? 0
+  return { cbs: ano >= 2027 ? 1 : 0, ibs: reducao, legado: 1 - reducao }
+}
+
 // ─── IRPF — Tabela Progressiva Mensal (MP 1.206/2024) + Lei 15.270/2025 ──────
 
 /**
@@ -907,12 +931,27 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Senado (CBS de 2027 a 2033; IBS de 2029 a 2033) e cada ente pode legislar a sua (LC 214, arts. 14 e 18). Sem
   // informar, vale a estimativa padrão. A parte da CBS só decide como o IVA se divide na transição (CBS entra em
   // 2027; IBS só em 2029): o ponto de 2033 depende apenas do total.
-  const ALIQ = aliquotaReferenciaEntrada != null && Number.isFinite(aliquotaReferenciaEntrada) && aliquotaReferenciaEntrada > 0
+  const ALIQ_PLENA = aliquotaReferenciaEntrada != null && Number.isFinite(aliquotaReferenciaEntrada) && aliquotaReferenciaEntrada > 0
     ? Math.min(0.60, Math.max(0.01, aliquotaReferenciaEntrada))
     : ALIQUOTA_IVA_PADRAO
-  const ALIQ_CBS = Math.min(ALIQ, aliquotaCBSReferenciaEntrada != null && Number.isFinite(aliquotaCBSReferenciaEntrada) && aliquotaCBSReferenciaEntrada > 0
+  const ALIQ_CBS_PLENA = Math.min(ALIQ_PLENA, aliquotaCBSReferenciaEntrada != null && Number.isFinite(aliquotaCBSReferenciaEntrada) && aliquotaCBSReferenciaEntrada > 0
     ? aliquotaCBSReferenciaEntrada
     : ALIQUOTA_CBS_2027)
+
+  // Ano de análise (transição 2026–2033). Sem informar vale 2033, o regime pleno. `ALIQ` e `ALIQ_CBS` abaixo são as
+  // alíquotas EM VIGOR no ano: a CBS plena já em 2027, o IBS só a partir de 2029, em 10%, 20%, 30%, 40% e 100%.
+  // Todo o bloco do IBS/CBS (alíquota bruta, créditos, líquido, híbrido do Simples) usa essas alíquotas, então muda
+  // junto com o ano. `fatorIVAAno` é a fração da alíquota plena em vigor e escala os créditos que não dependem
+  // diretamente da alíquota (regime automotivo, ZFM). A projeção ano a ano é sempre calculada a partir do ano pleno.
+  const ANO = normalizarAnoAnalise(dados.anoAnalise)
+  const faseAno = fasesDoAno(ANO)
+  const ALIQ_CBS = ALIQ_CBS_PLENA * faseAno.cbs
+  const ALIQ = ALIQ_CBS + (ALIQ_PLENA - ALIQ_CBS_PLENA) * faseAno.ibs
+  const fatorIVADoAno = (ano: number): number => {
+    const f = fasesDoAno(ano)
+    return (ALIQ_CBS_PLENA * f.cbs + (ALIQ_PLENA - ALIQ_CBS_PLENA) * f.ibs) / ALIQ_PLENA
+  }
+  const fatorIVAAno = fatorIVADoAno(ANO)
 
   // Simples Nacional — receita do mercado interno e da exportação são consideradas SEPARADAMENTE para
   // determinar a alíquota (LC 123 art. 3º §15, aplicável quando há receita de exportação — §14): cada uma
@@ -1332,7 +1371,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
 
   // Taxa CBS típica de fornecedores Simples (Anexo I Faixa 3 — estimativa conservadora)
   // Real = DAS_efetivo × partilha_CBS; varia por anexo/faixa do fornecedor (desconhecido)
-  const cbsFornecedorSimples = getCBSSimples('I', Math.min(faturamentoAnual, 720_000))
+  const cbsFornecedorSimples = getCBSSimples('I', Math.min(faturamentoAnual, 720_000)) * fatorIVAAno
 
   const fracSimples = Math.min(1, Math.max(0, pctFornecedoresSimples / 100))
   // Crédito = imposto cobrado pelo fornecedor. Por padrão usa a alíquota das vendas do próprio setor; em
@@ -1380,7 +1419,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Fatia da CBS dentro do IVA Dual: 9,25% de 26,5% (a CBS substitui o PIS/COFINS a partir de
   // 2027 e é estimada em 9,25%). O IBS (17,25%) completa os 26,5% e só entra a partir de 2029.
   // ⚠️ Alíquotas de referência a serem DEFINIDAS por resolução em out/2026 (ver ALERTA_DEFINICAO_ALIQUOTA).
-  const CBS_SHARE_IVA = ALIQ_CBS / ALIQ
+  // Fatia da CBS no IVA em vigor no ano (sem IVA em vigor, em 2026, não há o que dividir)
+  const CBS_SHARE_IVA = ALIQ > 0 ? ALIQ_CBS / ALIQ : 0
   const pisCofinsNoDAsMensal = (regime === 'simples_nacional' && cbsSimplesEfetivo != null)
     ? receitaConsumoSimplesMensal * cbsSimplesEfetivo
     : 0
@@ -1405,13 +1445,13 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   }
   const creditoRegimeAutomotivo =
     setor.regimeAutomotivo === true && regimeAutomotivoHabilitado
-      ? faturamentoMensal * (PCT_REGIME_AUTOMOTIVO[faseRegimeAutomotivo] ?? 0)
+      ? faturamentoMensal * (PCT_REGIME_AUTOMOTIVO[faseRegimeAutomotivo] ?? 0) * fatorIVAAno
       : 0
 
   // Zona Franca de Manaus — créditos presumidos IBS e CBS (Art. 450 LC 214/2025)
   // Estimativa da partilha IBS/CBS dentro dos 26,5%: CBS 9,25% (federal) + IBS 17,25% (estadual/municipal).
   // A partilha exata depende da alíquota de referência a ser fixada por resolução em out/2026.
-  const IBS_SHARE_ESTIMADO = 1 - ALIQ_CBS / ALIQ  // padrão: ≈ 0,651
+  const IBS_SHARE_ESTIMADO = ALIQ > 0 ? 1 - ALIQ_CBS / ALIQ : 0  // padrão no ano pleno: ≈ 0,651
   const PCT_ZFM_IBS: Record<import('../types').TipoBemZFM, number> = {
     consumo_final: 0.55,    // Art. 450 §1º I
     capital:       0.75,    // Art. 450 §1º II
@@ -1419,7 +1459,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     informatica:   1.00,    // Art. 450 §1º IV
   }
   const creditoZFMIbs = setor.zfm === true ? impostoIVABrutoMensal * IBS_SHARE_ESTIMADO * PCT_ZFM_IBS[tipoBemZFM] : 0
-  const creditoZFMCbs = setor.zfm === true ? faturamentoMensal * 0.02 : 0  // Art. 450 §2º II: 2% sobre o valor da operação
+  const creditoZFMCbs = setor.zfm === true ? faturamentoMensal * 0.02 * fatorIVAAno : 0  // Art. 450 §2º II: 2% sobre o valor da operação
 
   let impostoIVALiquidoMensal = Math.max(0,
     impostoIVABrutoMensal
@@ -1514,7 +1554,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   // Simples acima do sublimite: depois da transição o ICMS/ISS por fora vira IBS no regime regular (a CBS
   // continua dentro do DAS, pela partilha da 6ª faixa). Parte IBS do IVA líquido = IVA × (1 − fatia da CBS).
   const ibsRegularSublimiteMensal = sublimiteExcedido ? impostoIVALiquidoMensal * (1 - CBS_SHARE_IVA) : 0
-  const cargaTotalReformaMensal = ehLPouLR
+  const cargaTotalPlenaMensal = ehLPouLR
     ? impostoIVALiquidoMensal + irpjCsllPersistenteMensal + contribPrevidenciariaMensal
     : ehSimplesOuMEI
       ? impostoSNsemForaMensal + ibsRegularSublimiteMensal
@@ -1554,8 +1594,99 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   const residuoHojeComp = impostoAtualMensal - pisCofinsHojeComp - icmsIssHojeComp - contribPrevidenciariaMensal
   const irpjCsllHojeComp = regime === 'lucro_real' && !temDadosEfetivosLR ? residuoHojeComp : Math.max(0, residuoHojeComp)
 
+  // DAS do Simples (sem o ICMS/ISS pago por fora) em cada ano: na 6ª faixa a CBS cai 0,1 p.p. em 2027–2028 (art. 347)
+  const dasSimplesNoAnoMensal = (ano: number): number => {
+    const reducaoCBSFaixa6 =
+      regime === 'simples_nacional' && (ano === 2027 || ano === 2028) && faturamentoAnualSN > LIMITE_FAIXA5_SIMPLES_ANUAL
+        ? faturamentoMensal * REDUCAO_CBS_2027_2028
+        : 0
+    return Math.max(0, impostoSNsemForaMensal - reducaoCBSFaixa6)
+  }
+
+  // CBS e IBS dentro do DAS que o híbrido retira. O ano pleno usa a mesma base do resultado pleno (partilha de
+  // PIS/COFINS e ICMS/ISS do DAS de hoje, com o teto do ISS na 5ª faixa); os demais anos usam a partilha de cada ano.
+  const consumoNoDASDoAno = (ano: number): { cbs: number; ibs: number } =>
+    ano === ANO_PLENO ? { cbs: cbsSimplesEfetivo ?? 0, ibs: ibsSimplesEfetivo ?? 0 } : consumoSimplesNoAno(ano)
+
+  // Cenário "Simples híbrido" de um ano: DAS sem a parcela de CBS/IBS daquele ano + IVA líquido do regime regular.
+  // O IVA vem de fora porque a projeção o calcula para cada ano a partir do ano pleno.
+  const montarCenarioHibrido = (ano: number, ivaBruto: number, credito: number, ivaLiquido: number) => {
+    if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null || ano < 2027) return null
+    // DAS reduzido: remove CBS e IBS internos daquele ano — fica IRPJ+CSLL+CPP (e, até 2032, o ICMS/ISS que ainda
+    // está dentro do DAS). Sobre a receita exportada o DAS já não tem CBS/IBS, então só se remove a parcela interna.
+    const fracInterna = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
+    const consumo = consumoNoDASDoAno(ano)
+    const aliquotaDasReduzido = Math.max(0,
+      (faturamentoMensal > 0 ? dasSimplesNoAnoMensal(ano) / faturamentoMensal : aliquotaAtual)
+      - (consumo.cbs + consumo.ibs) * fracInterna)
+    const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
+    // Acima do sublimite o ICMS/ISS por fora continuam até 2032 (reduzindo 10%/ano) e o IBS/CBS regular os substitui
+    // por inteiro só em 2033
+    const icmsIssForaRestante = icmsIssPorForaMensal * (1 - (REDUCAO_ICMS_ISS[ano] ?? 0))
+    const totalMensal = dasReduzidoMensal + ivaLiquido + icmsIssForaRestante
+    return {
+      aliquotaDasReduzido,
+      dasReduzidoMensal,
+      ibsCBSBrutoMensal: ivaBruto,
+      creditoMensal: credito,
+      ibsCBSLiquidoMensal: ivaLiquido,
+      totalMensal,
+      aliquotaEfetiva: faturamentoMensal > 0 ? totalMensal / faturamentoMensal : 0,
+      custoAdicionalVsSimples: totalMensal - impostoAtualMensal,
+    }
+  }
+  type CenarioHibrido = NonNullable<ReturnType<typeof montarCenarioHibrido>>
+
+  // Análise do híbrido (Simples e MEI com clientes B2B) de um ano. Só a receita interna gera débito e crédito ao
+  // cliente — exportação é imune (art. 79).
+  const montarAnaliseHibrido = (ano: number, aliquotaBrutaAno: number, cenario: CenarioHibrido | null): AnaliseSimplesHibrido | null => {
+    if (!(regime === 'simples_nacional' || regime === 'mei') || !(perfilClientes === 'b2b' || perfilClientes === 'misto') || ano < 2027) return null
+    const consumo = consumoNoDASDoAno(ano)
+    return calcularSimplesHibrido(
+      faturamentoMensal - exportacoesImunesMensal, insumosMensais, impostoAtualMensal, aliquotaBrutaAno, fracClientesPJ,
+      cenario,
+      // parcela de CBS+IBS efetivamente tributada dentro do DAS sobre a receita interna (o que o cliente credita no Simples puro)
+      cbsSimplesEfetivo != null && ibsSimplesEfetivo != null
+        ? (consumo.cbs + consumo.ibs) * (receitaConsumoSimplesMensal / Math.max(1e-9, faturamentoMensal - exportacoesImunesMensal))
+        : 0,
+    )
+  }
+
+  // Acrescenta a cada ponto da projeção o que muda para a empresa naquele ano (variação, preço, alíquotas, híbrido)
+  const enriquecerProjecao = (p: Omit<ProjecaoAno, 'variacaoMensal' | 'variacaoPercentual' | 'reajustePrecoNecessario' | 'aliquotaCBS' | 'aliquotaIBS' | 'fracaoLegadoIcmsIss' | 'ivaLiquidoMensal' | 'hibrido'>): ProjecaoAno => {
+    const f = fasesDoAno(p.ano)
+    const g = fatorIVADoAno(p.ano)
+    const variacaoMensal = p.impostoMensal - impostoAtualMensal
+    const aliqTotal = faturamentoMensal > 0 ? p.impostoMensal / faturamentoMensal : 0
+    const reajuste = aliqTotal > aliquotaAtual && aliqTotal < 1 ? ((1 - aliquotaAtual) / (1 - aliqTotal) - 1) * 100 : 0
+    const ivaLiquidoAno = impostoIVALiquidoMensal * g
+    const cenario = montarCenarioHibrido(p.ano, impostoIVABrutoMensal * g, creditoInsumosMensal * g, ivaLiquidoAno)
+    const analise = montarAnaliseHibrido(p.ano, aliquotaIVABruta * g, cenario)
+    return {
+      ...p,
+      variacaoMensal,
+      variacaoPercentual: impostoAtualMensal > 0 ? (variacaoMensal / impostoAtualMensal) * 100 : 0,
+      reajustePrecoNecessario: reajuste,
+      aliquotaCBS: ALIQ_CBS_PLENA * f.cbs,
+      aliquotaIBS: (ALIQ_PLENA - ALIQ_CBS_PLENA) * f.ibs,
+      fracaoLegadoIcmsIss: f.legado,
+      ivaLiquidoMensal: ivaLiquidoAno,
+      hibrido: analise ? {
+        vale: analise.vale,
+        custoAdicionalMensal: analise.custoAdicionalMensal,
+        creditoPlenoCliente: analise.creditoDisponibilizadoAoCliente,
+        creditoClienteSimplesPuro: analise.creditoClienteSimplesPuro,
+        creditoIncrementalCliente: analise.creditoIncrementalCliente,
+      } : null,
+    }
+  }
+
   const anosProjecao = [2026, 2027, 2028, 2029, 2030, 2031, 2032, 2033]
-  const projecaoAnos: ProjecaoAno[] = anosProjecao.map(ano => {
+  // A projeção parte sempre do ano pleno (IVA, créditos e alíquotas plenos). Quando se analisa outro ano, os valores
+  // acima já estão na alíquota daquele ano — então a projeção vem de um cálculo à parte, feito para 2033.
+  const projecaoAnos: ProjecaoAno[] = ANO !== ANO_PLENO
+    ? calcularTodosOsCenarios({ ...dados, anoAnalise: ANO_PLENO }).projecaoAnos
+    : anosProjecao.map(ano => {
     const reducaoAnual = REDUCAO_ICMS_ISS[ano] ?? 0
     const impostoIVAAjustado = impostoIVALiquidoMensal
 
@@ -1583,6 +1714,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
         parcelaAtualAnual: parcelaAtual * 12,
         parcelaNovaAnual:  parcelaNova * 12,
         aliquotaEfetiva: faturamentoMensal > 0 ? impostoMensal / faturamentoMensal : 0,
+        legadoConsumoMensal: pisCofinsAno + icmsIssAno,
+        irpjCsllMensal: irpjCsllAno,
       }
     }
 
@@ -1596,11 +1729,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       // Anexos I–V da LC 214 baixam a alíquota nominal da 6ª faixa em 0,1 p.p. (ex.: Anexo I 18,90%
       // em vez de 19,00%). Com a mesma parcela a deduzir, o DAS efetivo cai 0,1% do faturamento.
       // Nas faixas 1–5 o IBS de teste (0,1%) compensa dentro da partilha e a nominal não muda.
-      const reducaoCBSFaixa6 =
-        regime === 'simples_nacional' && (ano === 2027 || ano === 2028) && faturamentoAnualSN > LIMITE_FAIXA5_SIMPLES_ANUAL
-          ? faturamentoMensal * REDUCAO_CBS_2027_2028
-          : 0
-      const dasAno = Math.max(0, impostoSNsemForaMensal - reducaoCBSFaixa6)
+      const dasAno = dasSimplesNoAnoMensal(ano)
       // CBS + IBS dentro do DAS no ano, pela partilha oficial da LC 214 (Anexos I–V). Só a receita
       // interna carrega esses tributos (exportação: tpRBSN 3/4).
       const consumoAno = consumoSimplesNoAno(ano)
@@ -1620,6 +1749,8 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
         parcelaAtualAnual: parcelaAtual * 12,
         parcelaNovaAnual:  parcelaNova * 12,
         aliquotaEfetiva: faturamentoMensal > 0 ? impostoMensalAno / faturamentoMensal : 0,
+        legadoConsumoMensal: icmsIssForaAno,
+        irpjCsllMensal: 0,
       }
     }
 
@@ -1639,8 +1770,15 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       parcelaAtualAnual: parcelaAtual * 12,
       parcelaNovaAnual:  parcelaNova * 12,
       aliquotaEfetiva: faturamentoMensal > 0 ? impostoMensal / faturamentoMensal : 0,
+      legadoConsumoMensal: icmsIssResidual,
+      irpjCsllMensal: 0,
     }
-  })
+  }).map(enriquecerProjecao)
+
+  // Carga total do ano analisado: no ano pleno é a carga pós-reforma; nos demais, o ponto da projeção
+  const cargaTotalReformaMensal = ANO === ANO_PLENO
+    ? cargaTotalPlenaMensal
+    : (projecaoAnos.find(p => p.ano === ANO)?.impostoMensal ?? cargaTotalPlenaMensal)
 
   // ── 4. Análise Comparativa e Alertas ────────────────────────────────────────
   const variacaoAbsolutaMensal = cargaTotalReformaMensal - impostoAtualMensal
@@ -1657,41 +1795,11 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
   }
 
   // ── 5a. Cenário híbrido "verdadeiro" do Simples (DAS sem a parcela de consumo + IVA líquido) ──
-  const cenarioHibridoVerdadeiro = (() => {
-      if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
-      // DAS reduzido: remove CBS e IBS internos — fica só IRPJ+CSLL+CPP. Sobre a receita exportada
-      // o DAS já não tem CBS/IBS, então só se remove a parcela da receita interna.
-      const fracInterna = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
-      // (sem o ICMS/ISS por fora do sublimite: nesse cenário o IBS/CBS regular o substitui)
-      const aliquotaDasReduzido = Math.max(0,
-        (faturamentoMensal > 0 ? impostoSNsemForaMensal / faturamentoMensal : aliquotaAtual)
-        - (cbsSimplesEfetivo + ibsSimplesEfetivo) * fracInterna)
-      const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
-      const totalMensal = dasReduzidoMensal + impostoIVALiquidoMensal
-      return {
-        aliquotaDasReduzido,
-        dasReduzidoMensal,
-        ibsCBSBrutoMensal: impostoIVABrutoMensal,
-        creditoMensal: creditoInsumosMensal,
-        ibsCBSLiquidoMensal: impostoIVALiquidoMensal,
-        totalMensal,
-        aliquotaEfetiva: faturamentoMensal > 0 ? totalMensal / faturamentoMensal : 0,
-        custoAdicionalVsSimples: totalMensal - impostoAtualMensal,
-      }
-    })()
+  // (as funções montarCenarioHibrido e montarAnaliseHibrido ficam antes da projeção: ela as usa para cada ano)
+  const cenarioHibridoVerdadeiro = montarCenarioHibrido(ANO, impostoIVABrutoMensal, creditoInsumosMensal, impostoIVALiquidoMensal)
 
   // ── 5. Análise do Simples Nacional Híbrido / MEI Híbrido ────────────────────
-  const analiseSimplesHibrido: AnaliseSimplesHibrido | null =
-    (regime === 'simples_nacional' || regime === 'mei') &&
-    (perfilClientes === 'b2b' || perfilClientes === 'misto')
-      // Só a receita interna gera débito e crédito ao cliente — exportação é imune (Art. 79)
-      ? calcularSimplesHibrido(
-          faturamentoMensal - exportacoesImunesMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ,
-          cenarioHibridoVerdadeiro,
-          // parcela de CBS+IBS efetivamente tributada dentro do DAS sobre a receita interna (o que o cliente credita no Simples puro)
-          cbsSimplesEfetivo != null && ibsSimplesEfetivo != null ? (cbsSimplesEfetivo + ibsSimplesEfetivo) * (receitaConsumoSimplesMensal / Math.max(1e-9, faturamentoMensal - exportacoesImunesMensal)) : 0,
-        )
-      : null
+  const analiseSimplesHibrido: AnaliseSimplesHibrido | null = montarAnaliseHibrido(ANO, aliquotaIVABruta, cenarioHibridoVerdadeiro)
 
   // ── 6. Análise do Grupo Societário (Simples/MEI) ────────────────────────────
   const analiseGrupoSimples: AnaliseGrupoSimples | null =
@@ -1765,8 +1873,12 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
       ? calcularProlabore(sociosAdministradores, regime as 'lucro_presumido' | 'lucro_real')
       : null,
 
-    aliquotaReferencia: ALIQ,
-    aliquotaCBSReferencia: ALIQ_CBS,
+    aliquotaReferencia: ALIQ_PLENA,
+    aliquotaCBSReferencia: ALIQ_CBS_PLENA,
+    anoAnalise: ANO,
+    aliquotaCBSAno: ALIQ_CBS,
+    aliquotaIBSAno: ALIQ - ALIQ_CBS,
+    fracaoLegadoIcmsIssAno: faseAno.legado,
     aliquotaIVABruta,
     aliquotaIVAEfetiva,
     impostoIVABrutoMensal,
@@ -1962,6 +2074,7 @@ function calcularSimplesHibrido(
     creditoDisponibilizadoAoCliente,
     creditoClienteSimplesPuro,
     creditoIncrementalCliente,
+    aliquotaEmbutidaNoDAS: aliquotaConsumoNoDAS,
     aliquotaIVABruta,
   }
 }

@@ -6,8 +6,6 @@ import type { TooltipProps } from 'recharts'
 import { fmt } from '../engine/calculadora'
 import type { ResultadoCalculo } from '../types'
 
-const ANOS_CHAVE = [2026, 2027, 2030, 2033]
-
 interface GraficoData {
   ano: string
   'Regime Atual': number
@@ -43,15 +41,16 @@ interface GraficoTransicaoProps {
 }
 
 export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) {
-  const { projecaoAnos, impostoAtualAnual, impostoIVALiquidoAnual, cargaTotalReformaMensal, regime } = resultados
+  const { projecaoAnos, impostoAtualAnual, regime, anoAnalise } = resultados
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
   // LP/LR: referência final é a carga total pós-reforma (IVA + IRPJ/CSLL + contrib. prev.)
   // Simples/MEI: carga pós-reforma = DAS inalterado (cargaTotalReformaMensal já reflete isso)
   const ehSimplesOuMEI = regime === 'simples_nacional' || regime === 'mei'
-  const referenciaFinalAnual = ehLPouLR || ehSimplesOuMEI ? cargaTotalReformaMensal * 12 : impostoIVALiquidoAnual
+  // A referência final é sempre o ano pleno (2033), qualquer que seja o ano em análise
+  const pleno = projecaoAnos[projecaoAnos.length - 1]
+  const referenciaFinalAnual = ehLPouLR || ehSimplesOuMEI ? pleno.impostoAnual : pleno.ivaLiquidoMensal * 12
 
   const data: GraficoData[] = projecaoAnos
-    .filter(p => ANOS_CHAVE.includes(p.ano))
     .map(p => ({
       ano: p.ano.toString(),
       'Regime Atual': Math.round(p.parcelaAtualAnual),
@@ -82,7 +81,7 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barSize={36}>
+          <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barSize={26}>
             <CartesianGrid strokeDasharray="3 3" stroke="#E4DDD2" vertical={false} />
             <XAxis
               dataKey="ano"
@@ -118,10 +117,10 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
       </div>
 
       {/* Linha de totais por ano */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
         {data.map(d => (
-          <div key={d.ano} className="bg-subtle border border-border rounded-lg p-3 text-center">
-            <div className="text-ink font-bold text-sm num">{fmt.moeda(d.total)}</div>
+          <div key={d.ano} className={`bg-subtle border rounded-lg p-2 text-center ${d.ano === String(anoAnalise) ? 'border-ink ring-1 ring-ink' : 'border-border'}`}>
+            <div className="text-ink font-bold text-xs num">{fmt.moeda(d.total)}</div>
             <div className="text-ink-muted text-xs mt-0.5 num">{d.ano}</div>
           </div>
         ))}
