@@ -1656,12 +1656,41 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     reajustePrecoNecessario = ((1 - aliquotaAtual) / (1 - aliquotaTotalReforma) - 1) * 100
   }
 
+  // ── 5a. Cenário híbrido "verdadeiro" do Simples (DAS sem a parcela de consumo + IVA líquido) ──
+  const cenarioHibridoVerdadeiro = (() => {
+      if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
+      // DAS reduzido: remove CBS e IBS internos — fica só IRPJ+CSLL+CPP. Sobre a receita exportada
+      // o DAS já não tem CBS/IBS, então só se remove a parcela da receita interna.
+      const fracInterna = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
+      // (sem o ICMS/ISS por fora do sublimite: nesse cenário o IBS/CBS regular o substitui)
+      const aliquotaDasReduzido = Math.max(0,
+        (faturamentoMensal > 0 ? impostoSNsemForaMensal / faturamentoMensal : aliquotaAtual)
+        - (cbsSimplesEfetivo + ibsSimplesEfetivo) * fracInterna)
+      const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
+      const totalMensal = dasReduzidoMensal + impostoIVALiquidoMensal
+      return {
+        aliquotaDasReduzido,
+        dasReduzidoMensal,
+        ibsCBSBrutoMensal: impostoIVABrutoMensal,
+        creditoMensal: creditoInsumosMensal,
+        ibsCBSLiquidoMensal: impostoIVALiquidoMensal,
+        totalMensal,
+        aliquotaEfetiva: faturamentoMensal > 0 ? totalMensal / faturamentoMensal : 0,
+        custoAdicionalVsSimples: totalMensal - impostoAtualMensal,
+      }
+    })()
+
   // ── 5. Análise do Simples Nacional Híbrido / MEI Híbrido ────────────────────
   const analiseSimplesHibrido: AnaliseSimplesHibrido | null =
     (regime === 'simples_nacional' || regime === 'mei') &&
     (perfilClientes === 'b2b' || perfilClientes === 'misto')
       // Só a receita interna gera débito e crédito ao cliente — exportação é imune (Art. 79)
-      ? calcularSimplesHibrido(faturamentoMensal - exportacoesImunesMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ)
+      ? calcularSimplesHibrido(
+          faturamentoMensal - exportacoesImunesMensal, insumosMensais, impostoAtualMensal, aliquotaIVABruta, fracClientesPJ,
+          cenarioHibridoVerdadeiro,
+          // parcela de CBS+IBS efetivamente tributada dentro do DAS sobre a receita interna (o que o cliente credita no Simples puro)
+          cbsSimplesEfetivo != null && ibsSimplesEfetivo != null ? (cbsSimplesEfetivo + ibsSimplesEfetivo) * (receitaConsumoSimplesMensal / Math.max(1e-9, faturamentoMensal - exportacoesImunesMensal)) : 0,
+        )
       : null
 
   // ── 6. Análise do Grupo Societário (Simples/MEI) ────────────────────────────
@@ -1727,28 +1756,7 @@ export function calcularTodosOsCenarios(dados: DadosEntrada): ResultadoCalculo {
     pctAnexo1: pctAnexo1 ?? undefined,
     cbsSimplesEfetivo,
     ibsSimplesEfetivo,
-    cenarioHibridoVerdadeiro: (() => {
-      if (regime !== 'simples_nacional' || cbsSimplesEfetivo == null || ibsSimplesEfetivo == null) return null
-      // DAS reduzido: remove CBS e IBS internos — fica só IRPJ+CSLL+CPP. Sobre a receita exportada
-      // o DAS já não tem CBS/IBS, então só se remove a parcela da receita interna.
-      const fracInterna = faturamentoMensal > 0 ? receitaConsumoSimplesMensal / faturamentoMensal : 1
-      // (sem o ICMS/ISS por fora do sublimite: nesse cenário o IBS/CBS regular o substitui)
-      const aliquotaDasReduzido = Math.max(0,
-        (faturamentoMensal > 0 ? impostoSNsemForaMensal / faturamentoMensal : aliquotaAtual)
-        - (cbsSimplesEfetivo + ibsSimplesEfetivo) * fracInterna)
-      const dasReduzidoMensal = faturamentoMensal * aliquotaDasReduzido
-      const totalMensal = dasReduzidoMensal + impostoIVALiquidoMensal
-      return {
-        aliquotaDasReduzido,
-        dasReduzidoMensal,
-        ibsCBSBrutoMensal: impostoIVABrutoMensal,
-        creditoMensal: creditoInsumosMensal,
-        ibsCBSLiquidoMensal: impostoIVALiquidoMensal,
-        totalMensal,
-        aliquotaEfetiva: faturamentoMensal > 0 ? totalMensal / faturamentoMensal : 0,
-        custoAdicionalVsSimples: totalMensal - impostoAtualMensal,
-      }
-    })(),
+    cenarioHibridoVerdadeiro,
     baseCalculoEfetiva,
     exportacoesImunesMensal,
     pctFornecedoresSimples,
@@ -1918,8 +1926,13 @@ function calcularProjecaoMesAMes(dadosMensais: DadosMes[], aliquotaIVABruta: num
 // ─── Análise do Simples Nacional Híbrido ────────────────────────────────────
 
 /**
- * Avalia se vale optar pelo "Simples Nacional Híbrido":
- * a empresa paga CBS e IBS por fora do DAS para dar crédito integral a clientes B2B.
+ * Avalia se vale optar pelo "Simples Nacional Híbrido": a empresa recolhe CBS e IBS por fora do DAS para dar
+ * crédito pleno a clientes B2B.
+ *
+ * No Simples puro o cliente (regime normal) JÁ credita, mas só a parcela de CBS/IBS efetivamente tributada e
+ * repartida dentro do DAS, pela alíquota da tabela do Simples (menor que a plena). O ganho do híbrido para o
+ * cliente é, portanto, a diferença entre o crédito pleno e o crédito que ele já teria. E o custo do híbrido é
+ * o DAS que sobra (IRPJ, CSLL, CPP) mais o IVA líquido, comparado ao DAS inteiro de hoje.
  */
 function calcularSimplesHibrido(
   faturamentoMensal: number,
@@ -1927,20 +1940,28 @@ function calcularSimplesHibrido(
   impostoAtualMensal: number,
   aliquotaIVABruta: number,
   fracClientesPJ: number,   // fração das vendas a PJ — só clientes PJ aproveitam o crédito
+  cenarioHibrido: { totalMensal: number } | null,
+  aliquotaConsumoNoDAS: number,   // CBS+IBS dentro do DAS, como fração da receita interna (0 no MEI)
 ): AnaliseSimplesHibrido {
   const creditoInsumos = insumosMensais * aliquotaIVABruta
   const ivaHibridoLiquido = Math.max(0, faturamentoMensal * aliquotaIVABruta - creditoInsumos)
 
-  const custoAdicionalMensal = ivaHibridoLiquido - impostoAtualMensal
+  // Simples Nacional: custo = DAS reduzido + IVA líquido − DAS de hoje. MEI (sem partilha percentual): IVA líquido − DAS fixo.
+  const custoAdicionalMensal = (cenarioHibrido ? cenarioHibrido.totalMensal : ivaHibridoLiquido) - impostoAtualMensal
+
   // Só a parcela vendida a PJ gera crédito aproveitável ao cliente
   const creditoDisponibilizadoAoCliente = faturamentoMensal * aliquotaIVABruta * fracClientesPJ
-  const vale = creditoDisponibilizadoAoCliente >= custoAdicionalMensal
+  const creditoClienteSimplesPuro = Math.min(creditoDisponibilizadoAoCliente, faturamentoMensal * aliquotaConsumoNoDAS * fracClientesPJ)
+  const creditoIncrementalCliente = creditoDisponibilizadoAoCliente - creditoClienteSimplesPuro
+  const vale = creditoIncrementalCliente >= custoAdicionalMensal
 
   return {
     vale,
     ivaHibridoLiquido,
     custoAdicionalMensal,
     creditoDisponibilizadoAoCliente,
+    creditoClienteSimplesPuro,
+    creditoIncrementalCliente,
     aliquotaIVABruta,
   }
 }

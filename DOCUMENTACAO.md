@@ -166,7 +166,7 @@ Quando o usuário informa folha, despesas, ICMS ou ISS, o motor apura o Lucro Re
 - **Redução de 40% só no que é regime específico.** Hospedagem e alimentação preparada no estabelecimento têm 40% de redução (arts. 275, 280 p.u. e 281 da LC 214). **Bebidas alcoólicas** e bebidas ou alimentos comprados de terceiros e vendidos sem preparo (água, refrigerante, suco de lata) ficam fora (art. 273 §2º) e pagam a alíquota cheia. O campo `pctReceitaAliquotaCheia` (hotelaria e restaurantes) informa essa fatia; a alíquota do débito é a média ponderada.
 - **Crédito das compras.** O crédito é o imposto que o fornecedor cobrou, não a alíquota das vendas do próprio setor. Hotelaria e parques compram manutenção, energia e serviços com alíquota cheia: o crédito usa 26,5% (a redução de 40% é só das vendas, art. 281). Restaurantes mantêm o padrão antigo, a alíquota das próprias vendas (15,9%), como média, porque compram muito alimento básico.
 - **Composição das compras (hotelaria, restaurantes e parques).** Campo opcional "Informar a composição das minhas compras": % em alimentos da cesta básica (alíquota zero, sem imposto e sem crédito), % em alimentos com 60% de redução do Anexo VII (crédito de 10,6%) e o restante a 26,5%. Sem informar, vale o padrão do setor. Com a composição, o crédito médio é `reduzidos × 10,6% + cheio × 26,5%`; zero + reduzido nunca passa de 100%. Combina com o campo de compras de fornecedores do Simples (essa fatia credita só a CBS do DAS do fornecedor). Um hotel ou restaurante que compra metade das compras em carnes e hortifrúti tem crédito bem menor que os 26,5% cheios.
-- **Híbrido = DAS sem a parcela de consumo + IVA líquido.** O DAS que sobra paga IRPJ, CSLL e CPP. Comparar o DAS inteiro com só o IVA líquido do híbrido, como fez o relatório da IA do caso do hotel, subestima o custo do Simples e inverte a conclusão.
+- **Híbrido = DAS sem a parcela de consumo + IVA líquido.** O DAS que sobra paga IRPJ, CSLL e CPP. Comparar o DAS inteiro com só o IVA líquido do híbrido, como fez o relatório da IA do caso do hotel, subestima o custo do híbrido (junto com o DAS informado, que não fecha, isso inverteu a conclusão).
 - **Compradores não creditam** hospedagem nem alimentação de restaurante (arts. 276 e 283): o ganho comercial do híbrido (cliente creditar o IVA cheio) não existe aqui.
 - **O que ainda não está:** a alíquota de referência é fixa em 26,5% (estimativa); não há campo para simular outra (por exemplo 9,25%, que é a soma de PIS e COFINS, não de CBS e IBS).
 
@@ -267,15 +267,21 @@ Slider de −40% a +200% de variação de faturamento. Para cada ponto:
 
 ### 8.5 Simples Nacional Híbrido
 
-Para empresas no Simples com clientes B2B, o sistema avalia se vale optar pelo **Simples Híbrido** (pagar CBS+IBS fora do DAS), que permite ao cliente B2B se creditar do IVA:
+Para empresas no Simples com clientes B2B, o sistema avalia se vale optar pelo **Simples Híbrido** (recolher CBS e IBS por fora do DAS).
+
+**O que o cliente credita em cada caso**
+- **Simples puro:** o cliente no regime normal **já credita**, mas só a parcela de CBS/IBS efetivamente tributada e repartida dentro do DAS, pela alíquota da tabela do Simples (faixa e anexo). Essa alíquota é menor que a plena.
+- **Híbrido:** o cliente credita a alíquota plena do IVA.
 
 ```
-IVA_híbrido_líquido           = max(0, Faturamento × alíq_IVA − Crédito_insumos)
-Custo_adicional               = IVA_híbrido − Imposto_DAS
-Crédito_disponibilizado_ao_cliente = Faturamento × alíq_IVA
+Crédito_cliente_híbrido      = Faturamento_interno × alíq_IVA × %vendas_a_PJ
+Crédito_cliente_Simples_puro = Faturamento_interno × (CBS+IBS dentro do DAS) × %vendas_a_PJ
+Crédito_a_mais_ao_cliente    = híbrido − Simples_puro
 ```
 
-Vale a pena quando o crédito gerado ao cliente ≥ custo adicional para a empresa.
+**Custo do híbrido** = DAS que sobra (IRPJ, CSLL, CPP, sem a parcela de consumo) + IVA líquido (`max(0, Faturamento × alíq_IVA − Crédito_insumos)`), menos o DAS inteiro de hoje. Comparar só o IVA líquido com o DAS inteiro, como fazia a primeira versão desta análise, subestima o custo do híbrido (o DAS que sobra some da conta). No MEI (DAS fixo, sem partilha percentual) o custo continua sendo o IVA líquido menos o DAS.
+
+Vale a pena quando o **crédito a mais** que o cliente ganha é maior ou igual ao custo adicional da empresa. Só vendas a empresas (PJ) geram crédito aproveitável.
 
 ### 8.6 Assistente de perguntas
 

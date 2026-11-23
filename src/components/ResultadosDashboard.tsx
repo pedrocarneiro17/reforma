@@ -510,7 +510,7 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               </table>
 
               <div className="rounded-lg bg-warning-soft border border-warning-border px-3 py-2 text-xs text-ink-secondary leading-relaxed">
-                Seus clientes B2B creditam apenas <strong>{fmt.pct(cbsSimplesEfetivo)}</strong> de CBS (embutido no DAS),
+                Seus clientes B2B já creditam, mas só <strong>{fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}</strong> (CBS + IBS embutidos no DAS, pela alíquota da tabela do Simples),
                 não os {fmt.pct(aliquotaIVABruta)} cheios do IVA. Isso pode reduzir sua competitividade em cadeias B2B.
               </div>
             </div>
@@ -1065,8 +1065,8 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               <div className="insight-warning text-xs leading-relaxed">
                 <strong>Como o IVA Dual afeta o MEI:</strong> o MEI continuará recolhendo o DAS
                 (que vai incorporar gradualmente uma parcela de CBS/IBS). A principal desvantagem
-                é para clientes B2B — eles <em>não conseguem creditar</em> o IVA embutido no DAS, tornando
-                o MEI menos competitivo como fornecedor para empresas.
+                é para clientes B2B — eles só creditam a parcela de CBS/IBS efetivamente embutida no DAS
+                (pequena no MEI), não o IVA pleno, o que torna o MEI menos competitivo como fornecedor para empresas.
               </div>
             </div>
           </div>
@@ -1205,8 +1205,9 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
               </div>
               <p className="text-ink-secondary text-sm mt-1.5 leading-relaxed">
                 Como você vende para empresas (B2B) e está no {regime === 'mei' ? 'MEI' : 'Simples Nacional'},
-                seus clientes <em>não conseguem creditar</em> o tributo embutido no DAS. Isso pode torná-lo
-                menos competitivo frente a fornecedores no Lucro Presumido/Real.
+                seus clientes <em>já creditam</em>, mas só a parcela de CBS/IBS efetivamente tributada dentro do DAS, pela
+                alíquota da tabela do Simples{regime !== 'mei' ? <> (<span className="num">{fmt.pct((cbsSimplesEfetivo ?? 0) + (ibsSimplesEfetivo ?? 0))}</span> da venda)</> : null}
+                {' '}— menor que os <span className="num">{fmt.pct(aliquotaIVABruta)}</span> do IVA pleno. O híbrido dá o crédito pleno, a um custo maior.
               </p>
             </div>
 
@@ -1224,14 +1225,16 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
                   {analiseSimplesHibrido.custoAdicionalMensal > 0 ? '+' : ''}
                   {fmt.moeda(analiseSimplesHibrido.custoAdicionalMensal)}
                 </div>
-                <div className="text-ink-muted text-xs mt-0.5">vs. Simples clássico</div>
+                <div className="text-ink-muted text-xs mt-0.5">{regime === 'mei' ? 'IVA líquido − DAS fixo' : 'DAS que sobra + IVA líquido − DAS de hoje'}</div>
               </div>
               <div className="bg-surface border border-warning-border rounded-md p-3">
-                <div className="text-ink-muted text-xs mb-1">Crédito p/ seus clientes</div>
+                <div className="text-ink-muted text-xs mb-1">Crédito a mais p/ seus clientes</div>
                 <div className="text-success font-bold text-base num">
-                  {fmt.moeda(analiseSimplesHibrido.creditoDisponibilizadoAoCliente)}
+                  {fmt.moeda(analiseSimplesHibrido.creditoIncrementalCliente)}
                 </div>
-                <div className="text-ink-muted text-xs mt-0.5">que eles podem abater do IVA deles</div>
+                <div className="text-ink-muted text-xs mt-0.5">
+                  pleno {fmt.moeda(analiseSimplesHibrido.creditoDisponibilizadoAoCliente)} no híbrido − {fmt.moeda(analiseSimplesHibrido.creditoClienteSimplesPuro)} que já têm no Simples
+                </div>
               </div>
             </div>
 
@@ -1243,12 +1246,12 @@ export default function ResultadosDashboard({ resultados, onVoltar }: Resultados
             >
               <strong>Análise:</strong>{' '}
               {analiseSimplesHibrido.vale
-                ? `O crédito de IVA disponibilizado aos seus clientes (${fmt.moeda(analiseSimplesHibrido.creditoDisponibilizadoAoCliente)}/mês)
-                   é maior que o custo adicional do modelo híbrido. Seus clientes B2B tendem a preferir
-                   fornecedores que geram crédito, tornando-o mais competitivo mesmo com o custo extra.`
+                ? `O crédito extra que o híbrido dá aos seus clientes (${fmt.moeda(analiseSimplesHibrido.creditoIncrementalCliente)}/mês: o crédito pleno menos o que eles já têm no Simples)
+                   é maior que o custo adicional do modelo híbrido (${fmt.moeda(analiseSimplesHibrido.custoAdicionalMensal)}/mês). Seus clientes B2B tendem a preferir
+                   fornecedores que geram crédito pleno, tornando-o mais competitivo mesmo com o custo extra.`
                 : `O custo adicional do modelo híbrido (${fmt.moeda(analiseSimplesHibrido.custoAdicionalMensal)}/mês) é alto
-                   em relação ao benefício gerado aos clientes. Avalie permanecer no Simples clássico
-                   ou migrar completamente para o Lucro Presumido.`
+                   em relação ao crédito extra que ele dá aos clientes (${fmt.moeda(analiseSimplesHibrido.creditoIncrementalCliente)}/mês, já descontado o que eles creditam no Simples).
+                   Avalie permanecer no Simples clássico ou migrar completamente para o Lucro Presumido.`
               }
             </div>
 

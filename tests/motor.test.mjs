@@ -337,6 +337,49 @@ describe('Simulador de crescimento', () => {
   })
 })
 
+describe('Simples híbrido: crédito do cliente e custo', () => {
+  const b2b = (extra = {}) => calc('simples_nacional', 'comercio_atacado', 200000, { insumosMensais: 120000, perfilClientes: 'b2b', ...extra })
+
+  it('no Simples puro o cliente já credita o CBS+IBS embutido no DAS; o híbrido acrescenta a diferença até o crédito pleno', () => {
+    const r = b2b()
+    const h = r.analiseSimplesHibrido
+    const embutido = (r.cbsSimplesEfetivo + r.ibsSimplesEfetivo) * r.faturamentoMensal
+    assert.ok(embutido > 0)
+    perto(R(h.creditoClienteSimplesPuro), R(embutido), 'crédito que o cliente já tem')
+    perto(R(h.creditoDisponibilizadoAoCliente), R(r.faturamentoMensal * r.aliquotaIVABruta), 'crédito pleno do híbrido')
+    perto(R(h.creditoIncrementalCliente), R(h.creditoDisponibilizadoAoCliente - h.creditoClienteSimplesPuro))
+    assert.ok(h.creditoClienteSimplesPuro < h.creditoDisponibilizadoAoCliente)
+  })
+
+  it('o custo adicional é o do cenário híbrido completo (DAS que sobra + IVA líquido − DAS de hoje)', () => {
+    const r = b2b()
+    perto(R(r.analiseSimplesHibrido.custoAdicionalMensal), R(r.cenarioHibridoVerdadeiro.custoAdicionalVsSimples))
+    // não pode ser o IVA líquido menos o DAS inteiro (versão antiga, que esquecia o DAS que sobra)
+    const antigo = r.analiseSimplesHibrido.ivaHibridoLiquido - r.impostoAtualMensal
+    assert.ok(Math.abs(r.analiseSimplesHibrido.custoAdicionalMensal - antigo) > 1, 'o DAS residual entra na conta')
+  })
+
+  it('a recomendação compara o crédito a MAIS com o custo adicional', () => {
+    const h = b2b().analiseSimplesHibrido
+    assert.equal(h.vale, h.creditoIncrementalCliente >= h.custoAdicionalMensal)
+  })
+
+  it('só vendas a empresas geram crédito: perfil misto reduz o crédito pela fração PJ; B2C não tem análise', () => {
+    const cheio = b2b().analiseSimplesHibrido
+    const metade = b2b({ perfilClientes: 'misto', pctClientesPJ: 50 }).analiseSimplesHibrido
+    perto(R(metade.creditoDisponibilizadoAoCliente), R(cheio.creditoDisponibilizadoAoCliente / 2))
+    perto(R(metade.creditoClienteSimplesPuro), R(cheio.creditoClienteSimplesPuro / 2))
+    assert.equal(b2b({ perfilClientes: 'b2c' }).analiseSimplesHibrido, null)
+  })
+
+  it('MEI mantém a conta própria (sem partilha no DAS: nada embutido para o cliente)', () => {
+    const r = calc('mei', 'comercio_varejo', 5000, { insumosMensais: 2000, perfilClientes: 'b2b' })
+    const h = r.analiseSimplesHibrido
+    assert.equal(h.creditoClienteSimplesPuro, 0)
+    perto(R(h.custoAdicionalMensal), R(h.ivaHibridoLiquido - r.impostoAtualMensal))
+  })
+})
+
 describe('Alíquota de referência (IBS+CBS) ajustável', () => {
   const ref = (aliq, extra = {}) => calc('lucro_presumido', 'comercio_varejo', 100000, { insumosMensais: 60000, aliquotaReferencia: aliq, ...extra })
 

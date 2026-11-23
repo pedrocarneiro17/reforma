@@ -246,6 +246,13 @@ export function resumirResultado(r: ResultadoCalculo) {
         custoAdicionalVsSimplesMensal: arred(h.custoAdicionalVsSimples),
         observacao: 'Híbrido = DAS sem a parcela de consumo (IRPJ, CSLL, CPP) + IBS/CBS líquido pago por fora.',
       } : null,
+      creditoParaClientesEmpresas: r.analiseSimplesHibrido ? {
+        noSimplesPuroMensal: arred(r.analiseSimplesHibrido.creditoClienteSimplesPuro),
+        noHibridoMensal: arred(r.analiseSimplesHibrido.creditoDisponibilizadoAoCliente),
+        acrescimoDoHibridoMensal: arred(r.analiseSimplesHibrido.creditoIncrementalCliente),
+        hibridoCompensa: r.analiseSimplesHibrido.vale,
+        observacao: 'No Simples puro o cliente já credita, mas só o CBS/IBS embutido no DAS (alíquota da tabela do Simples). O híbrido dá o crédito pleno.',
+      } : null,
     } : null,
     alertas: alertas(r),
     aliquotaReferenciaUsadaPct: pct(r.aliquotaReferencia),

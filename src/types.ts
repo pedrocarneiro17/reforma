@@ -194,7 +194,12 @@ export interface AnaliseSimplesHibrido {
   vale: boolean
   ivaHibridoLiquido: number
   custoAdicionalMensal: number
+  /** crédito pleno que o cliente PJ teria no híbrido (IBS/CBS pagos por fora) */
   creditoDisponibilizadoAoCliente: number
+  /** crédito que o cliente PJ já tem no Simples puro: só o CBS/IBS embutido no DAS, pela alíquota da tabela do Simples */
+  creditoClienteSimplesPuro: number
+  /** o que o híbrido acrescenta para o cliente: crédito pleno − crédito do Simples puro */
+  creditoIncrementalCliente: number
   aliquotaIVABruta: number
 }
 
