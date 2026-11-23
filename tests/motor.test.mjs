@@ -490,6 +490,37 @@ describe('Projeção 2026–2033 coerente com a carga de hoje e a carga pós-ref
   })
 })
 
+describe('Setor de representação comercial', () => {
+  const rep = (extra = {}) => calc('simples_nacional', 'representacao_comercial', 20000, { insumosMensais: 1000, perfilClientes: 'b2b', ...extra })
+
+  it('paga a alíquota cheia (sem redução) e não é vedado ao Simples', () => {
+    const s = S('representacao_comercial')
+    assert.equal(s.reducao, 0)
+    assert.equal(s.tipo, 'servico')
+    assert.notEqual(s.vedadoSimples, true)
+    const r = rep({ regime: 'lucro_presumido' })
+    perto(R(r.aliquotaIVABruta * 1e6), R(0.265 * 1e6))
+    perto(R(r.impostoIVABrutoMensal), R(20000 * 0.265))
+  })
+
+  it('Simples pelo Fator R: folha de 28% ou mais da receita vai ao Anexo III; abaixo, ao Anexo V', () => {
+    assert.equal(rep({ folhaMensal: 20000 * 0.30 }).anexoSimples, 'III')
+    assert.equal(rep({ folhaMensal: 20000 * 0.10 }).anexoSimples, 'V')
+    assert.ok(S('representacao_comercial').fatorR)
+  })
+
+  it('o código de atividade do Simples é o dos serviços sujeitos ao Fator R (cAtivSN 09)', () => {
+    const r = rep({ folhaMensal: 20000 * 0.30 })
+    assert.equal(r.atividadeSimples?.codigo, '09')
+  })
+
+  it('não há outro setor com o mesmo código e o grupo é o de alíquota cheia', () => {
+    const iguais = setoresMod.SETORES.filter(x => x.value === 'representacao_comercial')
+    assert.equal(iguais.length, 1)
+    assert.match(iguais[0].grupo, /Cheia/)
+  })
+})
+
 describe('Crédito das compras em hotelaria, restaurantes e parques', () => {
   const ALIQ = 0.265, RED60 = 0.265 * 0.4
   const rest = (extra = {}) => calc('simples_nacional', 'restaurantes_bares', 100000, { insumosMensais: 30000, ...extra })

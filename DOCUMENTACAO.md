@@ -331,7 +331,7 @@ O usuário marca quais situações contam como base de crédito antes de aplicar
 
 ---
 
-## 9. Setores Cadastrados (85 ao total)
+## 9. Setores Cadastrados (86 ao total)
 
 A lista completa está em `src/data/setores.ts`. Cada setor traz:
 

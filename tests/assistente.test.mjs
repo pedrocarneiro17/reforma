@@ -87,6 +87,15 @@ describe('Ferramentas do motor', () => {
     assert.equal(cmp.aliquotaReferenciaUsadaPct, 27.91)
   })
 
+  it('listar_setores acha representação comercial por "representante" ou "intermediacao"', () => {
+    for (const busca of ['representacao', 'intermediacao', 'REPRESENTAÇÃO COMERCIAL']) {
+      const r = ferr.executarFerramentaMotor('listar_setores', { busca })
+      assert.ok(r.setores.some(s => s.codigo === 'representacao_comercial' && s.reducaoAliquotaPct === 0), busca)
+    }
+    const calc = ferr.executarFerramentaMotor('calcular_cenarios', { ...EMPRESA, setor: 'representacao_comercial', faturamentoMensal: 20000, insumosMensais: 1000 })
+    assert.equal(calc.ivaDual.aliquotaBrutaAplicadaPct, 26.5)
+  })
+
   it('listar_setores acha por palavra sem depender de acento', () => {
     const r = ferr.executarFerramentaMotor('listar_setores', { busca: 'hoteis' })
     assert.ok(r.setores.some(s => s.codigo === 'hoteis_pousadas'))

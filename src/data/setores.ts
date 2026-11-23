@@ -546,6 +546,14 @@ export const SETORES: Setor[] = [
     fatorR: true,
   },
   {
+    value: 'representacao_comercial',
+    label: 'Representação Comercial e Intermediação de Negócios',
+    grupo: 'Alíquota Cheia (26,5%)',
+    reducao: 0.00,   // serviço de intermediação: fora da lista de 30% do art. 127 LC 214 (18 profissões regulamentadas) e de qualquer redução que eu tenha achado; base = comissão recebida
+    tipo: 'servico',
+    fatorR: true,    // Simples: Anexo III (folha ≥ 28% da receita) ou V, segundo a Resolução CGSN 140/2018 art. 25 §1º V (fonte: contabilidade; confirmar no PGDAS-D)
+  },
+  {
     value: 'marketing_publicidade',
     label: 'Marketing, Publicidade e Design',
     grupo: 'Alíquota Cheia (26,5%)',
