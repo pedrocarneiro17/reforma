@@ -82,6 +82,13 @@ export default function LinhaDoTempo({ resultados, onMudarAno }: Props) {
                   </span>
                 </div>
               )}
+              {p?.hibrido && (
+                <div className="mt-1 text-[11px] text-ink-secondary leading-snug">
+                  Híbrido: <span className="num font-medium">{p.hibrido.custoAdicionalMensal > 0 ? '+' : ''}{fmt.moeda(p.hibrido.custoAdicionalMensal)}/mês</span>
+                  {' '}· crédito a mais p/ clientes <span className="num font-medium">{fmt.moeda(p.hibrido.creditoIncrementalCliente)}</span>
+                  {' '}· <span className={p.hibrido.vale ? 'text-success font-medium' : 'text-ink-muted'}>{p.hibrido.vale ? 'compensa' : 'não compensa'}</span>
+                </div>
+              )}
             </button>
           )
         })}

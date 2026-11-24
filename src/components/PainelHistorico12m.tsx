@@ -33,7 +33,7 @@ interface PainelHistorico12mProps {
 export default function PainelHistorico12m({ resultados }: PainelHistorico12mProps) {
   const {
     projecaoMesAMes, aliquotaAtual, aliquotaAtualEstimada, fonteAliquota,
-    regime, irpjCsllPersistenteMensal, contribPrevidenciariaMensal,
+    regime, irpjCsllPersistenteMensal, contribPrevidenciariaMensal, anoAnalise, projecaoAnos,
   } = resultados
 
   if (!projecaoMesAMes) return null
@@ -42,7 +42,13 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
   // a série simulada precisa somar esses componentes (que persistem na reforma) ao IVA
   // do mês para comparar conjunto com conjunto.
   const ehLPouLR = regime === 'lucro_presumido' || regime === 'lucro_real'
-  const fixoMensalReforma = ehLPouLR ? irpjCsllPersistenteMensal + contribPrevidenciariaMensal : 0
+  // Antes de 2033 também restam PIS/COFINS (até 2026) e ICMS/ISS (até 2032), e o IRPJ/CSLL ainda migra de base: no
+  // ano analisado, tudo que não é IBS/CBS vem da projeção (parcela "de hoje" que continua)
+  const pAno = projecaoAnos.find(p => p.ano === anoAnalise)
+  const ehTransicao = anoAnalise !== 2033 && pAno != null
+  const fixoMensalReforma = !ehLPouLR ? 0
+    : ehTransicao ? pAno.parcelaAtual
+    : irpjCsllPersistenteMensal + contribPrevidenciariaMensal
   const labelSimulado = ehLPouLR ? 'Pós-reforma (simulado)' : 'IVA Dual (simulado)'
 
   const data = projecaoMesAMes.map(m => ({
@@ -218,8 +224,9 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
         </div>
         {ehLPouLR && fixoMensalReforma > 0 && (
           <p className="text-[11px] text-ink-muted leading-relaxed">
-            Pós-reforma (simulado) = IVA líquido do mês + {fmt.moeda(fixoMensalReforma)}/mês de IRPJ/CSLL e
-            contribuição previdenciária — tributos que persistem após a reforma e estão incluídos nos impostos reais informados.
+            {ehTransicao ? `Simulado em ${anoAnalise}` : 'Pós-reforma (simulado)'} = IVA líquido do mês + {fmt.moeda(fixoMensalReforma)}/mês de{' '}
+            {ehTransicao ? 'tributos de hoje que ainda restam (PIS/COFINS, ICMS/ISS, IRPJ/CSLL e contribuição previdenciária)' : 'IRPJ/CSLL e contribuição previdenciária'}
+            {ehTransicao ? '.' : ' — tributos que persistem após a reforma e estão incluídos nos impostos reais informados.'}
           </p>
         )}
       </div>

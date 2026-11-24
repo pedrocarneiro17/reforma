@@ -112,6 +112,14 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
   // Ano da transição em análise (2033 = regime pleno)
   const ehPleno = dadosBase.anoAnalise === 2033
   const rotuloAno = ehPleno ? 'pós-reforma (2033)' : `em ${dadosBase.anoAnalise}`
+  // Antes de 2033 ainda existem PIS/COFINS (até 2026) e ICMS/ISS (até 2032) e o IRPJ/CSLL migra de base: a carga do ano
+  // só fecha com essas parcelas (no ano pleno elas somem e o IRPJ/CSLL é o pós-reforma)
+  const parcelasDoAno = (r: { projecaoAnos: ResultadoCalculo['projecaoAnos']; anoAnalise: number; irpjCsllPersistenteMensal: number }) => {
+    const p = r.projecaoAnos.find(x => x.ano === r.anoAnalise)
+    return r.anoAnalise === 2033 || !p
+      ? { legado: 0, irpjCsll: r.irpjCsllPersistenteMensal }
+      : { legado: p.legadoConsumoMensal, irpjCsll: p.irpjCsllMensal }
+  }
   const pctRef = `${(dadosBase.aliquotaReferencia * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
   const snHibridoMensal = dadosBase.cenarioHibridoVerdadeiro?.totalMensal ?? null
 
@@ -349,9 +357,15 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                             <span>CBS + IBS líquido</span>
                             <span className="num">{fmt.moeda(r.impostoIVALiquidoMensal)}</span>
                           </div>
+                          {parcelasDoAno(r).legado > 0.5 && (
+                            <div className="flex justify-between text-[10px] text-ink-muted">
+                              <span>PIS/COFINS + ICMS/ISS que restam</span>
+                              <span className="num">{fmt.moeda(parcelasDoAno(r).legado)}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between text-[10px] text-ink-muted">
                             <span>IRPJ + CSLL</span>
-                            <span className="num">{fmt.moeda(r.irpjCsllPersistenteMensal)}</span>
+                            <span className="num">{fmt.moeda(parcelasDoAno(r).irpjCsll)}</span>
                           </div>
                           {r.contribPrevidenciariaMensal > 0 && (
                             <div className="flex justify-between text-[10px] text-warning font-medium">
@@ -508,7 +522,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                       <div className="text-ink font-medium">{fmt.moeda(r.cargaTotalReformaMensal)}</div>
                       {(r.regime === 'lucro_presumido' || r.regime === 'lucro_real') && (
                         <div className="text-[10px] text-ink-muted font-normal">
-                          IVA {fmt.moeda(r.impostoIVALiquidoMensal)} + IR/CSLL {fmt.moeda(r.irpjCsllPersistenteMensal)}
+                          IVA {fmt.moeda(r.impostoIVALiquidoMensal)}{parcelasDoAno(r).legado > 0.5 && <> + PIS/COFINS e ICMS/ISS {fmt.moeda(parcelasDoAno(r).legado)}</>} + IR/CSLL {fmt.moeda(parcelasDoAno(r).irpjCsll)}
                           {r.contribPrevidenciariaMensal > 0 && <> + prev. {fmt.moeda(r.contribPrevidenciariaMensal)}</>}
                         </div>
                       )}
