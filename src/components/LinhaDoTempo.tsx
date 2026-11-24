@@ -1,5 +1,5 @@
-import { fmt } from '../engine/calculadora'
-import type { ResultadoCalculo } from '../types'
+import { fmt, anoVigenteAnalise, ANO_PLENO } from '../engine/calculadora'
+import type { ProjecaoAno, ResultadoCalculo } from '../types'
 
 const pctRef = (x: number) => `${(x * 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
 
@@ -20,47 +20,66 @@ interface Props {
   onMudarAno: (ano: number) => void
 }
 
+const classeVariacao = (v: number) => (v > 0.5 ? 'text-danger' : v < -0.5 ? 'text-success' : 'text-ink')
+const setaVariacao = (v: number) => (v > 0.5 ? '▲' : v < -0.5 ? '▼' : '=')
+
 /**
- * Seletor do ano da transição. Cada botão mostra a carga mensal e a variação contra hoje naquele ano; ao escolher
- * um ano, todo o painel (alíquotas, créditos, Simples híbrido, comparador, preço) passa a descrever aquele ano.
+ * Duas visões isoladas — o ano vigente (hoje, a previsão de 2027; em 2028 passa a ser 2028, e assim por diante) e o
+ * fim do processo (2033) — mais o panorama do avanço da reforma de 2026 a 2033, só para leitura. Os anos
+ * intermediários não têm visão própria até chegarem: aparecem apenas no panorama.
  */
 export default function LinhaDoTempo({ resultados, onMudarAno }: Props) {
   const { projecaoAnos, anoAnalise, aliquotaReferencia, impostoAtualMensal } = resultados
-  const hoje = impostoAtualMensal
-  const atual = projecaoAnos.find(p => p.ano === anoAnalise)
+  const vigente = anoVigenteAnalise()
+  const temVigente = vigente !== ANO_PLENO
+  const anoCorrente = new Date().getFullYear()
+  const previsao = anoCorrente < vigente   // o ano vigente ainda não começou: é previsão
+  const ponto = (ano: number): ProjecaoAno | undefined => projecaoAnos.find(p => p.ano === ano)
+  const atual = ponto(anoAnalise)
   const temHibrido = projecaoAnos.some(p => p.hibrido != null)
 
+  const visoes: { ano: number; titulo: string; subtitulo: string }[] = [
+    ...(temVigente ? [{
+      ano: vigente,
+      titulo: previsao ? `Próximo ano · ${vigente}` : `Ano vigente · ${vigente}`,
+      subtitulo: previsao ? 'previsão' : 'em curso',
+    }] : []),
+    { ano: ANO_PLENO, titulo: `Visão final · ${ANO_PLENO}`, subtitulo: 'regime pleno' },
+  ]
+
   return (
-    <div className="card p-4 sm:p-5 space-y-3 no-print">
+    <div className="card p-4 sm:p-5 space-y-4 no-print">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="text-sm font-semibold text-ink font-display">Ano da transição em análise</h3>
+        <h3 className="text-sm font-semibold text-ink font-display">Impacto da reforma</h3>
         <p className="text-xs text-ink-muted">
-          A reforma entra aos poucos: escolha o ano e o painel inteiro passa a mostrar aquele ano.
+          O ano vigente e o fim do processo, com o avanço de toda a transição logo abaixo.
         </p>
       </div>
 
-      <div className="grid grid-cols-4 sm:grid-cols-8 gap-2" role="tablist" aria-label="Ano da transição">
-        {projecaoAnos.map(p => {
-          const ativo = p.ano === anoAnalise
-          const sobe = p.variacaoMensal > 0.5
-          const cai = p.variacaoMensal < -0.5
+      {/* ── As duas visões ─────────────────────────────────────────────── */}
+      <div className={`grid gap-3 ${visoes.length > 1 ? 'sm:grid-cols-2' : ''}`} role="tablist" aria-label="Visão da análise">
+        {visoes.map(v => {
+          const p = ponto(v.ano)
+          const ativo = v.ano === anoAnalise
           return (
             <button
-              key={p.ano}
+              key={v.ano}
               role="tab"
               aria-selected={ativo}
-              onClick={() => onMudarAno(p.ano)}
-              className={`rounded-lg border px-2 py-2 text-center transition-colors
+              onClick={() => onMudarAno(v.ano)}
+              className={`rounded-lg border px-4 py-3 text-left transition-colors
                 ${ativo ? 'border-ink bg-subtle ring-1 ring-ink' : 'border-border hover:border-ink-muted'}`}
             >
-              <div className={`text-sm font-bold num ${ativo ? 'text-ink' : 'text-ink-secondary'}`}>{p.ano}</div>
-              <div className="text-[11px] text-ink-muted num leading-tight mt-0.5">{fmt.moeda(p.impostoMensal)}</div>
-              <div className={`text-[11px] font-medium num leading-tight ${sobe ? 'text-danger' : cai ? 'text-success' : 'text-ink-muted'}`}>
-                {p.ano === 2026 ? 'hoje' : sobe ? '▲' : cai ? '▼' : '='} {p.ano === 2026 ? '' : `${Math.abs(p.variacaoPercentual).toFixed(1).replace('.', ',')}%`}
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm font-bold text-ink">{v.titulo}</span>
+                <span className="text-[11px] uppercase tracking-wide text-ink-muted">{v.subtitulo}</span>
               </div>
-              {temHibrido && (
-                <div className={`text-[10px] leading-tight mt-0.5 ${p.hibrido?.vale ? 'text-success' : 'text-ink-muted'}`}>
-                  {p.hibrido == null ? '—' : p.hibrido.vale ? 'híbrido vale' : 'híbrido não'}
+              {p && (
+                <div className="mt-1 flex items-baseline gap-2 flex-wrap">
+                  <span className="text-lg font-bold num text-ink">{fmt.moeda(p.impostoMensal)}<span className="text-xs font-normal text-ink-muted">/mês</span></span>
+                  <span className={`text-xs font-medium num ${classeVariacao(p.variacaoMensal)}`}>
+                    {setaVariacao(p.variacaoMensal)} {Math.abs(p.variacaoPercentual).toFixed(1).replace('.', ',')}% vs. hoje
+                  </span>
                 </div>
               )}
             </button>
@@ -68,6 +87,36 @@ export default function LinhaDoTempo({ resultados, onMudarAno }: Props) {
         })}
       </div>
 
+      {/* ── Panorama: o avanço da reforma, só leitura ───────────────────── */}
+      <div>
+        <p className="text-xs font-medium text-ink-secondary mb-2">
+          Panorama da transição · 2026 → 2033 <span className="font-normal text-ink-muted">(carga mensal e variação contra hoje, em cada ano)</span>
+        </p>
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {projecaoAnos.map(p => {
+            const destaque = p.ano === anoAnalise
+            return (
+              <div
+                key={p.ano}
+                className={`rounded-lg border px-2 py-2 text-center ${destaque ? 'border-ink bg-subtle' : 'border-border'}`}
+              >
+                <div className={`text-sm font-bold num ${destaque ? 'text-ink' : 'text-ink-secondary'}`}>{p.ano}</div>
+                <div className="text-[11px] text-ink-muted num leading-tight mt-0.5">{fmt.moeda(p.impostoMensal)}</div>
+                <div className={`text-[11px] font-medium num leading-tight ${p.ano === 2026 ? 'text-ink-muted' : classeVariacao(p.variacaoMensal)}`}>
+                  {p.ano === 2026 ? 'hoje' : `${setaVariacao(p.variacaoMensal)} ${Math.abs(p.variacaoPercentual).toFixed(1).replace('.', ',')}%`}
+                </div>
+                {temHibrido && (
+                  <div className={`text-[10px] leading-tight mt-0.5 ${p.hibrido?.vale ? 'text-success' : 'text-ink-muted'}`}>
+                    {p.hibrido == null ? '—' : p.hibrido.vale ? 'híbrido vale' : 'híbrido não'}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* ── Detalhe da visão escolhida ──────────────────────────────────── */}
       {atual && (
         <div className="text-xs text-ink-secondary bg-subtle rounded-md px-3 py-2.5 leading-relaxed space-y-1">
           {atual.ano === 2026 ? (
@@ -86,7 +135,7 @@ export default function LinhaDoTempo({ resultados, onMudarAno }: Props) {
           <p>{FASE_DO_ANO[atual.ano]}</p>
           {atual.ano !== 2026 && (
             <p>
-              Frente a hoje ({fmt.moeda(hoje)}/mês): <strong className={`num ${atual.variacaoMensal > 0.5 ? 'text-danger' : atual.variacaoMensal < -0.5 ? 'text-success' : 'text-ink'}`}>
+              Frente a hoje ({fmt.moeda(impostoAtualMensal)}/mês): <strong className={`num ${classeVariacao(atual.variacaoMensal)}`}>
                 {atual.variacaoMensal > 0 ? '+' : atual.variacaoMensal < 0 ? '−' : ''}{fmt.moeda(Math.abs(atual.variacaoMensal))}/mês
               </strong>
               {atual.reajustePrecoNecessario > 0 && <> · preço para manter a margem: <strong className="num text-ink">+{atual.reajustePrecoNecessario.toFixed(2).replace('.', ',')}%</strong></>}.

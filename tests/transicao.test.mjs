@@ -50,6 +50,12 @@ describe('Calendário da transição', () => {
     assert.deepEqual(ANOS.map(a => eng.fasesDoAno(a).legado), [1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0])
   })
 
+  it('o ano vigente segue o calendário: 2026 mostra a previsão de 2027; cada ano ganha a sua visão quando chega; depois de 2033 fica em 2033', () => {
+    const v = ano => eng.anoVigenteAnalise(new Date(ano, 10, 24))
+    assert.deepEqual([2025, 2026, 2027, 2028, 2029, 2032, 2033, 2034, 2040].map(v), [2027, 2027, 2027, 2028, 2029, 2032, 2033, 2033, 2033])
+    assert.equal(eng.normalizarAnoAnalise(v(2030)), v(2030), 'o ano vigente é sempre um ano de análise válido')
+  })
+
   it('ano inválido ou ausente cai em 2033', () => {
     for (const a of [undefined, null, 2025, 2034, 2029.5, NaN]) assert.equal(eng.normalizarAnoAnalise(a), 2033, String(a))
     for (const a of ANOS) assert.equal(eng.normalizarAnoAnalise(a), a)

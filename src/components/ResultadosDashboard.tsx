@@ -1537,12 +1537,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
                 const delta = p.variacaoMensal
                 const emAnalise = p.ano === anoAnalise
                 return (
-                  <tr
-                    key={p.ano}
-                    onClick={() => onMudarAno(p.ano)}
-                    className={`cursor-pointer transition-colors ${emAnalise ? 'bg-info-soft' : 'hover:bg-subtle'}`}
-                    title={`Ver o painel em ${p.ano}`}
-                  >
+                  <tr key={p.ano} className={emAnalise ? 'bg-info-soft' : ''}>
                     <td className="py-3 text-ink font-semibold num">
                       {p.ano}
                       {p.ano === 2026 && <span className="ml-2 text-xs text-ink-muted font-normal">(hoje)</span>}
@@ -1573,7 +1568,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
         <p className="text-xs text-ink-muted mt-3 leading-relaxed">
           CBS e IBS são as alíquotas de referência em vigor em cada ano (antes das reduções do seu setor), com a alíquota plena de{' '}
           <span className="num">{pctRef(aliquotaReferencia)}</span>; o IBS entra em 10%, 20%, 30% e 40% do valor pleno de 2029 a 2032 e o
-          ICMS/ISS caem na mesma proporção. Clique em um ano para ver todo o painel nele.
+          ICMS/ISS caem na mesma proporção.
         </p>
       </div>
 

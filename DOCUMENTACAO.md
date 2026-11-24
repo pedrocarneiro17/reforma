@@ -226,7 +226,12 @@ A reforma **não chega de uma vez**: o que vale em 2027 não é o que vale em 20
 | 2029 a 2032 | de referência | 10%, 20%, 30%, 40% da alíquota plena | 90%, 80%, 70%, 60% | extintos |
 | 2033 | de referência | 100% | extintos | extintos |
 
-**Ano de análise.** `DadosEntrada.anoAnalise` (2026 a 2033; sem informar vale 2033, o resultado de sempre) faz o motor descrever aquele ano: a alíquota bruta, os créditos, o IBS/CBS líquido, o Simples híbrido, o comparador de regimes, o simulador de crescimento, o reajuste de preço e a carga total passam a ser os do ano. Na tela, a **linha do tempo** no topo do resultado troca o ano sem gastar uma simulação do limite; o assistente recebe o mesmo ano.
+**Ano de análise.** `DadosEntrada.anoAnalise` (2026 a 2033; sem informar vale 2033, o resultado de sempre) faz o motor descrever aquele ano: a alíquota bruta, os créditos, o IBS/CBS líquido, o Simples híbrido, o comparador de regimes, o simulador de crescimento, o reajuste de preço e a carga total passam a ser os do ano. Na tela há **duas visões isoladas** e um **panorama**:
+- **Ano vigente** (`anoVigenteAnalise`, pelo calendário): hoje, em 2026, é a *previsão de 2027*; em 2028 passa a ser 2028, em 2029 passa a ser 2029, e assim por diante. Os anos intermediários só ganham visão própria quando chegam.
+- **Visão final**: sempre 2033, o regime pleno.
+- **Panorama da transição**: o avanço da reforma de 2026 a 2033 (carga, variação e decisão do híbrido em cada ano), sempre visível e só para leitura, no topo e na tabela de cronograma.
+
+Trocar de visão recalcula na hora, sem gastar uma simulação do limite, e o assistente recebe a mesma visão. O motor continua aceitando qualquer ano de 2026 a 2033 em `anoAnalise` (testes e assistente).
 
 **Como é calculado.**
 - As alíquotas em vigor no ano são `CBS = referência da CBS × (1 desde 2027)` e `IBS = (referência − CBS) × fração do ano`. Tudo que depende da alíquota (débito, crédito sobre compras, crédito de bens de capital, crédito presumido, ZFM e regime automotivo) usa essas alíquotas, então o IVA líquido de um ano é o do ano pleno × `(CBS×fCBS + IBS×fIBS) ÷ referência` (teste).
@@ -254,7 +259,7 @@ A reforma **não chega de uma vez**: o que vale em 2027 não é o que vale em 20
 
 Exibe, na seguinte ordem:
 
-0. **Linha do tempo** — escolha do ano da transição (2026 a 2033); cada ano mostra a carga, a variação contra hoje e, no Simples B2B, se o híbrido compensa
+0. **Impacto da reforma** — duas visões (ano vigente e visão final de 2033) e, sempre à vista, o panorama de 2026 a 2033 com carga, variação contra hoje e, no Simples B2B, se o híbrido compensa em cada ano
 1. **Cards de resumo** — Carga atual vs. carga do ano analisado vs. variação
 2. **Painel Histórico 12 meses** — Gráficos com dados reais (se modo detalhado)
 3. **Tabela de apuração** — Breakdown linha a linha do cálculo
@@ -262,7 +267,7 @@ Exibe, na seguinte ordem:
 5. **Comparador de Regimes** — Os 3 regimes calculados com os mesmos dados financeiros, lado a lado
 6. **Simulador de Crescimento** — Curva interativa mostrando como o imposto evolui com o crescimento do faturamento
 7. **Alertas** — Reajuste de preço, Simples Nacional Híbrido
-8. **Tabela de transição detalhada** — Ano a ano: CBS, IBS e ICMS/ISS em vigor, imposto, alíquota efetiva e preço para manter a margem (clicar na linha troca o ano)
+8. **Tabela de transição detalhada** — Ano a ano: CBS, IBS e ICMS/ISS em vigor, imposto, alíquota efetiva e preço para manter a margem
 
 ### 8.3 Comparador de Regimes
 

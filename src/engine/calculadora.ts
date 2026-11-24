@@ -181,6 +181,15 @@ export const ANO_PLENO = 2033
 /** Primeiro ano da transição (testes de CBS 0,9% e IBS 0,1%, compensados com PIS/COFINS). */
 export const ANO_INICIAL_TRANSICAO = 2026
 
+/**
+ * Ano da visão "vigente" do simulador, pelo calendário: em 2026 (ano de teste, sem custo novo) é a previsão de 2027;
+ * de 2027 em diante é o próprio ano corrente; depois de 2033 fica em 2033. Os anos intermediários só ganham uma
+ * visão isolada quando chegam.
+ */
+export function anoVigenteAnalise(hoje: Date = new Date()): number {
+  return Math.min(ANO_PLENO, Math.max(ANO_INICIAL_TRANSICAO + 1, hoje.getFullYear()))
+}
+
 /** Ano de análise válido (inteiro de 2026 a 2033); qualquer outro valor cai no ano pleno. */
 export function normalizarAnoAnalise(ano?: number | null): number {
   return ano != null && Number.isInteger(ano) && ano >= ANO_INICIAL_TRANSICAO && ano <= ANO_PLENO ? ano : ANO_PLENO

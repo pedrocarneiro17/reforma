@@ -8,7 +8,7 @@ import {
 import FormularioEntrada from './components/FormularioEntrada'
 import ResultadosDashboard from './components/ResultadosDashboard'
 import AssistenteChat from './components/AssistenteChat'
-import { calcularTodosOsCenarios, ANO_PLENO } from './engine/calculadora'
+import { calcularTodosOsCenarios, anoVigenteAnalise } from './engine/calculadora'
 import type { ResultadoCalculo, DadosEntrada } from './types'
 import { useAuth } from './auth/AuthContext'
 import { useApi } from './auth/useApi'
@@ -215,8 +215,9 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
   const [menuAberto, setMenuAberto] = useState(false)   // gaveta do menu no celular
   const [erroLimite, setErroLimite] = useState('')
   const [ultimosDados, setUltimosDados] = useState<DadosEntrada | null>(null)  // contexto do assistente
-  // Ano da transição em análise: trocar o ano recalcula na hora, sem gastar uma simulação do limite
-  const [anoAnalise, setAnoAnalise] = useState(ANO_PLENO)
+  // Visão em análise: o ano vigente (hoje, a previsão de 2027) ou o fim do processo (2033). Trocar de visão recalcula
+  // na hora, sem gastar uma simulação do limite; o panorama de 2026 a 2033 aparece sempre.
+  const [anoAnalise, setAnoAnalise] = useState(anoVigenteAnalise)
   const resultados: ResultadoCalculo | null = useMemo(
     () => (ultimosDados ? calcularTodosOsCenarios({ ...ultimosDados, anoAnalise }) : null),
     [ultimosDados, anoAnalise],
