@@ -217,8 +217,8 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               key={`${r.regime}-${r.anexoComparado ?? ''}`}
               className={`rounded-xl border p-5 space-y-4 transition-all
                 ${isAtual
-                  ? `ring-2 ${COR_RING[meta.color]} bg-[#EFEAE1] border-[#9A9286]`
-                  : 'bg-white border-[#C4BDB4]'
+                  ? `ring-2 ${COR_RING[meta.color]} bg-[#EBEDF0] border-[#6C7684]`
+                  : 'bg-white border-[#AFB7C0]'
                 }
                 ${r.inaplicavel ? 'opacity-50' : ''}
               `}
@@ -252,14 +252,14 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
               </div>
 
               <div className="space-y-3">
-                <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-3">
+                <div className="bg-[#F5F6F7] border border-[#AFB7C0] rounded-md p-3">
                   <div className="text-ink-muted text-xs mb-1">Carga hoje / mês</div>
                   <div className={`font-bold text-lg num ${COR_TEXT[meta.color]}`}>
                     {fmt.moeda(r.impostoAtualMensal)}
                   </div>
                   <div className="text-ink-muted text-xs num">{fmt.pct(r.aliquotaAtual)} efetivo</div>
                   {(r.regime === 'lucro_presumido' || r.regime === 'lucro_real') && (
-                    <div className="mt-2 pt-2 border-t border-[#D4CEC7] space-y-0.5">
+                    <div className="mt-2 pt-2 border-t border-[#AFB7C0] space-y-0.5">
                       <div className="flex justify-between text-[10px] text-ink-muted">
                         <span>Federais (IRPJ/CSLL/PIS-COFINS)</span>
                         <span className="num">{fmt.moeda(r.impostoAtualMensal - r.icmsAtualMensal - r.issAtualMensal - r.contribPrevidenciariaMensal)}</span>
@@ -296,7 +296,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                 {r.regime === 'simples_nacional' && snHibridoMensal != null && !desdobrado ? (
                   <>
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-2.5">
+                      <div className="bg-[#F5F6F7] border border-[#AFB7C0] rounded-md p-2.5">
                         <div className="text-ink-muted text-[10px] mb-1 font-medium">Pleno / mês</div>
                         <div className={`font-bold text-base num ${r.variacaoAbsolutaMensal > 0 ? 'text-danger' : 'text-success'}`}>
                           {fmt.moeda(r.cargaTotalReformaMensal)}
@@ -305,7 +305,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                           {fmt.pct(r.cargaTotalReformaMensal / dadosBase.faturamentoMensal)} ef.
                         </div>
                       </div>
-                      <div className="bg-[#FBFAF7] border border-danger-border rounded-md p-2.5">
+                      <div className="bg-[#F5F6F7] border border-danger-border rounded-md p-2.5">
                         <div className="text-ink-muted text-[10px] mb-1 font-medium">Híbrido / mês</div>
                         <div className="font-bold text-base num text-danger">
                           {fmt.moeda(snHibridoMensal)}
@@ -333,7 +333,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                   </>
                 ) : (
                   <>
-                    <div className="bg-[#FBFAF7] border border-[#D4CEC7] rounded-md p-3">
+                    <div className="bg-[#F5F6F7] border border-[#AFB7C0] rounded-md p-3">
                       <div className="text-ink-muted text-xs mb-1">Carga total {ehPleno ? 'pós-reforma' : `em ${dadosBase.anoAnalise}`} / mês</div>
                       <div className={`font-bold text-lg num ${
                         r.variacaoAbsolutaMensal > 0 ? 'text-danger' : 'text-success'
@@ -344,7 +344,7 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
                         {fmt.pct(r.faturamentoMensal > 0 ? r.cargaTotalReformaMensal / r.faturamentoMensal : 0)} efetivo total
                       </div>
                       {(r.regime === 'lucro_presumido' || r.regime === 'lucro_real') && (
-                        <div className="mt-2 pt-2 border-t border-[#D4CEC7] space-y-0.5">
+                        <div className="mt-2 pt-2 border-t border-[#AFB7C0] space-y-0.5">
                           <div className="flex justify-between text-[10px] text-ink-muted">
                             <span>CBS + IBS líquido</span>
                             <span className="num">{fmt.moeda(r.impostoIVALiquidoMensal)}</span>
@@ -408,27 +408,27 @@ export default function ComparadorRegimes({ dadosBase }: ComparadorRegimesProps)
       </div>
 
       {/* ── Gráfico comparativo ───────────────────────────────────────── */}
-      <div className="rounded-xl border border-border bg-[#FBFAF7] p-5 space-y-3">
+      <div className="rounded-xl border border-border bg-[#F5F6F7] p-5 space-y-3">
         <h4 className="text-sm font-medium text-ink-secondary">Carga tributária total por regime — hoje vs {rotuloAno}: CBS, IBS, IR, CSLL e INSS</h4>
         <div className="h-52">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dataGrafico} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E4DDD2" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#D9DDE3" vertical={false} />
               <XAxis
                 dataKey="cenario"
-                tick={{ fill: '#5F5A52', fontSize: 12, fontWeight: 600 }}
-                axisLine={{ stroke: '#E4DDD2' }}
+                tick={{ fill: '#4E5865', fontSize: 12, fontWeight: 600 }}
+                axisLine={{ stroke: '#D9DDE3' }}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`}
-                tick={{ fill: '#9A9286', fontSize: 10 }}
+                tick={{ fill: '#6C7684', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
                 width={62}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-              <Legend wrapperStyle={{ fontSize: '11px', color: '#9A9286', paddingTop: '8px' }} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#6C7684', paddingTop: '8px' }} />
               {desdobrado ? (
                 <>
                   <Bar dataKey="SN Anexo III" fill="rgba(47,125,87,0.75)"  radius={[4, 4, 0, 0]} barSize={22} />

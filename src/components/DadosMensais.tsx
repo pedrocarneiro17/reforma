@@ -423,7 +423,7 @@ export default function DadosMensais({ onChange, valoresIniciais }: DadosMensais
           total={aggregates.totais.faturamento}
           color="blue"
           sparkline={faturamentos}
-          sparkColor="#315C8C"
+          sparkColor="#004766"
         />
         <MetricCard
           label="Insumos Médios/Mês"
@@ -483,7 +483,7 @@ const COLOR_RING: Record<InputColor, string> = {
   orange:  'focus:ring-warning-border/50 border-warning-border focus:border-warning',
   amber:   'focus:ring-warning-border/50 border-warning-border focus:border-warning',
   emerald: 'focus:ring-success-border/50 border-success-border focus:border-success',
-  slate:   'focus:ring-[#9A9286]/30 border-[#C4BDB4] focus:border-[#9A9286]',
+  slate:   'focus:ring-[#6C7684]/30 border-[#AFB7C0] focus:border-[#6C7684]',
 }
 
 interface MoneyInputProps {

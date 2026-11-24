@@ -124,8 +124,8 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
                 background: `linear-gradient(to right,
                   rgba(239,68,68,0.4) 0%,
                   rgba(239,68,68,0.4) ${((crescimentoPct + 40) / 240) * 100}%,
-                  #E5E7EB ${((crescimentoPct + 40) / 240) * 100}%,
-                  #E5E7EB 100%)`,
+                  #D9DDE3 ${((crescimentoPct + 40) / 240) * 100}%,
+                  #D9DDE3 100%)`,
               }}
             />
             <div
@@ -193,23 +193,23 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dataGrafico} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E4DDD2" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#D9DDE3" vertical={false} />
               <XAxis
                 dataKey="pct"
                 tickFormatter={v => `${v > 0 ? '+' : ''}${v}%`}
-                tick={{ fill: '#9A9286', fontSize: 10 }}
-                axisLine={{ stroke: '#E4DDD2' }}
+                tick={{ fill: '#6C7684', fontSize: 10 }}
+                axisLine={{ stroke: '#D9DDE3' }}
                 tickLine={false}
               />
               <YAxis
                 tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`}
-                tick={{ fill: '#9A9286', fontSize: 10 }}
+                tick={{ fill: '#6C7684', fontSize: 10 }}
                 axisLine={false}
                 tickLine={false}
                 width={60}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Legend wrapperStyle={{ fontSize: '11px', color: '#9A9286', paddingTop: '6px' }} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#6C7684', paddingTop: '6px' }} />
 
               {isSimples && limiteVisivelNoGrafico && (
                 <ReferenceArea
@@ -222,15 +222,15 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
 
               <ReferenceLine
                 x={crescimentoPct}
-                stroke="#E4DDD2"
+                stroke="#D9DDE3"
                 strokeDasharray="4 3"
-                label={{ value: `${crescimentoPct > 0 ? '+' : ''}${crescimentoPct}%`, position: 'top', fill: '#9A9286', fontSize: 10 }}
+                label={{ value: `${crescimentoPct > 0 ? '+' : ''}${crescimentoPct}%`, position: 'top', fill: '#6C7684', fontSize: 10 }}
               />
 
               {crescimentoPct !== 0 && (
                 <ReferenceLine
                   x={0}
-                  stroke="#E4DDD2"
+                  stroke="#D9DDE3"
                   strokeDasharray="2 3"
                 />
               )}
@@ -241,7 +241,7 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
                 stroke="rgba(49,92,140,0.8)"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, fill: '#315C8C', strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: '#004766', strokeWidth: 0 }}
               />
               <Line
                 type="monotone"
@@ -249,7 +249,7 @@ export default function SimuladorCrescimento({ dadosBase }: SimuladorCrescimento
                 stroke="rgba(47,125,87,0.8)"
                 strokeWidth={2}
                 dot={false}
-                activeDot={{ r: 4, fill: '#2F7D57', strokeWidth: 0 }}
+                activeDot={{ r: 4, fill: '#005221', strokeWidth: 0 }}
               />
             </LineChart>
           </ResponsiveContainer>

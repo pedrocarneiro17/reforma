@@ -131,21 +131,29 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
   return (
     <div className="space-y-6">
 
-      {/* ── Cabeçalho dos resultados ─────────────────────────────────── */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <button onClick={onVoltar} className="btn-ghost flex items-center gap-1.5 mb-3 -ml-1 no-print">
-            ← Voltar aos dados
-          </button>
-          {nomePrincipal && (
-            <p className="text-xs font-semibold text-ink-muted uppercase tracking-widest mb-1">{nomePrincipal}</p>
-          )}
-          <h2 className="text-2xl sm:text-3xl font-bold text-ink font-display">
-            Análise Tributária — <span className="text-gradient">{setor.label.split('(')[0].trim()}</span>
-          </h2>
-          <p className="text-ink-secondary text-sm mt-1.5">
-            {NOMES_REGIME[regime]} · <span className="num">{fmt.moeda(faturamentoMensal)}/mês</span> · {NOMES_PERFIL[perfilClientes]}
-          </p>
+      {/* ── Cabeçalho dos resultados (bloco marinho com as barras da logo) ─── */}
+      <div className="bloco-marinho p-5 sm:p-6">
+        <svg aria-hidden focusable="false" viewBox="0 0 405 437" preserveAspectRatio="xMaxYMax meet" className="barras-marca">
+          <polygon points="0,437 0,333 57,300 57,437" />
+          <polygon points="117,437 117,261 174,222 174,437" />
+          <polygon points="231,437 231,176 288,126 288,437" />
+          <polygon points="348,437 348,67 405,0 405,437" />
+        </svg>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 pr-0 sm:pr-24">
+            {nomePrincipal && (
+              <p className="text-[11px] font-bold uppercase tracking-[0.12em] mb-1 apoio">{nomePrincipal}</p>
+            )}
+            <h2 className="text-2xl sm:text-[28px] font-bold font-display leading-tight">
+              Análise Tributária — <span style={{ color: 'hsl(4 80% 78%)' }}>{setor.label.split('(')[0].trim()}</span>
+            </h2>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <span className="chip-marinho">{NOMES_REGIME[regime]}</span>
+              <span className="chip-marinho num">{fmt.moeda(faturamentoMensal)}/mês</span>
+              <span className="chip-marinho">{NOMES_PERFIL[perfilClientes]}</span>
+            </div>
+          </div>
+          <button onClick={onVoltar} className="btn-pilula-branca no-print">← Voltar aos dados</button>
         </div>
       </div>
 
@@ -153,14 +161,13 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
       <LinhaDoTempo resultados={resultados} onMudarAno={onMudarAno} />
 
       {/* ── Abas: Análise Tributária | Memória de Cálculo ────────────────── */}
-      <div className="flex items-center justify-between gap-3 border-b border-border -mt-2 no-print">
-        <div className="flex gap-1">
+      <div className="flex items-center justify-between gap-3 no-print">
+        <div className="flex gap-2">
           {([['analise', 'Análise Tributária'], ['memoria', 'Memória de Cálculo']] as const).map(([id, label]) => (
             <button
               key={id}
               onClick={() => setAba(id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors
-                ${aba === id ? 'border-ink text-ink' : 'border-transparent text-ink-muted hover:text-ink-secondary'}`}
+              className={`piloto-fase ${aba === id ? 'ativo' : ''}`}
             >
               {label}
             </button>
@@ -630,13 +637,13 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
             <span className="badge badge-warning text-xs">Lei 15.270/2025</span>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-1">
+            <div className="rounded-xl border border-[#AFB7C0] bg-[#F5F6F7] p-4 space-y-1">
               <p className="text-xs text-ink-muted uppercase tracking-wide font-semibold">Lucros distribuídos</p>
               <p className="text-lg font-bold num text-ink">{fmt.moeda(distribuicaoLucrosMensal)}/mês</p>
               <p className="text-xs text-ink-muted">Isento até R$ 50.000/mês por sócio (PF)</p>
             </div>
-            <div className={`rounded-xl border p-4 space-y-1 ${irrfDividendosMensal > 0 ? 'bg-[#FDECEC] border-[#F4A9A5]' : 'bg-[#E7F4ED] border-[#A8D5BC]'}`}>
-              <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: irrfDividendosMensal > 0 ? '#B42318' : '#2F7D57' }}>IRRF sobre dividendos (10%)</p>
+            <div className={`rounded-xl border p-4 space-y-1 ${irrfDividendosMensal > 0 ? 'bg-[#FFE7E5] border-[#FEAAA4]' : 'bg-[#E2F4E4] border-[#9CD3A7]'}`}>
+              <p className="text-xs uppercase tracking-wide font-semibold" style={{ color: irrfDividendosMensal > 0 ? '#7E0214' : '#005221' }}>IRRF sobre dividendos (10%)</p>
               <p className={`text-lg font-bold num ${irrfDividendosMensal > 0 ? 'text-danger' : 'text-success'}`}>{fmt.moeda(irrfDividendosMensal)}/mês</p>
               <p className="text-xs text-ink-muted">
                 {irrfDividendosMensal > 0
@@ -662,11 +669,11 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
             Para <strong>anular o IVA a pagar</strong> de {fmt.moeda(impostoIVALiquidoMensal)}/mês seriam necessárias despesas creditáveis adicionais de:
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-[#A8D5BC] bg-[#E7F4ED] p-4 space-y-1">
-              <p className="text-xs uppercase tracking-wide font-semibold text-[#2F7D57]">Despesas creditáveis necessárias</p>
-              <p className="text-lg font-bold num text-[#2F7D57]">{fmt.moeda(despesasParaZerarIVAMensal)}/mês</p>
+            <div className="rounded-xl border border-[#9CD3A7] bg-[#E2F4E4] p-4 space-y-1">
+              <p className="text-xs uppercase tracking-wide font-semibold text-[#005221]">Despesas creditáveis necessárias</p>
+              <p className="text-lg font-bold num text-[#005221]">{fmt.moeda(despesasParaZerarIVAMensal)}/mês</p>
             </div>
-            <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-1">
+            <div className="rounded-xl border border-[#AFB7C0] bg-[#F5F6F7] p-4 space-y-1">
               <p className="text-xs uppercase tracking-wide font-semibold text-ink-muted">% do faturamento</p>
               <p className="text-lg font-bold num text-ink">{fmt.pct(pctFatParaZerarIVA)}</p>
             </div>
@@ -1340,7 +1347,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+            <div className="bg-[#F5F6F7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
               <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Tributos federais</div>
               <div className="flex justify-between text-ink-muted"><span>Base presumida (presunção × receita)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.lucroPresumidoBase)}</span></div>
               <div className="flex justify-between text-ink-secondary"><span>IRPJ (15% da base presumida)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.irpj)}</span></div>
@@ -1348,7 +1355,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
               <div className="flex justify-between text-ink-secondary"><span>CSLL (9% da base presumida)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.csll)}</span></div>
               <div className="flex justify-between text-ink-secondary"><span>PIS/COFINS cumulativo (3,65%)</span><span className="num">{fmt.moeda(apuracaoLucroPresumido.pisCofins)}</span></div>
             </div>
-            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+            <div className="bg-[#F5F6F7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
               <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">{circulaMercadoria ? 'ICMS / ISS / Encargos' : 'ISS / Encargos'}</div>
               {circulaMercadoria && (apuracaoLucroPresumido.icmsCredito > 0 ? (
                 <>
@@ -1400,7 +1407,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+            <div className="bg-[#F5F6F7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
               <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Formação do lucro tributável</div>
               <div className="flex justify-between text-ink-secondary"><span>Receita bruta</span><span className="num">{fmt.moeda(faturamentoMensal)}</span></div>
               <div className="flex justify-between text-ink-muted"><span>(−) CMV / Insumos</span><span className="num">−{fmt.moeda(insumosMensais)}</span></div>
@@ -1429,7 +1436,7 @@ export default function ResultadosDashboard({ resultados, onVoltar, onMudarAno }
                 <span>Lucro Real (base IRPJ/CSLL)</span><span className="num">{fmt.moeda(apuracaoLucroReal.lucroRealBase)}</span>
               </div>
             </div>
-            <div className="bg-[#FBFAF7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
+            <div className="bg-[#F5F6F7] border border-border rounded-lg p-4 space-y-1.5 text-sm">
               <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide mb-2">Impostos do mês</div>
               <div className="flex justify-between text-ink-secondary"><span>IRPJ (15%)</span><span className="num">{fmt.moeda(apuracaoLucroReal.irpj)}</span></div>
               <div className="flex justify-between text-ink-secondary"><span>IRPJ adicional (10% acima de R$ 20 mil)</span><span className="num">{fmt.moeda(apuracaoLucroReal.irpjAdicional)}</span></div>
@@ -1844,10 +1851,10 @@ function CardProlabore({ analise }: { analise: AnaliseProlabore }) {
 
       {/* Detalhamento por sócio */}
       {detalhes.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-[#E4DDD2]">
+        <div className="overflow-x-auto rounded-lg border border-[#D9DDE3]">
           <table className="table-premium w-full text-sm">
             <thead>
-              <tr className="border-b border-[#E4DDD2]">
+              <tr className="border-b border-[#D9DDE3]">
                 <th className="text-left py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Sócio</th>
                 <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Pró-labore</th>
                 <th className="text-right px-3 py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">IRPF</th>
@@ -1856,9 +1863,9 @@ function CardProlabore({ analise }: { analise: AnaliseProlabore }) {
                 <th className="text-right py-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Custo total</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#F0EBE3]">
+            <tbody className="divide-y divide-[#E7EAEE]">
               {detalhes.map(d => (
-                <tr key={d.socio.id} className="hover:bg-[#FBFAF7] transition-colors">
+                <tr key={d.socio.id} className="hover:bg-[#F5F6F7] transition-colors">
                   <td className="py-3 text-ink font-medium">{d.socio.nome}</td>
                   <td className="px-3 py-3 text-right text-ink-secondary num">{fmt.moeda(d.socio.prolaboreMensal)}</td>
                   <td className="px-3 py-3 text-right text-danger num">{fmt.moeda(d.irpfMensal)}</td>
@@ -1870,7 +1877,7 @@ function CardProlabore({ analise }: { analise: AnaliseProlabore }) {
             </tbody>
             {detalhes.length > 1 && (
               <tfoot>
-                <tr className="border-t-2 border-[#E4DDD2] bg-[#FBFAF7]">
+                <tr className="border-t-2 border-[#D9DDE3] bg-[#F5F6F7]">
                   <td className="py-3 font-bold text-xs uppercase tracking-wider text-ink-secondary">Total</td>
                   <td className="px-3 py-3 text-right font-bold text-ink num">{fmt.moeda(analise.totalProlabore)}</td>
                   <td className="px-3 py-3 text-right font-bold text-danger num">{fmt.moeda(totalIrpf)}</td>
@@ -1886,31 +1893,31 @@ function CardProlabore({ analise }: { analise: AnaliseProlabore }) {
 
       {/* Resumo */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[#FDECEC] border border-[#F4A9A5] rounded-xl p-4">
-          <p className="text-xs text-[#B42318] font-semibold uppercase tracking-wide">Custo total bruto</p>
-          <p className="text-xl font-bold num text-[#B42318] mt-1">{fmt.moeda(custoTotalBruto)}<span className="text-xs font-normal">/mês</span></p>
-          <p className="text-xs text-[#B42318] opacity-70 mt-0.5">{fmt.moeda(custoTotalBruto * 12)}/ano</p>
+        <div className="bg-[#FFE7E5] border border-[#FEAAA4] rounded-xl p-4">
+          <p className="text-xs text-[#7E0214] font-semibold uppercase tracking-wide">Custo total bruto</p>
+          <p className="text-xl font-bold num text-[#7E0214] mt-1">{fmt.moeda(custoTotalBruto)}<span className="text-xs font-normal">/mês</span></p>
+          <p className="text-xs text-[#7E0214] opacity-70 mt-0.5">{fmt.moeda(custoTotalBruto * 12)}/ano</p>
         </div>
         {beneficioFiscalEmpresa > 0 ? (
-          <div className="bg-[#E7F4ED] border border-[#A8D5BC] rounded-xl p-4">
-            <p className="text-xs text-[#2F7D57] font-semibold uppercase tracking-wide">Economia IRPJ/CSLL (LR)</p>
-            <p className="text-xl font-bold num text-[#2F7D57] mt-1">−{fmt.moeda(beneficioFiscalEmpresa)}<span className="text-xs font-normal">/mês</span></p>
-            <p className="text-xs text-[#2F7D57] opacity-70 mt-0.5">24% sobre pró-labore total</p>
+          <div className="bg-[#E2F4E4] border border-[#9CD3A7] rounded-xl p-4">
+            <p className="text-xs text-[#005221] font-semibold uppercase tracking-wide">Economia IRPJ/CSLL (LR)</p>
+            <p className="text-xl font-bold num text-[#005221] mt-1">−{fmt.moeda(beneficioFiscalEmpresa)}<span className="text-xs font-normal">/mês</span></p>
+            <p className="text-xs text-[#005221] opacity-70 mt-0.5">24% sobre pró-labore total</p>
           </div>
         ) : (
-          <div className="bg-[#FBFAF7] border border-[#E4DDD2] rounded-xl p-4">
+          <div className="bg-[#F5F6F7] border border-[#D9DDE3] rounded-xl p-4">
             <p className="text-xs text-ink-muted font-semibold uppercase tracking-wide">LP — sem dedução</p>
             <p className="text-sm text-ink-muted leading-relaxed mt-1">Pró-labore não reduz base de IRPJ no Lucro Presumido</p>
           </div>
         )}
-        <div className={`rounded-xl p-4 border ${custoLiquido > 0 ? 'bg-[#FDECEC] border-[#F4A9A5]' : 'bg-[#E7F4ED] border-[#A8D5BC]'}`}>
-          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: custoLiquido > 0 ? '#B42318' : '#2F7D57' }}>
+        <div className={`rounded-xl p-4 border ${custoLiquido > 0 ? 'bg-[#FFE7E5] border-[#FEAAA4]' : 'bg-[#E2F4E4] border-[#9CD3A7]'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: custoLiquido > 0 ? '#7E0214' : '#005221' }}>
             Custo líquido vs. distribuição
           </p>
-          <p className={`text-xl font-bold num mt-1 ${custoLiquido > 0 ? 'text-[#B42318]' : 'text-[#2F7D57]'}`}>
+          <p className={`text-xl font-bold num mt-1 ${custoLiquido > 0 ? 'text-[#7E0214]' : 'text-[#005221]'}`}>
             {fmt.moeda(custoLiquido)}<span className="text-xs font-normal">/mês</span>
           </p>
-          <p className="text-xs opacity-70 mt-0.5" style={{ color: custoLiquido > 0 ? '#B42318' : '#2F7D57' }}>
+          <p className="text-xs opacity-70 mt-0.5" style={{ color: custoLiquido > 0 ? '#7E0214' : '#005221' }}>
             {fmt.moeda(custoLiquido * 12)}/ano a mais que distribuição
           </p>
         </div>
@@ -1938,8 +1945,8 @@ function CardRiscoProLabore({ distribuicao, proLabore, nivel }: { distribuicao: 
   const meta = {
     alto:   { cls: 'bg-danger-soft border-danger-border',   txt: 'text-danger',  label: 'Atenção alta' },
     medio:  { cls: 'bg-warning-soft border-warning-border', txt: 'text-warning', label: 'Atenção moderada' },
-    baixo:  { cls: 'bg-[#FBFAF7] border-[#E4DDD2]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
-    nenhum: { cls: 'bg-[#FBFAF7] border-[#E4DDD2]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
+    baixo:  { cls: 'bg-[#F5F6F7] border-[#D9DDE3]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
+    nenhum: { cls: 'bg-[#F5F6F7] border-[#D9DDE3]',         txt: 'text-ink-secondary', label: 'Atenção baixa' },
   }[nivel]
 
   const riscos = [
@@ -1976,7 +1983,7 @@ function CardRiscoProLabore({ distribuicao, proLabore, nivel }: { distribuicao: 
       <div className="space-y-2.5">
         {riscos.map((r, i) => (
           <div key={i} className="flex gap-2.5">
-            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${nivel === 'alto' ? 'bg-danger' : nivel === 'medio' ? 'bg-warning' : 'bg-[#9A9286]'}`} />
+            <span className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${nivel === 'alto' ? 'bg-danger' : nivel === 'medio' ? 'bg-warning' : 'bg-[#6C7684]'}`} />
             <div>
               <p className="text-sm font-semibold text-ink">{r.t}</p>
               <p className="text-xs text-ink-secondary leading-relaxed">{r.d}</p>
@@ -2028,13 +2035,13 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
             {(fatorR * 100).toFixed(1)}% {jaEstaNoIII ? '≥ 28%' : '< 28%'}
           </span>
         </div>
-        <div className="relative h-2 bg-[#E4DDD2] rounded-full overflow-hidden">
+        <div className="relative h-2 bg-[#D9DDE3] rounded-full overflow-hidden">
           <div
             className={`h-full rounded-full transition-all duration-500 ${jaEstaNoIII ? 'bg-success' : 'bg-warning'}`}
             style={{ width: `${pctBarra}%` }}
           />
           {/* Marcador do limiar em 28% */}
-          <div className="absolute top-0 h-full w-px bg-[#9A9286]" style={{ left: '100%' }} />
+          <div className="absolute top-0 h-full w-px bg-[#6C7684]" style={{ left: '100%' }} />
         </div>
         <div className="flex justify-between text-xs text-ink-muted">
           <span>0%</span>
@@ -2044,17 +2051,17 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
 
       {/* Cards comparativos */}
       <div className="grid grid-cols-2 gap-3">
-        <div className={`rounded-xl border p-4 space-y-1 ${jaEstaNoIII ? 'bg-[#E7F4ED] border-[#A8D5BC]' : 'bg-[#FBFAF7] border-[#E4DDD2]'}`}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#2F7D57]">Anexo III</p>
-          <p className="text-lg font-bold num text-[#2F7D57]">{fmt.pct(aliquotaAnexoIII)}</p>
-          <p className="text-xs text-[#5F5A52]">Folha ≥ 28% do fat.</p>
-          <p className="text-xs font-medium text-[#2F7D57] num">{fmt.moeda(faturamentoMensal * aliquotaAnexoIII)}/mês</p>
+        <div className={`rounded-xl border p-4 space-y-1 ${jaEstaNoIII ? 'bg-[#E2F4E4] border-[#9CD3A7]' : 'bg-[#F5F6F7] border-[#D9DDE3]'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#005221]">Anexo III</p>
+          <p className="text-lg font-bold num text-[#005221]">{fmt.pct(aliquotaAnexoIII)}</p>
+          <p className="text-xs text-[#4E5865]">Folha ≥ 28% do fat.</p>
+          <p className="text-xs font-medium text-[#005221] num">{fmt.moeda(faturamentoMensal * aliquotaAnexoIII)}/mês</p>
         </div>
-        <div className={`rounded-xl border p-4 space-y-1 ${!jaEstaNoIII ? 'bg-[#FFF4DA] border-[#F4C97A]' : 'bg-[#FBFAF7] border-[#E4DDD2]'}`}>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#B7791F]">Anexo V</p>
-          <p className="text-lg font-bold num text-[#B7791F]">{fmt.pct(aliquotaAnexoV)}</p>
-          <p className="text-xs text-[#5F5A52]">Folha &lt; 28% do fat.</p>
-          <p className="text-xs font-medium text-[#B7791F] num">{fmt.moeda(faturamentoMensal * aliquotaAnexoV)}/mês</p>
+        <div className={`rounded-xl border p-4 space-y-1 ${!jaEstaNoIII ? 'bg-[#F7ECD9] border-[#E1BF84]' : 'bg-[#F5F6F7] border-[#D9DDE3]'}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#573D00]">Anexo V</p>
+          <p className="text-lg font-bold num text-[#573D00]">{fmt.pct(aliquotaAnexoV)}</p>
+          <p className="text-xs text-[#4E5865]">Folha &lt; 28% do fat.</p>
+          <p className="text-xs font-medium text-[#573D00] num">{fmt.moeda(faturamentoMensal * aliquotaAnexoV)}/mês</p>
         </div>
       </div>
 
@@ -2075,7 +2082,7 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
       )}
 
       {/* Planejamento do Anexo III — pró-labore para manter o Fator R + impacto no IRPF */}
-      <div className="rounded-xl border border-[#C4BDB4] bg-[#FBFAF7] p-4 space-y-2">
+      <div className="rounded-xl border border-[#AFB7C0] bg-[#F5F6F7] p-4 space-y-2">
         <p className="text-xs font-semibold text-ink uppercase tracking-wide">Manter o Anexo III — pró-labore x IRPF</p>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
           <span className="text-ink-muted">Pró-labore alvo (28% do fat.)</span>
@@ -2084,8 +2091,8 @@ function CardFatorR({ analise }: { analise: AnaliseFatorR }) {
           <span className="text-right num text-danger">{fmt.moeda(irpfProLaboreMensal)}/mês</span>
           <span className="text-ink-muted">(−) INSS segurado (11%)</span>
           <span className="text-right num text-danger">{fmt.moeda(inssSeguradoProLaboreMensal)}/mês</span>
-          <span className="text-ink-secondary font-medium border-t border-[#E4DDD2] pt-1">Custo pessoal de manter o III</span>
-          <span className="text-right num text-danger font-semibold border-t border-[#E4DDD2] pt-1">{fmt.moeda(custoManterAnexoIIIMensal)}/mês</span>
+          <span className="text-ink-secondary font-medium border-t border-[#D9DDE3] pt-1">Custo pessoal de manter o III</span>
+          <span className="text-right num text-danger font-semibold border-t border-[#D9DDE3] pt-1">{fmt.moeda(custoManterAnexoIIIMensal)}/mês</span>
           <span className="text-ink-secondary font-medium">(+) Economia no DAS (V→III)</span>
           <span className="text-right num text-success font-semibold">{fmt.moeda(diferencaMensal)}/mês</span>
         </div>
@@ -2300,7 +2307,7 @@ function CardPisCofinsVsCBS({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         {/* PIS/COFINS atual */}
-        <div className="rounded-xl border border-border bg-[#FBFAF7] p-4 space-y-2">
+        <div className="rounded-xl border border-border bg-[#F5F6F7] p-4 space-y-2">
           <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide">PIS/COFINS hoje (DAS)</div>
           <div className="text-2xl font-black text-info num">{fmt.moeda(pisCofinsAtualMensal)}</div>
           <div className="text-xs text-ink-muted num">{fmt.pct(aliquotaPisCofins)} efetivo</div>
@@ -2310,7 +2317,7 @@ function CardPisCofinsVsCBS({
         </div>
 
         {/* CBS bruta IVA Dual */}
-        <div className="rounded-xl border border-border bg-[#FBFAF7] p-4 space-y-2">
+        <div className="rounded-xl border border-border bg-[#F5F6F7] p-4 space-y-2">
           <div className="text-xs font-semibold text-ink-muted uppercase tracking-wide">CBS bruta (IVA Dual)</div>
           <div className="text-2xl font-black text-ink num">{fmt.moeda(cbsBrutaMensal)}</div>
           <div className="text-xs text-ink-muted">
@@ -2433,34 +2440,34 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
       {/* T-account visual: Débitos vs Créditos */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {/* Débito */}
-        <div className="bg-[#FDECEC] border border-[#F4A9A5] rounded-xl p-4">
-          <p className="text-xs text-[#B42318] font-semibold uppercase tracking-wide">Débito CBS/IBS</p>
-          <p className="text-xl font-bold num text-[#B42318] mt-1">{fmt.moeda(impostoIVABrutoMensal)}</p>
-          <p className="text-xs text-[#B42318] opacity-70 mt-0.5">
+        <div className="bg-[#FFE7E5] border border-[#FEAAA4] rounded-xl p-4">
+          <p className="text-xs text-[#7E0214] font-semibold uppercase tracking-wide">Débito CBS/IBS</p>
+          <p className="text-xl font-bold num text-[#7E0214] mt-1">{fmt.moeda(impostoIVABrutoMensal)}</p>
+          <p className="text-xs text-[#7E0214] opacity-70 mt-0.5">
             {fmt.pct(aliquotaIVABruta)} × {fmt.moeda(faturamentoMensal)} faturamento
           </p>
         </div>
 
         {/* Crédito */}
-        <div className="bg-[#E7F4ED] border border-[#A8D5BC] rounded-xl p-4">
-          <p className="text-xs text-[#2F7D57] font-semibold uppercase tracking-wide">Crédito sobre Insumos</p>
-          <p className="text-xl font-bold num text-[#2F7D57] mt-1">−{fmt.moeda(creditoReal)}</p>
-          <p className="text-xs text-[#2F7D57] opacity-70 mt-0.5">
+        <div className="bg-[#E2F4E4] border border-[#9CD3A7] rounded-xl p-4">
+          <p className="text-xs text-[#005221] font-semibold uppercase tracking-wide">Crédito sobre Insumos</p>
+          <p className="text-xl font-bold num text-[#005221] mt-1">−{fmt.moeda(creditoReal)}</p>
+          <p className="text-xs text-[#005221] opacity-70 mt-0.5">
             {fmt.pct(aliquotaIVABruta)} × {fmt.moeda(insumosMensais)} compras
           </p>
         </div>
 
         {/* Saldo */}
         <div className={`rounded-xl p-4 border ${posicaoCredora
-          ? 'bg-[#EFF6FF] border-[#93C5FD]'
-          : 'bg-[#FBFAF7] border-[#E4DDD2]'}`}>
-          <p className={`text-xs font-semibold uppercase tracking-wide ${posicaoCredora ? 'text-[#1E40AF]' : 'text-ink-muted'}`}>
+          ? 'bg-[#EFF6FF] border-[#93CEF0]'
+          : 'bg-[#F5F6F7] border-[#D9DDE3]'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wide ${posicaoCredora ? 'text-[#004766]' : 'text-ink-muted'}`}>
             {posicaoCredora ? 'Saldo Credor' : 'IVA Líquido (a pagar)'}
           </p>
-          <p className={`text-xl font-bold num mt-1 ${posicaoCredora ? 'text-[#1E40AF]' : 'text-ink'}`}>
+          <p className={`text-xl font-bold num mt-1 ${posicaoCredora ? 'text-[#004766]' : 'text-ink'}`}>
             {posicaoCredora ? `+${fmt.moeda(saldoCredor)}` : fmt.moeda(impostoIVALiquidoMensal)}
           </p>
-          <p className={`text-xs opacity-70 mt-0.5 ${posicaoCredora ? 'text-[#1E40AF]' : 'text-ink-muted'}`}>
+          <p className={`text-xs opacity-70 mt-0.5 ${posicaoCredora ? 'text-[#004766]' : 'text-ink-muted'}`}>
             {posicaoCredora ? 'acumula para ressarcimento' : `${fmt.moeda(impostoIVALiquidoMensal * 12)}/ano`}
           </p>
         </div>
@@ -2513,9 +2520,9 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
 
         {/* Crédito perdido por fornecedores Simples */}
         {pctFornecedoresSimples > 0 && creditoPerdido > 0 && (
-          <div className="bg-[#FFF7ED] border border-[#F5C27C] rounded-lg p-3 space-y-1">
-            <p className="font-semibold text-[#92400E]">Crédito reduzido — fornecedores Simples</p>
-            <p className="text-[#92400E] opacity-80">
+          <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-lg p-3 space-y-1">
+            <p className="font-semibold text-[#573D00]">Crédito reduzido — fornecedores Simples</p>
+            <p className="text-[#573D00] opacity-80">
               {pctFornecedoresSimples}% das compras vêm do Simples → crédito menor.
               Perda: <strong className="num">{fmt.moeda(creditoPerdido)}/mês</strong>.
             </p>
@@ -2524,11 +2531,11 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
 
         {/* Acumulação de créditos */}
         {acumulaCredito && (
-          <div className="bg-[#F0F7FF] border border-[#93C5FD] rounded-lg p-3 space-y-1">
-            <p className="font-semibold text-[#1E40AF]">
+          <div className="bg-[#DEF1FC] border border-[#93CEF0] rounded-lg p-3 space-y-1">
+            <p className="font-semibold text-[#004766]">
               {posicaoCredora ? '⊕ Posição credora' : 'Atenção — possível acumulação de créditos'}
             </p>
-            <p className="text-[#1E40AF] opacity-80 leading-relaxed">
+            <p className="text-[#004766] opacity-80 leading-relaxed">
               {exportacoesMensais > 0 && 'Exportações são imunes → crédito CBS dos insumos acumula para ressarcimento. '}
               {setor.reducao === 1 && 'Setor isento não gera débito mas pode ter crédito de insumos → solicite ressarcimento à RFB. '}
               {posicaoCredora && !exportacoesMensais && setor.reducao !== 1 && 'Créditos de insumos superam os débitos → solicite ressarcimento ou use como compensação.'}
@@ -2538,9 +2545,9 @@ function CardCreditoIVA({ resultados }: { resultados: ResultadoCalculo }) {
 
         {/* Crédito vedado */}
         {setor.creditoVedadoComprador && (
-          <div className="bg-[#FFF4DA] border border-[#F4C97A] rounded-lg p-3 space-y-1">
-            <p className="font-semibold text-[#B7791F]">⊘ Crédito vedado ao comprador</p>
-            <p className="text-[#B7791F] opacity-80">
+          <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-lg p-3 space-y-1">
+            <p className="font-semibold text-[#573D00]">⊘ Crédito vedado ao comprador</p>
+            <p className="text-[#573D00] opacity-80">
               Seu cliente B2B não pode creditar CBS nas compras deste setor (Arts. 401/407 Dec. 12.955/2026).
               A alíquota reduzida não gera vantagem competitiva na cadeia B2B.
             </p>
@@ -2623,17 +2630,17 @@ function CardJCP({ faturamentoMensal }: { faturamentoMensal: number }) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="bg-[#F0F7FF] border border-[#93C5FD] rounded-xl p-4">
-          <p className="text-xs text-[#1E40AF] font-semibold uppercase tracking-wide">JCP dedutível/mês</p>
-          <p className="text-xl font-bold num text-[#1E40AF] mt-1">{fmt.moeda(jcpMensal)}</p>
-          <p className="text-xs text-[#1E40AF] opacity-70 mt-0.5">base de dedução mensal</p>
+        <div className="bg-[#DEF1FC] border border-[#93CEF0] rounded-xl p-4">
+          <p className="text-xs text-[#004766] font-semibold uppercase tracking-wide">JCP dedutível/mês</p>
+          <p className="text-xl font-bold num text-[#004766] mt-1">{fmt.moeda(jcpMensal)}</p>
+          <p className="text-xs text-[#004766] opacity-70 mt-0.5">base de dedução mensal</p>
         </div>
-        <div className="bg-[#E7F4ED] border border-[#A8D5BC] rounded-xl p-4">
-          <p className="text-xs text-[#2F7D57] font-semibold uppercase tracking-wide">Economia IRPJ+CSLL/mês</p>
-          <p className="text-xl font-bold num text-[#2F7D57] mt-1">{fmt.moeda(economiaMensal)}</p>
-          <p className="text-xs text-[#2F7D57] opacity-70 mt-0.5">{fmt.moeda(economiaAnual)}/ano</p>
+        <div className="bg-[#E2F4E4] border border-[#9CD3A7] rounded-xl p-4">
+          <p className="text-xs text-[#005221] font-semibold uppercase tracking-wide">Economia IRPJ+CSLL/mês</p>
+          <p className="text-xl font-bold num text-[#005221] mt-1">{fmt.moeda(economiaMensal)}</p>
+          <p className="text-xs text-[#005221] opacity-70 mt-0.5">{fmt.moeda(economiaAnual)}/ano</p>
         </div>
-        <div className="bg-[#FBFAF7] border border-[#E4DDD2] rounded-xl p-4">
+        <div className="bg-[#F5F6F7] border border-[#D9DDE3] rounded-xl p-4">
           <p className="text-xs text-ink-muted font-semibold uppercase tracking-wide">Como usar</p>
           <p className="text-xs text-ink-secondary leading-relaxed mt-1">
             Registre a despesa de JCP na contabilidade e pague ao(s) sócio(s). O valor recebido pelo sócio tem
@@ -2698,22 +2705,22 @@ function CardCreditosICMS({ faturamentoMensal }: { faturamentoMensal: number }) 
       </div>
 
       {/* Cronograma de aproveitamento */}
-      <div className="overflow-x-auto rounded-lg border border-[#E4DDD2]">
+      <div className="overflow-x-auto rounded-lg border border-[#D9DDE3]">
         <table className="table-premium w-full text-sm">
           <thead>
-            <tr className="border-b border-[#E4DDD2]">
+            <tr className="border-b border-[#D9DDE3]">
               <th className="text-left py-2.5 px-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Ano</th>
               <th className="text-right py-2.5 px-3 text-ink-muted font-medium text-xs uppercase tracking-wide">% Aproveitável</th>
               <th className="text-right py-2.5 px-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Valor disponível</th>
               <th className="text-right py-2.5 px-3 text-ink-muted font-medium text-xs uppercase tracking-wide">Redução CBS/IBS</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#F0EBE3]">
+          <tbody className="divide-y divide-[#E7EAEE]">
             {cronograma.map(c => {
               const disponivel = aproveitamentoTotal * c.pct
               const reducaoCBS = disponivel / 12
               return (
-                <tr key={c.ano} className="hover:bg-[#FBFAF7]">
+                <tr key={c.ano} className="hover:bg-[#F5F6F7]">
                   <td className="py-2.5 px-3 font-semibold text-ink num">{c.ano}</td>
                   <td className="py-2.5 px-3 text-right text-ink-secondary num">{(c.pct * 100).toFixed(0)}%</td>
                   <td className="py-2.5 px-3 text-right text-ink-secondary num">{fmt.moeda(disponivel)}</td>
@@ -2905,23 +2912,23 @@ function CardSplitPayment({ impostoIVAMensal, impostoIVABrutoMensal, perfilClien
 
       {/* Resultado */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="bg-[#FFF7ED] border border-[#F5C27C] rounded-xl p-4">
-          <p className="text-xs text-[#92400E] font-semibold uppercase tracking-wide">Retido na liquidação/mês</p>
-          <p className="text-xl font-bold num text-[#92400E] mt-1">
+        <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-xl p-4">
+          <p className="text-xs text-[#573D00] font-semibold uppercase tracking-wide">Retido na liquidação/mês</p>
+          <p className="text-xl font-bold num text-[#573D00] mt-1">
             {fmt.moeda(impostoRetidoMensal)}<span className="text-xs font-normal">/mês</span>
           </p>
-          <p className="text-xs text-[#92400E] opacity-70 mt-0.5">
+          <p className="text-xs text-[#573D00] opacity-70 mt-0.5">
             {procedimento === 'padrao'
               ? `${pctEletronico}% do IVA líquido mensal`
               : <>{pctEletronico}% do débito bruto · sobra de {fmt.moeda(sobraRetidaMensal)} devolvida após a apuração</>}
           </p>
         </div>
-        <div className="bg-[#FDECEC] border border-[#F4A9A5] rounded-xl p-4">
-          <p className="text-xs text-[#B42318] font-semibold uppercase tracking-wide">Custo do float — anual</p>
-          <p className="text-xl font-bold num text-[#B42318] mt-1">
+        <div className="bg-[#FFE7E5] border border-[#FEAAA4] rounded-xl p-4">
+          <p className="text-xs text-[#7E0214] font-semibold uppercase tracking-wide">Custo do float — anual</p>
+          <p className="text-xl font-bold num text-[#7E0214] mt-1">
             {fmt.moeda(custoFloatAnual)}<span className="text-xs font-normal">/ano</span>
           </p>
-          <p className="text-xs text-[#B42318] opacity-70 mt-0.5">
+          <p className="text-xs text-[#7E0214] opacity-70 mt-0.5">
             {fmt.moeda(custoFloatMensal)}/mês · rendimento perdido sobre o período retido
           </p>
         </div>

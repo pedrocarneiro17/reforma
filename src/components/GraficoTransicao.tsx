@@ -69,11 +69,11 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ background: '#315C8C' }} />
+            <div className="w-3 h-3 rounded-sm" style={{ background: '#004766' }} />
             <span className="text-ink-secondary">Regime Atual</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm" style={{ background: '#2F7D57' }} />
+            <div className="w-3 h-3 rounded-sm" style={{ background: '#005221' }} />
             <span className="text-ink-secondary">IVA Dual</span>
           </div>
         </div>
@@ -82,16 +82,16 @@ export default function GraficoTransicao({ resultados }: GraficoTransicaoProps) 
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }} barSize={26}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E4DDD2" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#D9DDE3" vertical={false} />
             <XAxis
               dataKey="ano"
-              tick={{ fill: '#5F5A52', fontSize: 12, fontWeight: 600 }}
-              axisLine={{ stroke: '#E4DDD2' }}
+              tick={{ fill: '#4E5865', fontSize: 12, fontWeight: 600 }}
+              axisLine={{ stroke: '#D9DDE3' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={v => `R$ ${(v / 1000).toFixed(0)}k`}
-              tick={{ fill: '#9A9286', fontSize: 10 }}
+              tick={{ fill: '#6C7684', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
               domain={[0, maxValor]}

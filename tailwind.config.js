@@ -4,57 +4,65 @@ export default {
   theme: {
     extend: {
       colors: {
-        page:    '#F7F4EE',
-        subtle:  '#EFEAE1',
+        // Identidade Contajur (mesmo padrão do Tarefas): fundo branco, marinho pleno e o vermelho da marca como contraste.
+        page:    '#FFFFFF',
+        subtle:  '#EBEDF0',
         surface: '#FFFFFF',
-        raised:  '#FBFAF7',
-        border:  '#E4DDD2',
+        raised:  '#F5F6F7',
+        border:  '#D9DDE3',
 
         ink: {
-          DEFAULT: '#171717',
-          secondary: '#5F5A52',
-          muted:     '#9A9286',
-          faint:     '#C4BDB4',
+          DEFAULT: '#161B22',
+          secondary: '#4E5865',
+          muted:     '#6C7684',
+          faint:     '#AFB7C0',
         },
 
         prim: {
-          DEFAULT: '#111111',
-          hover:   '#2A2A2A',
-          soft:    '#EFEAE1',
+          DEFAULT: '#15335B',
+          hover:   '#284267',
+          soft:    '#EBEDF0',
+        },
+
+        marca: {
+          DEFAULT: '#A22029',
+          soft:    '#FFE7E5',
+          border:  '#FEAAA4',
         },
 
         success: {
-          DEFAULT: '#2F7D57',
-          soft:    '#E7F4ED',
-          border:  '#A8D5BC',
+          DEFAULT: '#005221',
+          soft:    '#E2F4E4',
+          border:  '#9CD3A7',
         },
         warning: {
-          DEFAULT: '#B7791F',
-          soft:    '#FFF4DA',
-          border:  '#F4C97A',
+          DEFAULT: '#573D00',
+          soft:    '#F7ECD9',
+          border:  '#E1BF84',
         },
         danger: {
-          DEFAULT: '#B42318',
-          soft:    '#FDECEC',
-          border:  '#F4A9A5',
+          DEFAULT: '#7E0214',
+          soft:    '#FFE7E5',
+          border:  '#FEAAA4',
         },
         info: {
-          DEFAULT: '#315C8C',
-          soft:    '#EAF1FA',
-          border:  '#9BBCE0',
+          DEFAULT: '#004766',
+          soft:    '#DEF1FC',
+          border:  '#93CEF0',
         },
+        // "gold" era o destaque dourado; agora é o marinho claro (destaque sem competir com o vermelho de alerta).
         gold: {
-          DEFAULT: '#C49A4A',
-          dark:    '#8B6914',
-          soft:    '#F4E8C8',
-          border:  '#E0C882',
+          DEFAULT: '#234F85',
+          dark:    '#15335B',
+          soft:    '#EBEDF0',
+          border:  '#D9DDE3',
         },
       },
 
       fontFamily: {
-        display: ['"Fraunces"', 'Georgia', 'serif'],
-        sans:    ['"IBM Plex Sans"', 'system-ui', 'sans-serif'],
-        mono:    ['"IBM Plex Mono"', 'Menlo', 'monospace'],
+        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        sans:    ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        mono:    ['"Space Grotesk"', 'system-ui', 'sans-serif'],
       },
 
       fontSize: {
@@ -66,15 +74,15 @@ export default {
         sm: '8px',
         md: '12px',
         lg: '16px',
-        xl: '20px',
-        '2xl': '24px',
+        xl: '18px',
+        '2xl': '18px',
       },
 
       boxShadow: {
-        card:   '0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04)',
-        lifted: '0 4px 12px rgba(0,0,0,0.08), 0 16px 40px rgba(0,0,0,0.06)',
-        input:  '0 0 0 3px rgba(196,154,74,0.14)',
-        btn:    '0 2px 8px rgba(0,0,0,0.18)',
+        card:   'none',
+        lifted: 'none',
+        input:  '0 0 0 3px rgba(21,51,91,0.18)',
+        btn:    'none',
       },
 
       animation: {

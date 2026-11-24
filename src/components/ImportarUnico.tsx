@@ -87,7 +87,7 @@ export default function ImportarUnico({ onImport }: ImportarUnicoProps) {
           tabIndex={0}
           onKeyDown={e => { if ((e.key === 'Enter' || e.key === ' ') && estado !== 'lendo') inputRef.current?.click() }}
           className={`rounded-xl border-2 border-dashed px-4 py-6 text-center cursor-pointer transition-colors
-            ${arrasta ? 'border-info bg-info-soft' : 'border-[#C4BDB4] hover:border-info hover:bg-[#FBFAF7]'}
+            ${arrasta ? 'border-info bg-info-soft' : 'border-[#AFB7C0] hover:border-info hover:bg-[#F5F6F7]'}
             ${estado === 'lendo' ? 'opacity-70 cursor-wait' : ''}`}
         >
           <input ref={inputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={e => processar(e.target.files?.[0])} />
