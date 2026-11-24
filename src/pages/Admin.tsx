@@ -64,23 +64,33 @@ export default function Admin({ onVoltar }: { onVoltar: () => void }) {
 
   return (
     <div className="min-h-screen bg-page">
-      {/* Header */}
-      <header className="page-header">
-        <div className="flex items-center gap-3">
-          <button onClick={onVoltar} className="btn-secondary">
-            <ChevronLeft size={15} /> Simulador
-          </button>
-          <div>
-            <h1 className="page-title flex items-center gap-2">
-              <Shield size={18} className="text-prim" /> Painel Admin
-            </h1>
-            <p className="page-subtitle">Gerenciamento de usuários e simulações</p>
+      {/* Cabeçalho: bloco marinho com as barras da logo */}
+      <div className="px-6 sm:px-8 pt-6 max-w-5xl mx-auto">
+        <header className="bloco-marinho p-5 sm:p-6">
+          <svg aria-hidden focusable="false" viewBox="0 0 405 437" preserveAspectRatio="xMaxYMax meet" className="barras-marca">
+            <polygon points="0,437 0,333 57,300 57,437" />
+            <polygon points="117,437 117,261 174,222 174,437" />
+            <polygon points="231,437 231,176 288,126 288,437" />
+            <polygon points="348,437 348,67 405,0 405,437" />
+          </svg>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-4 min-w-0">
+              <button onClick={onVoltar} className="btn-pilula-branca">
+                <ChevronLeft size={15} /> Simulador
+              </button>
+              <div className="min-w-0">
+                <h1 className="font-display text-2xl font-bold flex items-center gap-2">
+                  <Shield size={20} /> Painel Admin
+                </h1>
+                <p className="text-[13px] apoio">Gerenciamento de usuários e simulações</p>
+              </div>
+            </div>
+            <button onClick={() => setModal(true)} className="btn-pilula-branca" style={{ marginRight: 80 }}>
+              <Plus size={15} /> Novo usuário
+            </button>
           </div>
-        </div>
-        <button onClick={() => setModal(true)} className="btn-primary">
-          <Plus size={15} /> Novo usuário
-        </button>
-      </header>
+        </header>
+      </div>
 
       <main className="px-6 sm:px-8 py-8 max-w-5xl mx-auto">
         {loading ? (

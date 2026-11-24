@@ -37,7 +37,7 @@ function Linha({ label, formula, valor, refLegal, destaque, negativo }: {
   negativo?: boolean
 }) {
   return (
-    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 py-2.5 ${destaque ? 'bg-[#FBFAF7]' : ''}`}>
+    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 py-2.5 ${destaque ? 'bg-[#F5F6F7]' : ''}`}>
       <div className="flex-1 min-w-[140px]">
         <div className={`text-sm ${destaque ? 'font-bold text-ink' : 'text-ink-secondary'}`}>{label}</div>
         {refLegal && <div className="text-[10px] text-ink-muted mt-0.5">{refLegal}</div>}

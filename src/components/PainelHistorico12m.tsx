@@ -169,17 +169,17 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
         <div className="h-60">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E4DDD2" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#D9DDE3" vertical={false} />
               <XAxis
                 dataKey="mes"
-                tick={{ fill: '#9A9286', fontSize: 10, fontWeight: 600 }}
-                axisLine={{ stroke: '#E4DDD2' }}
+                tick={{ fill: '#6C7684', fontSize: 10, fontWeight: 600 }}
+                axisLine={{ stroke: '#D9DDE3' }}
                 tickLine={false}
               />
               <YAxis
                 yAxisId="left"
                 tickFormatter={v => `R$${(v / 1000).toFixed(0)}k`}
-                tick={{ fill: '#9A9286', fontSize: 9 }}
+                tick={{ fill: '#6C7684', fontSize: 9 }}
                 axisLine={false}
                 tickLine={false}
                 width={58}
@@ -196,7 +196,7 @@ export default function PainelHistorico12m({ resultados }: PainelHistorico12mPro
                 />
               )}
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,0,0,0.03)' }} />
-              <Legend wrapperStyle={{ fontSize: '11px', color: '#9A9286', paddingTop: '8px' }} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#6C7684', paddingTop: '8px' }} />
               <Bar yAxisId="left" dataKey="Faturamento" fill="rgba(49,92,140,0.2)" radius={[3, 3, 0, 0]} barSize={18} />
               {temImpostosReais && (
                 <Bar yAxisId="left" dataKey="Impostos Reais Pagos" fill="rgba(192,138,64,0.6)" radius={[3, 3, 0, 0]} barSize={18} />

@@ -595,8 +595,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                       onClick={() => set('perfilClientes', p.value)}
                       className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-md border transition-all duration-150
                         ${sel
-                          ? 'bg-[#EFEAE1] border-[#9A9286] text-ink'
-                          : 'bg-white border-[#E4DDD2] text-ink-secondary hover:border-[#9A9286]'
+                          ? 'bg-[#EBEDF0] border-[#6C7684] text-ink'
+                          : 'bg-white border-[#D9DDE3] text-ink-secondary hover:border-[#6C7684]'
                         }`}
                     >
                       <span className="font-bold text-sm">{p.label}</span>
@@ -677,7 +677,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               onClick={() => setModoEntrada('simples')}
               className={`px-4 py-1.5 rounded text-xs font-medium transition-all duration-150
                 ${modoEntrada === 'simples'
-                  ? 'bg-white border border-[#E4DDD2] text-ink shadow-sm'
+                  ? 'bg-white border border-[#D9DDE3] text-ink shadow-sm'
                   : 'text-ink-muted hover:text-ink-secondary'
                 }`}
             >
@@ -688,7 +688,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               onClick={() => setModoEntrada('detalhado')}
               className={`px-4 py-1.5 rounded text-xs font-medium transition-all duration-150
                 ${modoEntrada === 'detalhado'
-                  ? 'bg-white border border-[#E4DDD2] text-ink shadow-sm'
+                  ? 'bg-white border border-[#D9DDE3] text-ink shadow-sm'
                   : 'text-ink-muted hover:text-ink-secondary'
                 }`}
             >
@@ -779,7 +779,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                         { value: 'indireta', label: 'Via comercial exportadora', desc: 'tpRBSN 4 — CBS/IBS suspensos' },
                       ] as const).map(op => (
                         <label key={op.value} className={`flex items-start gap-2 cursor-pointer rounded-lg border px-2.5 py-2 transition-colors
-                          ${tipoExportacao === op.value ? 'border-[#6B5E4E] bg-white' : 'border-[#E4DDD2] bg-white hover:border-[#9A9286]'}`}>
+                          ${tipoExportacao === op.value ? 'border-[#4E5865] bg-white' : 'border-[#D9DDE3] bg-white hover:border-[#6C7684]'}`}>
                           <input type="radio" name="tipoExportacao" value={op.value}
                             checked={tipoExportacao === op.value}
                             onChange={() => setTipoExportacao(op.value)}
@@ -902,9 +902,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
         {/* ── Fornecedores no Simples — LP e LR com insumos ───────────── */}
         {mostrarFornecedorSimples && (
-          <div className="border border-[#E4DDD2] rounded-xl p-4 space-y-3 bg-[#FBFAF7]">
+          <div className="border border-[#D9DDE3] rounded-xl p-4 space-y-3 bg-[#F5F6F7]">
             <div className="flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9286" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C7684" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
               <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">Crédito de IVA — Mix de Fornecedores</span>
@@ -924,7 +924,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 step={1}
                 value={dados.pctFornecedoresSimples}
                 onChange={e => setDados(prev => ({ ...prev, pctFornecedoresSimples: Number(e.target.value) }))}
-                className="w-full accent-[#111111]"
+                className="w-full accent-[#15335B]"
               />
               <div className="flex justify-between text-xs text-ink-muted">
                 <span>0% — todos no regime pleno</span>
@@ -938,7 +938,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 const creditoPerdido = insumos * fracSimples * (aliqIVA - 0.0588)
                 const aliqEfetiva = fracSimples * 0.0588 + (1 - fracSimples) * aliqIVA
                 return (
-                  <div className="bg-[#FFF4DA] border border-[#F4C97A] rounded-lg px-3 py-2 text-xs text-[#B7791F] space-y-0.5">
+                  <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-lg px-3 py-2 text-xs text-[#573D00] space-y-0.5">
                     <p>Crédito efetivo sobre insumos: <strong className="num">{(aliqEfetiva * 100).toFixed(2)}%</strong> (vs. {(aliqIVA * 100).toFixed(2)}% sem restrição)</p>
                     <p>Crédito perdido estimado: <strong className="num">−{fmt.moeda(creditoPerdido)}/mês</strong> ({fmt.moeda(creditoPerdido * 12)}/ano)</p>
                     {fat > 0 && <p>Impacto na alíquota efetiva: <strong className="num">+{((creditoPerdido / fat) * 100).toFixed(2)}%</strong></p>}
@@ -952,9 +952,9 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
         {/* ── Anexo Simples Nacional ───────────────────────────────────── */}
         {mostrarAnexoSimples && (
-          <div className="border border-[#E4DDD2] rounded-xl p-4 space-y-3 bg-[#FBFAF7]">
+          <div className="border border-[#D9DDE3] rounded-xl p-4 space-y-3 bg-[#F5F6F7]">
             <div className="flex items-center gap-2">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9286" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C7684" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
               </svg>
               <span className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">Anexo do Simples Nacional</span>
@@ -972,8 +972,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               ] as const).map(op => (
                 <label key={op.value} className={`flex items-start gap-3 cursor-pointer rounded-lg border px-3 py-2.5 transition-colors
                   ${anexoSimples === op.value
-                    ? 'border-[#6B5E4E] bg-white'
-                    : 'border-[#E4DDD2] bg-white hover:border-[#9A9286]'
+                    ? 'border-[#4E5865] bg-white'
+                    : 'border-[#D9DDE3] bg-white hover:border-[#6C7684]'
                   }`}>
                   <input
                     type="radio"
@@ -994,7 +994,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               <p className="text-xs text-warning font-medium">Selecione o anexo para um cálculo preciso. Sem seleção, o sistema infere pelo tipo de setor.</p>
             )}
             {atividadeSN && (
-              <div className="rounded-lg border border-[#E4DDD2] bg-white px-3 py-2.5">
+              <div className="rounded-lg border border-[#D9DDE3] bg-white px-3 py-2.5">
                 <span className="block text-[10px] font-semibold text-ink-muted uppercase tracking-wide">
                   Código da atividade nas notas fiscais (cAtivSN) — a partir de 2027
                 </span>
@@ -1012,7 +1012,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
             {/* ── Atividade mista — dois anexos ─────────────────────── */}
             {anexoSimples && (
-              <div className="mt-3 border-t border-[#E4DDD2] pt-3 space-y-3">
+              <div className="mt-3 border-t border-[#D9DDE3] pt-3 space-y-3">
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -1021,7 +1021,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                       setAtivoAnexoMisto(e.target.checked)
                       if (!e.target.checked) setAnexoSimples2('')
                     }}
-                    className="w-4 h-4 accent-[#111111]"
+                    className="w-4 h-4 accent-[#15335B]"
                   />
                   <span className="text-xs font-semibold text-ink-secondary">
                     Atividade mista — empresa fatura em dois anexos distintos
@@ -1049,8 +1049,8 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                         ] as const).filter(op => op.value !== anexoSimples).map(op => (
                           <label key={op.value} className={`flex items-center gap-2.5 cursor-pointer rounded-lg border px-3 py-2 transition-colors
                             ${anexoSimples2 === op.value
-                              ? 'border-[#6B5E4E] bg-white'
-                              : 'border-[#E4DDD2] bg-white hover:border-[#9A9286]'
+                              ? 'border-[#4E5865] bg-white'
+                              : 'border-[#D9DDE3] bg-white hover:border-[#6C7684]'
                             }`}>
                             <input
                               type="radio"
@@ -1080,7 +1080,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                           step={1}
                           value={pctAnexo1}
                           onChange={e => setPctAnexo1(Number(e.target.value))}
-                          className="w-full accent-[#111111]"
+                          className="w-full accent-[#15335B]"
                         />
                         <div className="flex justify-between text-xs text-ink-muted">
                           <span>{pctAnexo1}% — Anexo {anexoSimples}</span>
@@ -1108,7 +1108,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
       {/* ── Incorporação Imobiliária — redutor de ajuste + social ────────── */}
       {setorSelecionado?.regimeImobiliario && (
-        <div className="card p-5 space-y-4 border-l-4 border-l-[#C2A96A]">
+        <div className="card p-5 space-y-4 border-l-4 border-l-[#234F85]">
           <div>
             <h3 className="text-sm font-semibold text-ink">Incorporação Imobiliária — Base de Cálculo Real</h3>
             <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
@@ -1146,7 +1146,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
               <p className="text-xs text-ink-muted">R$100.000 × unidades residenciais/mês ou R$30.000 × lotes/mês</p>
             </div>
           </div>
-          <div className="bg-[#FFF7ED] border border-[#F5C27C] rounded-lg px-3 py-2 text-xs text-[#92400E]">
+          <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-lg px-3 py-2 text-xs text-[#573D00]">
             Exemplo: vende 1 apartamento/mês a R$500k, custo 70% = R$350k, redutor social R$100k → base CBS = <strong>R$50k</strong> (não R$500k)
           </div>
         </div>
@@ -1208,7 +1208,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
 
       {/* ── Gorjeta — excluída da base IBS/CBS (Art. 274 LC 214/2025) ──────── */}
       {mostrarGorjeta && (
-        <div className="card p-5 space-y-3 border-l-4 border-l-[#C2A96A]">
+        <div className="card p-5 space-y-3 border-l-4 border-l-[#234F85]">
           <div>
             <h3 className="text-sm font-semibold text-ink">Gorjeta — Exclusão da Base IBS/CBS</h3>
             <p className="text-xs text-ink-muted mt-0.5 leading-relaxed">
@@ -1307,7 +1307,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
                 key={val}
                 type="button"
                 onClick={() => setVersaoMedicina(val)}
-                className={`rounded-xl border px-4 py-3 text-left transition-colors ${versaoMedicina === val ? 'border-info bg-info-soft' : 'border-[#C4BDB4] hover:border-info bg-white'}`}
+                className={`rounded-xl border px-4 py-3 text-left transition-colors ${versaoMedicina === val ? 'border-info bg-info-soft' : 'border-[#AFB7C0] hover:border-info bg-white'}`}
               >
                 <span className="block text-sm font-semibold text-ink">{titulo}</span>
                 <span className="block text-xs text-ink-muted num">redução {pct}</span>
@@ -1440,7 +1440,7 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
             const csll = lucro * 0.09
             const isLP = dados.regime === 'lucro_presumido'
             return (
-              <div className="bg-[#FBFAF7] border border-border rounded-lg p-3 text-xs space-y-1.5">
+              <div className="bg-[#F5F6F7] border border-border rounded-lg p-3 text-xs space-y-1.5">
                 <div className="font-semibold text-ink mb-2">
                   {isLP ? 'Prévia — contribuição previdenciária patronal' : 'Prévia da apuração mensal (Lucro Real)'}
                 </div>
@@ -1894,19 +1894,19 @@ export default function FormularioEntrada({ onCalcular }: FormularioEntradaProps
           )}
 
           {/* Alerta Imposto Seletivo sobre bebidas */}
-          <div className="bg-[#FFF4DA] border border-[#F4C97A] rounded-lg px-3 py-2 text-xs text-[#92400E] leading-relaxed">
+          <div className="bg-[#F7ECD9] border border-[#E1BF84] rounded-lg px-3 py-2 text-xs text-[#573D00] leading-relaxed">
             <strong>Imposto Seletivo:</strong> bebidas alcoólicas e açucaradas (dentro da fração cheia) sofrerão IS além do IBS/CBS. A alíquota ainda <strong>não foi fixada</strong> por lei — não está incluída no cálculo.
           </div>
 
           {/* Dica ICMS alimentos / modo 12 meses */}
           {modoEntrada !== 'detalhado' && (
-            <div className="bg-[#EAF1FA] border border-[#9BBCE0] rounded-lg px-3 py-2 text-xs text-[#315C8C] leading-relaxed">
+            <div className="bg-[#DEF1FC] border border-[#93CEF0] rounded-lg px-3 py-2 text-xs text-[#004766] leading-relaxed">
               <strong>Dica:</strong> o ICMS atual sobre alimentos costuma ser reduzido em vários estados, então a estimativa de comércio pode superestimar a carga de hoje. Para mais precisão, use o modo <strong>Histórico real — 12 meses</strong> (informa os impostos efetivamente pagos).
             </div>
           )}
 
           {/* Crédito amplo */}
-          <div className="bg-[#E7F4ED] border border-[#A8D5BC] rounded-lg px-3 py-2 text-xs text-[#166534] leading-relaxed">
+          <div className="bg-[#E2F4E4] border border-[#9CD3A7] rounded-lg px-3 py-2 text-xs text-[#166534] leading-relaxed">
             <strong>Crédito amplo:</strong> energia das lojas, aluguel, refrigeração, logística e serviços passam a gerar crédito de IBS/CBS. Para redes com várias lojas, informe esses valores em <strong>“despesas creditáveis adicionais”</strong> — o ganho costuma ser relevante.
           </div>
         </div>
@@ -2081,22 +2081,22 @@ function RegimeCombobox({ value, onChange, grupos }: RegimeComboboxProps) {
         type="button"
         onClick={() => setAberto(o => !o)}
         className={`w-full flex items-center justify-between gap-2 px-4 py-[11px] rounded-xl border-[1.5px] text-sm text-left transition-colors duration-150 bg-white
-          ${aberto ? 'border-[#C49A4A] shadow-[0_0_0_3px_rgba(196,154,74,0.14)]' : 'border-[#E4DDD2] hover:border-[#9A9286]'}`}
+          ${aberto ? 'border-[#234F85] shadow-[0_0_0_3px_rgba(21,51,91,0.18)]' : 'border-[#D9DDE3] hover:border-[#6C7684]'}`}
       >
-        <span className={selecionado ? 'text-[#171717] font-medium' : 'text-[#C4BDB4]'}>
+        <span className={selecionado ? 'text-[#161B22] font-medium' : 'text-[#AFB7C0]'}>
           {selecionado ? selecionado.label : 'Selecione o regime tributário...'}
         </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9286" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C7684" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 9l-7 7-7-7"/>
         </svg>
       </button>
 
       {/* Dropdown */}
       {aberto && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-[#E4DDD2] rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-white border border-[#D9DDE3] rounded-xl shadow-lg overflow-hidden">
           {grupos.map(grupo => (
             <div key={grupo.label}>
-              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9A9286] bg-[#FBFAF7] border-b border-[#F0EBE3]">
+              <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6C7684] bg-[#F5F6F7] border-b border-[#E7EAEE]">
                 {grupo.label}
               </p>
               {grupo.regimes.map(r => {
@@ -2107,14 +2107,14 @@ function RegimeCombobox({ value, onChange, grupos }: RegimeComboboxProps) {
                     type="button"
                     onClick={() => selecionar(r.value)}
                     className={`w-full flex items-start justify-between gap-3 px-4 py-3 text-left transition-colors duration-100
-                      ${sel ? 'bg-[#EFEAE1]' : 'hover:bg-[#FBFAF7]'}`}
+                      ${sel ? 'bg-[#EBEDF0]' : 'hover:bg-[#F5F6F7]'}`}
                   >
                     <div className="min-w-0">
-                      <p className={`text-sm font-semibold ${sel ? 'text-[#171717]' : 'text-[#5F5A52]'}`}>{r.label}</p>
-                      <p className="text-xs text-[#9A9286] mt-0.5 leading-relaxed">{r.desc}</p>
+                      <p className={`text-sm font-semibold ${sel ? 'text-[#161B22]' : 'text-[#4E5865]'}`}>{r.label}</p>
+                      <p className="text-xs text-[#6C7684] mt-0.5 leading-relaxed">{r.desc}</p>
                     </div>
                     {sel && (
-                      <svg className="flex-shrink-0 mt-1 text-[#171717]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <svg className="flex-shrink-0 mt-1 text-[#161B22]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="20 6 9 17 4 12"/>
                       </svg>
                     )}
@@ -2187,23 +2187,23 @@ function SetorCombobox({ value, onChange, setoresPorGrupo }: SetorComboboxProps)
         type="button"
         onClick={abrir}
         className={`w-full flex items-center justify-between gap-2 px-4 py-[11px] rounded-xl border-[1.5px] text-sm text-left transition-colors duration-150
-          ${aberto ? 'border-[#C49A4A] shadow-[0_0_0_3px_rgba(196,154,74,0.14)]' : 'border-[#E4DDD2] hover:border-[#9A9286]'}
+          ${aberto ? 'border-[#234F85] shadow-[0_0_0_3px_rgba(21,51,91,0.18)]' : 'border-[#D9DDE3] hover:border-[#6C7684]'}
           bg-white`}
       >
-        <span className={selecionado ? 'text-[#171717]' : 'text-[#C4BDB4]'}>
+        <span className={selecionado ? 'text-[#161B22]' : 'text-[#AFB7C0]'}>
           {selecionado ? selecionado.label : 'Selecione ou pesquise o setor...'}
         </span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9286" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6C7684" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 9l-7 7-7-7"/>
         </svg>
       </button>
 
       {/* Dropdown */}
       {aberto && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-[#E4DDD2] rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-white border border-[#D9DDE3] rounded-xl shadow-lg overflow-hidden">
           {/* Campo de busca */}
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-[#E4DDD2]">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9A9286" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-[#D9DDE3]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6C7684" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
             </svg>
             <input
@@ -2212,10 +2212,10 @@ function SetorCombobox({ value, onChange, setoresPorGrupo }: SetorComboboxProps)
               value={busca}
               onChange={e => setBusca(e.target.value)}
               placeholder="Pesquisar setor..."
-              className="flex-1 text-sm outline-none bg-transparent text-[#171717] placeholder:text-[#C4BDB4]"
+              className="flex-1 text-sm outline-none bg-transparent text-[#161B22] placeholder:text-[#AFB7C0]"
             />
             {busca && (
-              <button type="button" onClick={() => setBusca('')} className="text-[#9A9286] hover:text-[#171717]">
+              <button type="button" onClick={() => setBusca('')} className="text-[#6C7684] hover:text-[#161B22]">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -2226,11 +2226,11 @@ function SetorCombobox({ value, onChange, setoresPorGrupo }: SetorComboboxProps)
           {/* Lista */}
           <div className="max-h-64 overflow-y-auto">
             {totalFiltrado === 0 ? (
-              <p className="px-4 py-3 text-sm text-[#9A9286]">Nenhum setor encontrado.</p>
+              <p className="px-4 py-3 text-sm text-[#6C7684]">Nenhum setor encontrado.</p>
             ) : (
               Object.entries(filtrado).map(([grupo, lista]) => (
                 <div key={grupo}>
-                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#9A9286] bg-[#FBFAF7] border-b border-[#F0EBE3]">
+                  <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#6C7684] bg-[#F5F6F7] border-b border-[#E7EAEE]">
                     {grupo}
                   </p>
                   {lista.map(s => (
@@ -2240,8 +2240,8 @@ function SetorCombobox({ value, onChange, setoresPorGrupo }: SetorComboboxProps)
                       onClick={() => selecionar(s.value)}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-colors duration-100
                         ${s.value === value
-                          ? 'bg-[#EFEAE1] text-[#171717] font-medium'
-                          : 'text-[#5F5A52] hover:bg-[#FBFAF7]'
+                          ? 'bg-[#EBEDF0] text-[#161B22] font-medium'
+                          : 'text-[#4E5865] hover:bg-[#F5F6F7]'
                         }`}
                     >
                       <span>{s.label}</span>

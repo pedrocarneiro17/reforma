@@ -120,7 +120,7 @@ export default function SociosAdministradores({ regime, numeroCard, onChange }: 
                 const custoLiquido = Math.max(0, irpf + inssEmp + inssPatronal - beneficioLR)
 
                 return (
-                  <div key={s.id} className="bg-[#FBFAF7] border border-[#E4DDD2] rounded-xl p-4 space-y-3">
+                  <div key={s.id} className="bg-[#F5F6F7] border border-[#D9DDE3] rounded-xl p-4 space-y-3">
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-bold text-ink-muted w-5 text-center">{i + 1}</span>
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -166,20 +166,20 @@ export default function SociosAdministradores({ regime, numeroCard, onChange }: 
                     {/* Preview IRPF + INSS */}
                     {pl > 0 && (
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                        <div className="bg-white border border-[#E4DDD2] rounded-lg px-3 py-2">
+                        <div className="bg-white border border-[#D9DDE3] rounded-lg px-3 py-2">
                           <p className="text-ink-muted uppercase tracking-wide font-semibold" style={{fontSize:'10px'}}>IRPF</p>
                           <p className="font-bold num text-danger mt-0.5">{fmt.moeda(irpf)}/mês</p>
                         </div>
-                        <div className="bg-white border border-[#E4DDD2] rounded-lg px-3 py-2">
+                        <div className="bg-white border border-[#D9DDE3] rounded-lg px-3 py-2">
                           <p className="text-ink-muted uppercase tracking-wide font-semibold" style={{fontSize:'10px'}}>INSS sócio</p>
                           <p className="font-bold num text-danger mt-0.5">{fmt.moeda(inssEmp)}/mês</p>
                         </div>
-                        <div className="bg-white border border-[#E4DDD2] rounded-lg px-3 py-2">
+                        <div className="bg-white border border-[#D9DDE3] rounded-lg px-3 py-2">
                           <p className="text-ink-muted uppercase tracking-wide font-semibold" style={{fontSize:'10px'}}>INSS patronal</p>
                           <p className="font-bold num text-danger mt-0.5">{fmt.moeda(inssPatronal)}/mês</p>
                         </div>
-                        <div className={`rounded-lg px-3 py-2 border ${custoLiquido > 0 ? 'bg-[#FDECEC] border-[#F4A9A5]' : 'bg-[#E7F4ED] border-[#A8D5BC]'}`}>
-                          <p className="uppercase tracking-wide font-semibold" style={{fontSize:'10px', color: custoLiquido > 0 ? '#B42318' : '#2F7D57'}}>Custo líquido</p>
+                        <div className={`rounded-lg px-3 py-2 border ${custoLiquido > 0 ? 'bg-[#FFE7E5] border-[#FEAAA4]' : 'bg-[#E2F4E4] border-[#9CD3A7]'}`}>
+                          <p className="uppercase tracking-wide font-semibold" style={{fontSize:'10px', color: custoLiquido > 0 ? '#7E0214' : '#005221'}}>Custo líquido</p>
                           <p className={`font-bold num mt-0.5 ${custoLiquido > 0 ? 'text-danger' : 'text-success'}`}>{fmt.moeda(custoLiquido)}/mês</p>
                         </div>
                       </div>
@@ -200,7 +200,7 @@ export default function SociosAdministradores({ regime, numeroCard, onChange }: 
             const beneficioLR = isLR ? totalPL * 0.24 : 0
             const custoLiq    = Math.max(0, totalIRPF + totalInssE + totalInssP - beneficioLR)
             return (
-              <div className="bg-[#EFEAE1] border border-[#9A9286] rounded-xl p-4 space-y-2">
+              <div className="bg-[#EBEDF0] border border-[#6C7684] rounded-xl p-4 space-y-2">
                 <p className="text-xs font-semibold text-ink-secondary uppercase tracking-wide">Total — todos os sócios</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                   <div><span className="text-ink-muted">IRPF total</span><br/><span className="font-bold num text-danger">{fmt.moeda(totalIRPF)}/mês</span></div>

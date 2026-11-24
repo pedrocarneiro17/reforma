@@ -1,8 +1,8 @@
-import { useState, useMemo, Component } from 'react'
+import { useState, useMemo, useEffect, Component } from 'react'
 import type { ReactNode } from 'react'
 import {
   Calculator, BarChart2, ChevronLeft, ChevronRight,
-  FileText, AlertTriangle, RefreshCw, LogOut, Shield, AlertCircle,
+  FileText, AlertTriangle, RefreshCw, LogOut, Shield, AlertCircle, Menu,
 } from 'lucide-react'
 // FileText mantido para ícone no sidebar; PDF export removido intencionalmente
 import FormularioEntrada from './components/FormularioEntrada'
@@ -67,14 +67,12 @@ function Sidebar({ etapa, collapsed, onReset, onAdmin, onLogout, username, isAdm
   return (
     <aside className="sidebar h-full w-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-border overflow-hidden">
-        <div className="w-8 h-8 rounded-lg bg-prim flex items-center justify-center flex-shrink-0">
-          <Calculator size={15} strokeWidth={1.75} className="text-white" />
-        </div>
+      <div className="flex items-center gap-3 px-4 py-5 overflow-hidden">
+        <img src="/logo.svg" alt="Contajur" className="w-10 h-10 rounded-xl bg-white p-1 flex-shrink-0" />
         {!collapsed && (
           <div className="overflow-hidden">
-            <div className="font-display font-semibold text-sm text-ink leading-tight">ReformaCalc</div>
-            <div className="text-2xs text-ink-muted leading-tight">Tributário Profissional</div>
+            <div className="font-display font-bold text-[15px] text-white leading-tight tracking-wide">ReformaCalc</div>
+            <div className="text-[11.5px] leading-tight" style={{ color: 'hsl(214 52% 88%)' }}>Tributário Profissional</div>
           </div>
         )}
       </div>
@@ -117,9 +115,9 @@ function Sidebar({ etapa, collapsed, onReset, onAdmin, onLogout, username, isAdm
       </nav>
 
       {/* Footer */}
-      <div className="p-2 border-t border-border space-y-1">
+      <div className="p-2 space-y-1">
         {etapa === 'resultados' && (
-          <button onClick={onReset} className="sidebar-item w-full text-ink-secondary" title={collapsed ? 'Nova simulação' : undefined}>
+          <button onClick={onReset} className="sidebar-item w-full" title={collapsed ? 'Nova simulação' : undefined}>
             <RefreshCw size={15} strokeWidth={1.75} className="flex-shrink-0" />
             {!collapsed && <span className="text-xs">Nova simulação</span>}
           </button>
@@ -128,15 +126,15 @@ function Sidebar({ etapa, collapsed, onReset, onAdmin, onLogout, username, isAdm
         {/* Contador de simulações */}
         {!collapsed && !isAdmin && simulacoesLimite != null && (
           <div className="px-3 py-2">
-            <div className="flex justify-between text-2xs text-ink-muted mb-1">
+            <div className="flex justify-between text-2xs mb-1" style={{ color: 'hsl(214 52% 88%)' }}>
               <span>Simulações</span>
-              <span className={simulacoesUsadas >= simulacoesLimite ? 'text-danger font-medium' : ''}>
+              <span className={simulacoesUsadas >= simulacoesLimite ? 'font-bold' : ''} style={simulacoesUsadas >= simulacoesLimite ? { color: 'hsl(4 98% 82%)' } : undefined}>
                 {simulacoesUsadas}/{simulacoesLimite}
               </span>
             </div>
-            <div className="h-1 rounded-full bg-border overflow-hidden">
+            <div className="h-1 rounded-full bg-white/20 overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${simulacoesUsadas >= simulacoesLimite ? 'bg-danger' : simulacoesUsadas / simulacoesLimite > 0.7 ? 'bg-amber-500' : 'bg-prim'}`}
+                className={`h-full rounded-full transition-all ${simulacoesUsadas >= simulacoesLimite ? 'bg-marca' : simulacoesUsadas / simulacoesLimite > 0.7 ? 'bg-amber-300' : 'bg-white'}`}
                 style={{ width: `${Math.min((simulacoesUsadas / simulacoesLimite) * 100, 100)}%` }}
               />
             </div>
@@ -147,24 +145,24 @@ function Sidebar({ etapa, collapsed, onReset, onAdmin, onLogout, username, isAdm
         {!collapsed && (
           <div className="px-3 py-2 flex items-center justify-between">
             <div>
-              <div className="text-2xs font-medium text-ink truncate max-w-[120px]">{username}</div>
-              {isAdmin && <span className="badge badge-gold text-2xs">Admin</span>}
+              <div className="text-xs font-semibold text-white truncate max-w-[120px]">{username}</div>
+              {isAdmin && <span className="badge text-2xs" style={{ background: 'rgba(255,255,255,0.14)', color: '#fff' }}>Admin</span>}
             </div>
-            <button onClick={onLogout} title="Sair" className="p-1 rounded hover:bg-surface text-ink-muted hover:text-danger transition-colors">
+            <button onClick={onLogout} title="Sair" className="p-1.5 rounded-full hover:bg-white/10 transition-colors" style={{ color: 'hsl(4 98% 82%)' }}>
               <LogOut size={13} />
             </button>
           </div>
         )}
 
         {collapsed && (
-          <button onClick={onLogout} title="Sair" className="sidebar-item w-full text-ink-muted">
+          <button onClick={onLogout} title="Sair" className="sidebar-item w-full">
             <LogOut size={15} strokeWidth={1.75} className="flex-shrink-0" />
           </button>
         )}
 
         {!collapsed && (
           <div className="px-3 py-1">
-            <span className="badge badge-gold text-2xs">Beta · LC 214/2025</span>
+            <span className="badge text-2xs" style={{ background: 'rgba(255,255,255,0.14)', color: '#fff' }}>Beta · LC 214/2025</span>
           </div>
         )}
       </div>
@@ -214,6 +212,7 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
 
   const [etapa, setEtapa]           = useState<Etapa>('formulario')
   const [collapsed, setCollapsed]   = useState(false)
+  const [menuAberto, setMenuAberto] = useState(false)   // gaveta do menu no celular
   const [erroLimite, setErroLimite] = useState('')
   const [ultimosDados, setUltimosDados] = useState<DadosEntrada | null>(null)  // contexto do assistente
   // Ano da transição em análise: trocar o ano recalcula na hora, sem gastar uma simulação do limite
@@ -224,6 +223,8 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
   )
   // O assistente responde sobre o mesmo ano que está na tela
   const dadosDoAssistente = useMemo(() => (ultimosDados ? { ...ultimosDados, anoAnalise } : null), [ultimosDados, anoAnalise])
+
+  useEffect(() => { setMenuAberto(false) }, [etapa])
 
   const handleCalcular = async (dados: DadosEntrada) => {
     setErroLimite('')
@@ -252,7 +253,11 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
 
   return (
     <div className="flex min-h-screen bg-page">
-      <div className="relative flex-shrink-0 h-screen sticky top-0 z-30 no-print" style={{ width: collapsed ? 68 : 240, transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)' }}>
+      {menuAberto && <div className="fixed inset-0 z-40 bg-black/45 lg:hidden no-print" onClick={() => setMenuAberto(false)} />}
+      <div
+        className={`${menuAberto ? 'fixed inset-y-0 left-0 z-50 w-[268px]' : 'hidden'} lg:block lg:relative lg:inset-auto lg:flex-shrink-0 lg:h-screen lg:sticky lg:top-0 lg:z-30 lg:w-[var(--larg)] no-print`}
+        style={{ ['--larg' as any]: `${collapsed ? 68 : 240}px`, transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)' }}
+      >
         <Sidebar
           etapa={etapa}
           collapsed={collapsed}
@@ -268,34 +273,28 @@ function SimuladorApp({ usuario, onAdmin, onLogout }: SimuladorAppProps) {
         <button
           onClick={() => setCollapsed(v => !v)}
           title={collapsed ? 'Expandir' : 'Recolher'}
-          className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-40
-            w-7 h-7 rounded-full bg-white border border-[#E4DDD2]
-            flex items-center justify-center shadow-sm
-            text-[#9A9286] hover:text-[#171717] hover:border-[#9A9286]
-            transition-colors duration-150"
+          className="hidden lg:flex absolute -right-3 top-[26px] z-40
+            w-6 h-6 rounded-full border-[1.5px] border-white/35
+            items-center justify-center text-white
+            hover:brightness-125 transition duration-150"
+          style={{ background: 'hsl(215 44% 28%)' }}
         >
           {collapsed ? <ChevronRight size={13} strokeWidth={2} /> : <ChevronLeft size={13} strokeWidth={2} />}
         </button>
       </div>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        <div className="lg:hidden flex items-center justify-between h-14 px-4 no-print">
+          <button type="button" aria-label="Abrir menu" onClick={() => setMenuAberto(true)}
+            className="w-10 h-10 rounded-full border-[1.5px] border-ink-muted bg-white text-prim grid place-items-center">
+            <Menu size={20} />
+          </button>
+          <img src="/logo.svg" alt="" aria-hidden className="w-8 h-8 rounded-lg" />
+        </div>
         <header className="page-header flex-shrink-0">
           <div>
-            {etapa === 'formulario' ? (
-              <>
-                <h1 className="page-title">Simulador de Impacto</h1>
-                <p className="page-subtitle">Análise do IVA Dual conforme LC 214/2025 · LC 227/2026</p>
-              </>
-            ) : (
-              <>
-                <h1 className="page-title">
-                  {resultados?.nomePrincipal ? resultados.nomePrincipal : 'Análise Tributária'}
-                </h1>
-                <p className="page-subtitle">
-                  {resultados?.setor.label.split('(')[0].trim()} · {resultados?.regime.replace('_', ' ')}
-                </p>
-              </>
-            )}
+            <h1 className="page-title">Simulador de Impacto</h1>
+            <p className="page-subtitle">Análise do IVA Dual conforme LC 214/2025 · LC 227/2026</p>
           </div>
           <div className="flex items-center gap-3">
             <StepBar etapa={etapa} />
